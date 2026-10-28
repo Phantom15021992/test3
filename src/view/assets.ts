@@ -1,7 +1,7 @@
 import type { ColorId } from '../core/board';
 
 // Иконки фишек: по одной на ColorId, порядок совпадает с TILE_COLORS
-const TILE_ICON_COUNT = 6;
+const TILE_ICON_COUNT = 5;
 
 export function tileTextureKey(color: ColorId): string {
   return `tile${color}`;

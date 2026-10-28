@@ -26,7 +26,7 @@ export const MEGA_BOMB_ROCKET_WIDTH = 5;
 // Временное поле, пока нет уровней
 export const DEMO_BOARD_ROWS = 8;
 export const DEMO_BOARD_COLS = 8;
-export const DEMO_COLOR_COUNT = 6;
+export const DEMO_COLOR_COUNT = 5;
 
 // Анимации, мс
 export const SWAP_DURATION_MS = 150;
