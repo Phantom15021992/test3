@@ -25,6 +25,7 @@ import {
   SPECIAL_MARK_COLOR,
   TILE_COLORS,
 } from './palette';
+import { tileTextureKey } from './assets';
 
 type TileSprite = Phaser.GameObjects.Container;
 
@@ -158,12 +159,21 @@ export class BoardView {
     const { x, y } = this.centerOf(pos);
     const body = this.scene.add.graphics();
     const children: Phaser.GameObjects.GameObject[] = [body];
-    if (cell.kind === 'tile') this.drawTile(body, cell);
-    else children.push(...this.drawPiece(body, cell));
+    children.push(
+      ...(cell.kind === 'tile' ? this.drawTile(body, cell) : this.drawPiece(body, cell)),
+    );
     return this.scene.add.container(x, y, children).setMask(this.mask);
   }
 
-  private drawTile(g: Phaser.GameObjects.Graphics, tile: Tile): void {
+  /** Возвращает картинку фишки, если она есть; иначе рисует кружок в g */
+  private drawTile(g: Phaser.GameObjects.Graphics, tile: Tile): Phaser.GameObjects.GameObject[] {
+    // Уровень у такой фишки виден по самой картинке, поэтому кольца-маркеры ей не нужны
+    const key = tileTextureKey(tile);
+    if (key) {
+      const size = this.cellSize * 0.84;
+      return [this.scene.add.image(0, 0, key).setDisplaySize(size, size)];
+    }
+
     const radius = this.cellSize * 0.38;
     g.fillStyle(TILE_COLORS[tile.color] ?? 0xffffff);
     g.fillCircle(0, 0, radius);
@@ -179,6 +189,7 @@ export class BoardView {
       g.lineStyle(3, LEVEL3_MARKER_COLOR);
       g.strokeCircle(0, 0, radius * 0.6);
     }
+    return [];
   }
 
   /** Возвращает дополнительные объекты (подписи), которые нужно положить в контейнер */
