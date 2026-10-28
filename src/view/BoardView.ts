@@ -25,7 +25,6 @@ import {
   SPECIAL_MARK_COLOR,
   TILE_COLORS,
 } from './palette';
-import { tileTextureKey } from './assets';
 
 type TileSprite = Phaser.GameObjects.Container;
 
@@ -157,30 +156,29 @@ export class BoardView {
 
   private createSprite(cell: Exclude<Cell, null | { kind: 'hole' }>, pos: Position): TileSprite {
     const { x, y } = this.centerOf(pos);
-    let children: Phaser.GameObjects.GameObject[];
-    if (cell.kind === 'tile') children = this.drawTile(cell);
-    else {
-      const body = this.scene.add.graphics();
-      children = [body, ...this.drawPiece(body, cell)];
-    }
+    const body = this.scene.add.graphics();
+    const children: Phaser.GameObjects.GameObject[] = [body];
+    if (cell.kind === 'tile') this.drawTile(body, cell);
+    else children.push(...this.drawPiece(body, cell));
     return this.scene.add.container(x, y, children).setMask(this.mask);
   }
 
-  private drawTile(tile: Tile): Phaser.GameObjects.GameObject[] {
-    const size = this.cellSize * 0.84;
-    const icon = this.scene.add.image(0, 0, tileTextureKey(tile.color)).setDisplaySize(size, size);
-    if (tile.level === 1) return [icon];
+  private drawTile(g: Phaser.GameObjects.Graphics, tile: Tile): void {
+    const radius = this.cellSize * 0.38;
+    g.fillStyle(TILE_COLORS[tile.color] ?? 0xffffff);
+    g.fillCircle(0, 0, radius);
+    // Блик сверху, чтобы фишка выглядела объёмной
+    g.fillStyle(0xffffff, 0.25);
+    g.fillCircle(-radius * 0.3, -radius * 0.35, radius * 0.35);
 
-    // Маркер уровня рисуется поверх иконки: кольцо вокруг неё, у 3 уровня — второе, золотое
-    const radius = this.cellSize * 0.44;
-    const marker = this.scene.add.graphics();
-    marker.lineStyle(4, LEVEL2_MARKER_COLOR);
-    marker.strokeCircle(0, 0, radius);
-    if (tile.level === 3) {
-      marker.lineStyle(4, LEVEL3_MARKER_COLOR);
-      marker.strokeCircle(0, 0, radius - 5);
+    if (tile.level >= 2) {
+      g.lineStyle(4, LEVEL2_MARKER_COLOR);
+      g.strokeCircle(0, 0, radius - 2);
     }
-    return [icon, marker];
+    if (tile.level === 3) {
+      g.lineStyle(3, LEVEL3_MARKER_COLOR);
+      g.strokeCircle(0, 0, radius * 0.6);
+    }
   }
 
   /** Возвращает дополнительные объекты (подписи), которые нужно положить в контейнер */
