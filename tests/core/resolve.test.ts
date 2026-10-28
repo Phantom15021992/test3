@@ -42,7 +42,7 @@ describe('resolveMove: совпадения 1 уровня', () => {
     expect(transform!.placements).toEqual([
       {
         pos: p(0, 1),
-        cell: { kind: 'tile', color: 0, level: 1, special: { type: 'rocket', direction: 'row' } },
+        cell: { kind: 'piece', type: 'rocket', direction: 'row' },
       },
     ]);
     expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(40);
@@ -74,7 +74,7 @@ describe('resolveMove: совпадения 1 уровня', () => {
     expect(choice!.options).toEqual(['bomb', 'merge']);
     expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(50);
     expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
-      { pos: p(2, 0), cell: { kind: 'tile', color: 0, level: 1, special: { type: 'bomb' } } },
+      { pos: p(2, 0), cell: { kind: 'piece', type: 'bomb' } },
     ]);
   });
 
@@ -148,25 +148,45 @@ describe('resolveMove: ячейки 2–3 уровня', () => {
 });
 
 describe('resolveMove: срабатывание спецфишек', () => {
-  it('ракета в совпадении убирает свой столбец', () => {
+  it('ракета, сдвинутая на обычную фишку, срабатывает на новом месте', () => {
     const board = parseBoard(`
-      R1| R1 G1
-      B1  Y1 R1
-      P1  O1 B1
+      G1 B1 Y1
+      -  R1 P1
+      O1 Y1 B1
     `);
-    const result = runMove(board, { type: 'swap', from: p(1, 2), to: p(0, 2) }, ctx());
+    const result = runMove(board, { type: 'swap', from: p(1, 0), to: p(1, 1) }, ctx());
+    expect(result.steps[0]).toEqual({ kind: 'swap', a: p(1, 0), b: p(1, 1) });
     const [clear] = stepsOf(result.steps, 'clear');
-    expect(sortCells(clear!.cells)).toEqual([p(0, 0), p(0, 1), p(0, 2), p(1, 0), p(2, 0)]);
-    expect(clear!.points).toBe(50);
+    expect(sortCells(clear!.cells)).toEqual([p(1, 0), p(1, 1), p(1, 2)]);
+    // Сама ракета очков не даёт
+    expect(clear!.points).toBe(20);
+  });
+
+  it('если двигали обычную фишку на бомбу — бомба срабатывает там, куда переехала', () => {
+    const board = parseBoard(`
+      G1 B1 Y1 O1
+      R1 *  P1 G1
+      O1 Y1 B1 R1
+    `);
+    const result = runMove(board, { type: 'swap', from: p(1, 0), to: p(1, 1) }, ctx());
+    // Бомба переехала в (1, 0): взрыв 3×3 вокруг неё
+    expect(sortCells(stepsOf(result.steps, 'clear')[0]!.cells)).toEqual([
+      p(0, 0),
+      p(0, 1),
+      p(1, 0),
+      p(1, 1),
+      p(2, 0),
+      p(2, 1),
+    ]);
   });
 
   it('цепная реакция: ракета задевает бомбу', () => {
     const board = parseBoard(`
-      R1| R1 G1
-      B1  Y1 R1
-      P1* O1 B1
+      G1 B1 Y1
+      -  R1 *
+      O1 Y1 B1
     `);
-    const result = runMove(board, { type: 'swap', from: p(1, 2), to: p(0, 2) }, ctx());
+    const result = runMove(board, { type: 'swap', from: p(1, 0), to: p(1, 1) }, ctx());
     expect(stepsOf(result.steps, 'clear')[0]!.cells).toHaveLength(7);
   });
 });
@@ -174,9 +194,9 @@ describe('resolveMove: срабатывание спецфишек', () => {
 describe('resolveMove: комбо', () => {
   it('ракета + ракета — крест', () => {
     const board = parseBoard(`
-      G1  B1  Y1
-      R1- R1| P1
-      O1  Y1  B1
+      G1 B1 Y1
+      -  |  P1
+      O1 Y1 B1
     `);
     const result = runMove(board, { type: 'swap', from: p(1, 0), to: p(1, 1) }, ctx());
     expect(sortCells(stepsOf(result.steps, 'clear')[0]!.cells)).toEqual([
@@ -192,7 +212,7 @@ describe('resolveMove: комбо', () => {
     const board = parseBoard(`
       R1 G1 B1  Y1  P1
       G1 B1 Y1  P1  O1
-      B1 Y1 R1* G1* R1
+      B1 Y1 *  *  R1
       Y1 P1 O1  R1  G1
       P1 O1 R1  G1  B1
     `);
@@ -209,17 +229,18 @@ describe('resolveMove: комбо', () => {
     expect(stepsOf(result.steps, 'clear')[0]!.cells).toHaveLength(4);
   });
 
-  it('радуга + ракета — все фишки цвета становятся ракетами', () => {
+  it('радуга + ракета — фишки 1 уровня самого частого цвета становятся ракетами', () => {
     const board = parseBoard(`
-      @  R1- G1
-      R1 G1  R1
-      B1 R1  Y1
+      @  -  G1
+      R1 G1 R1
+      B1 R1 R2
     `);
     const result = runMove(board, { type: 'swap', from: p(0, 0), to: p(0, 1) }, ctx());
     const [transform] = stepsOf(result.steps, 'transform');
-    expect(transform!.placements).toHaveLength(4);
+    // Красных больше всего (с учётом R2), но превращаются только фишки 1 уровня
+    expect(transform!.placements.map((pl) => pl.pos)).toEqual([p(1, 0), p(1, 2), p(2, 1)]);
     for (const { cell } of transform!.placements) {
-      expect(cell).toMatchObject({ color: 0, special: { type: 'rocket' } });
+      expect(cell).toMatchObject({ kind: 'piece', type: 'rocket' });
     }
   });
 
@@ -233,7 +254,7 @@ describe('resolveMove: комбо', () => {
     const [transform] = stepsOf(result.steps, 'transform');
     expect(transform!.placements.map((pl) => pl.pos)).toEqual([p(0, 2), p(1, 1), p(2, 2)]);
     for (const { cell } of transform!.placements) {
-      expect(cell).toMatchObject({ special: { type: 'bomb' } });
+      expect(cell).toEqual({ kind: 'piece', type: 'bomb' });
     }
   });
 });

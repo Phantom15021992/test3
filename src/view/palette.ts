@@ -14,7 +14,9 @@ export const SELECTION_COLOR = 0xffffff;
 export const LEVEL2_MARKER_COLOR = 0xffffff;
 export const LEVEL3_MARKER_COLOR = 0xffd54a;
 
-export const SPECIAL_MARK_COLOR = 0xffffff;
+// Спецфишки бесцветные — рисуем их нейтральными цветами, не похожими на цвета фишек
+export const SPECIAL_BODY_COLOR = 0xdfe3f2;
+export const SPECIAL_MARK_COLOR = 0x2b3150;
 export const BOMB_CORE_COLOR = 0x1e1e28;
 export const MEGA_BOMB_COLOR = 0x15151c;
 export const MEGA_BOMB_RING_COLOR = 0xff3b3b;

@@ -1,6 +1,6 @@
 import { cloneBoard, getCell, isTile, type Board, type Position } from './board';
 import { findMatches } from './match';
-import { isCombo } from './specials';
+import { activationSwapTarget, isCombo } from './specials';
 
 export interface SwapMove {
   from: Position;
@@ -23,12 +23,13 @@ export function swapCells(board: Board, a: Position, b: Position): Board {
 }
 
 /**
- * Допустимый обмен соседних клеток: две спецфишки (комбо) или две фишки, после обмена
- * которых появляется совпадение. Радугу, мега-бомбу и манипулятор с обычной фишкой не меняют.
+ * Допустимый обмен соседних клеток: две спецфишки (комбо), ракета/бомба с любой клеткой
+ * (срабатывает) или две фишки, после обмена которых появляется совпадение.
+ * Радугу, мега-бомбу и манипулятор с обычной фишкой не меняют.
  */
 export function isValidSwap(board: Board, a: Position, b: Position): boolean {
   if (!areAdjacent(a, b)) return false;
-  if (isCombo(board, a, b)) return true;
+  if (isCombo(board, a, b) || activationSwapTarget(board, a, b) !== null) return true;
   if (!isTile(getCell(board, a)) || !isTile(getCell(board, b))) return false;
   return findMatches(swapCells(board, a, b)).length > 0;
 }

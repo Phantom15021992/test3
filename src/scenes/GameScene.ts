@@ -185,6 +185,8 @@ export class GameScene extends Phaser.Scene {
     if (selected && samePos(selected, cell)) return this.setSelected(null);
 
     if (isPiece(content)) {
+      // Ракету и бомбу выбирают как обычную фишку — срабатывают при обмене с соседней клеткой
+      if (content.type === 'rocket' || content.type === 'bomb') return this.setSelected(cell);
       this.setSelected(null);
       if (content.type === 'megaBomb') return void this.play({ type: 'megaBomb', at: cell });
       if (content.type === 'rainbow') return this.setMode({ type: 'rainbowColor', at: cell });

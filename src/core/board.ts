@@ -8,23 +8,18 @@ export type CellLevel = 1 | 2 | 3;
 /** row — ракета убирает строку, col — столбец */
 export type RocketDirection = 'row' | 'col';
 
-/** Спецфишки, у которых есть цвет: участвуют в обычных совпадениях этого цвета */
-export type TileSpecial = { type: 'rocket'; direction: RocketDirection } | { type: 'bomb' };
-
 export interface Tile {
   kind: 'tile';
   color: ColorId;
   level: CellLevel;
-  special?: TileSpecial;
 }
 
-/** Спецфишки без цвета: не участвуют в совпадениях, активируются тапом */
-export type PieceType = 'rainbow' | 'manipulator' | 'megaBomb';
+/** Спецфишки. У всех нет цвета, в совпадениях они не участвуют */
+export type Piece =
+  | { kind: 'piece'; type: 'rocket'; direction: RocketDirection }
+  | { kind: 'piece'; type: 'bomb' | 'rainbow' | 'manipulator' | 'megaBomb' };
 
-export interface Piece {
-  kind: 'piece';
-  type: PieceType;
-}
+export type PieceType = Piece['type'];
 
 /** Дыра — клетка, которой нет на поле; в неё ничего не падает */
 export interface Hole {
@@ -51,11 +46,6 @@ export function isTile(cell: Cell | undefined): cell is Tile {
 
 export function isPiece(cell: Cell | undefined): cell is Piece {
   return cell != null && cell.kind === 'piece';
-}
-
-/** Ракета, бомба, радуга, манипулятор или мега-бомба */
-export function isSpecial(cell: Cell | undefined): boolean {
-  return isPiece(cell) || (isTile(cell) && cell.special !== undefined);
 }
 
 /** Совпадают ли фишки: одинаковый цвет и одинаковый уровень */

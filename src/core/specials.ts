@@ -7,8 +7,8 @@ import {
   type Board,
   type Cell,
   type ColorId,
+  type Piece,
   type Position,
-  type Tile,
 } from './board';
 import {
   BASE_POINTS_PER_TILE,
@@ -76,25 +76,26 @@ export function mostFrequentColor(board: Board): ColorId | null {
   return best;
 }
 
-/** Что задевает спецфишка, когда её саму задело (или она попала в совпадение) */
+/** Что задевает спецфишка, когда срабатывает (в том числе когда её задело) */
 function activationArea(board: Board, pos: Position, cell: Cell): Position[] {
-  if (isTile(cell)) {
-    if (cell.special?.type === 'rocket') {
-      const rows = cell.special.direction === 'row';
+  if (!isPiece(cell)) return [];
+  switch (cell.type) {
+    case 'rocket': {
+      const rows = cell.direction === 'row';
       return bandArea(board, pos, 1, { rows, cols: !rows });
     }
-    if (cell.special?.type === 'bomb') return squareArea(board, pos, BOMB_SIZE);
-    return [];
-  }
-  if (isPiece(cell)) {
-    if (cell.type === 'megaBomb') return squareArea(board, pos, MEGA_BOMB_SIZE);
-    if (cell.type === 'rainbow') {
+    case 'bomb':
+      return squareArea(board, pos, BOMB_SIZE);
+    case 'megaBomb':
+      return squareArea(board, pos, MEGA_BOMB_SIZE);
+    case 'rainbow': {
       const color = mostFrequentColor(board);
       return color === null ? [] : tilesOfColor(board, color);
     }
-    // Манипулятор просто исчезает
+    case 'manipulator':
+      // Просто исчезает
+      return [];
   }
-  return [];
 }
 
 // ---------- Цепная реакция ----------
@@ -137,14 +138,31 @@ export function hitPoints(cell: Cell | undefined): number {
 type ComboKind = 'rocket' | 'bomb' | 'rainbow' | 'megaBomb';
 
 export function comboKind(cell: Cell | undefined): ComboKind | null {
-  if (isTile(cell)) return cell.special?.type ?? null;
-  if (isPiece(cell) && cell.type !== 'manipulator') return cell.type;
-  return null;
+  return isPiece(cell) && cell.type !== 'manipulator' ? cell.type : null;
 }
 
 /** Обмен двух спецфишек (манипулятор в комбо не участвует) */
 export function isCombo(board: Board, a: Position, b: Position): boolean {
   return comboKind(getCell(board, a)) !== null && comboKind(getCell(board, b)) !== null;
+}
+
+function isRocketOrBomb(cell: Cell | undefined): boolean {
+  return isPiece(cell) && (cell.type === 'rocket' || cell.type === 'bomb');
+}
+
+/**
+ * Ракета или бомба меняется с соседней клеткой, которая не даёт комбо
+ * (обычная фишка или манипулятор), — и срабатывает там, куда её передвинули.
+ * Возвращает клетку срабатывания уже после обмена, или null.
+ */
+export function activationSwapTarget(board: Board, a: Position, b: Position): Position | null {
+  if (isCombo(board, a, b)) return null;
+  const cellA = getCell(board, a);
+  const cellB = getCell(board, b);
+  if (cellA == null || cellB == null || cellA.kind === 'hole' || cellB.kind === 'hole') return null;
+  if (isRocketOrBomb(cellA)) return b;
+  if (isRocketOrBomb(cellB)) return a;
+  return null;
 }
 
 /** Нужен ли игроку выбор цвета для комбо (мега-бомба + радуга) */
@@ -155,7 +173,7 @@ export function comboNeedsColor(board: Board, a: Position, b: Position): boolean
 
 export interface ComboEffect {
   /** Клетки, превращённые в спецфишки перед срабатыванием (радуга + ракета/бомба и т.п.) */
-  conversions: { pos: Position; cell: Tile }[];
+  conversions: { pos: Position; cell: Piece }[];
   initial: Position[];
   preActivated: Set<string>;
 }
@@ -199,8 +217,10 @@ export function comboEffect(
       return effect(squareArea(board, center, MEGA_BOMB_BOMB_SIZE));
     case 'rainbow+rocket':
     case 'bomb+rainbow': {
-      const special = [cellA, cellB].find((c): c is Tile => isTile(c))!;
-      return convertColor(board, special.color, special.special!.type, rng, effect);
+      // Спецфишки бесцветные — превращается самый частый цвет на поле
+      const target = mostFrequentColor(board);
+      if (target === null) return effect([]);
+      return convertColor(board, target, kinds === 'bomb+rainbow' ? 'bomb' : 'rocket', rng, effect);
     }
     case 'megaBomb+rainbow': {
       if (color === undefined) throw new Error('Для комбо мега-бомба + радуга нужен цвет');
@@ -218,16 +238,12 @@ function convertColor(
   rng: Rng,
   effect: (initial: Position[], conversions: ComboEffect['conversions']) => ComboEffect,
 ): ComboEffect {
-  const targets = tilesOfColor(board, color, true).filter((p) => !isPiece(getCell(board, p)));
-  const conversions = targets.map((pos) => {
-    const tile = getCell(board, pos) as Tile;
-    // Уже существующие спецфишки этого цвета остаются как есть
-    if (tile.special) return { pos, cell: tile };
-    const special: Tile['special'] =
-      into === 'bomb'
-        ? { type: 'bomb' }
-        : { type: 'rocket', direction: rng.int(2) === 0 ? 'row' : 'col' };
-    return { pos, cell: { ...tile, special } };
-  });
+  const targets = tilesOfColor(board, color, true);
+  const conversions = targets.map((pos) => ({
+    pos,
+    cell: (into === 'bomb'
+      ? { kind: 'piece', type: 'bomb' }
+      : { kind: 'piece', type: 'rocket', direction: rng.int(2) === 0 ? 'row' : 'col' }) as Piece,
+  }));
   return effect(targets, conversions);
 }

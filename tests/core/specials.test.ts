@@ -6,9 +6,9 @@ import { parseBoard } from '../helpers/parseBoard';
 describe('expandChain', () => {
   it('задетая радуга убирает самый частый цвет', () => {
     const board = parseBoard(`
-      R1- B1 @
-      G1  B1 G1
-      G1  G1 Y1
+      -  B1 @
+      G1 B1 G1
+      G1 G1 Y1
     `);
     expect(mostFrequentColor(board)).toBe(1);
     const cells = expandChain(board, [{ row: 0, col: 0 }]);
@@ -17,29 +17,27 @@ describe('expandChain', () => {
   });
 
   it('задетый манипулятор просто исчезает', () => {
-    const board = parseBoard(`R1- M G1`);
+    const board = parseBoard(`- M G1`);
     expect(expandChain(board, [{ row: 0, col: 0 }])).toHaveLength(3);
   });
 
   it('дыры не уничтожаются', () => {
-    const board = parseBoard(`R1- # G1`);
+    const board = parseBoard(`- # G1`);
     expect(expandChain(board, [{ row: 0, col: 0 }])).toHaveLength(2);
   });
 });
 
 describe('hitPoints', () => {
-  it('очки за клетку по уровню', () => {
-    const [l1, l2, l3, piece] = parseBoard(`R1 R2 R3 @`)[0]!;
-    expect([hitPoints(l1), hitPoints(l2), hitPoints(l3), hitPoints(piece)]).toEqual([
-      10, 50, 150, 0,
-    ]);
+  it('очки за клетку по уровню; спецфишки очков не дают', () => {
+    const [l1, l2, l3, rainbow, rocket] = parseBoard(`R1 R2 R3 @ -`)[0]!;
+    expect([l1, l2, l3, rainbow, rocket].map(hitPoints)).toEqual([10, 50, 150, 0, 0]);
   });
 });
 
 describe('isValidSwap со спецфишками', () => {
   const board = parseBoard(`
-    R1- G1* @ X
-    B1  Y1  P1 M
+    -  *  @  X
+    B1 Y1 P1 M
   `);
   const p = (row: number, col: number) => ({ row, col });
 
@@ -48,8 +46,14 @@ describe('isValidSwap со спецфишками', () => {
     expect(isValidSwap(board, p(0, 2), p(0, 3))).toBe(true);
   });
 
-  it('радугу и манипулятор нельзя менять с обычной фишкой', () => {
+  it('ракету и бомбу можно поменять с обычной фишкой', () => {
+    expect(isValidSwap(board, p(0, 0), p(1, 0))).toBe(true);
+    expect(isValidSwap(board, p(1, 1), p(0, 1))).toBe(true);
+  });
+
+  it('радугу, мега-бомбу и манипулятор нельзя менять с обычной фишкой', () => {
     expect(isValidSwap(board, p(0, 2), p(1, 2))).toBe(false);
     expect(isValidSwap(board, p(0, 3), p(1, 3))).toBe(false);
+    expect(isValidSwap(board, p(1, 3), p(1, 2))).toBe(false);
   });
 });

@@ -20,7 +20,15 @@ import { applyGravity, refill, removeCells, type Fall, type Spawn } from './grav
 import { findMatches, type MatchGroup } from './match';
 import { swapCells } from './moves';
 import type { Rng } from './rng';
-import { comboEffect, expandChain, hitPoints, isCombo, squareArea, tilesOfColor } from './specials';
+import {
+  activationSwapTarget,
+  comboEffect,
+  expandChain,
+  hitPoints,
+  isCombo,
+  squareArea,
+  tilesOfColor,
+} from './specials';
 
 // Разбор хода целиком: эффект хода → совпадения → удаление → падение → заполнение → …
 //
@@ -101,12 +109,16 @@ export function* resolveMove(
   switch (move.type) {
     case 'swap': {
       const combo = isCombo(current, move.from, move.to);
+      const fireAt = activationSwapTarget(current, move.from, move.to);
       current = swapCells(current, move.from, move.to);
       yield { kind: 'swap', a: move.from, b: move.to };
       if (combo) {
         const effect = comboEffect(current, move.to, move.from, ctx.rng, move.color);
         yield* place(effect.conversions);
         yield* destroy(effect.initial, effect.preActivated);
+      } else if (fireAt) {
+        // Ракета/бомба срабатывает там, куда её передвинули
+        yield* destroy([fireAt]);
       } else {
         landing = [move.to, move.from];
       }
@@ -191,8 +203,7 @@ interface GroupOutcome {
 
 function groupOutcome(group: MatchGroup, spot: Position, option?: ChoiceOption): GroupOutcome {
   const color = group.color;
-  const tile = (level: Tile['level'], special?: Tile['special']): Tile =>
-    special ? { kind: 'tile', color, level, special } : { kind: 'tile', color, level };
+  const tile = (level: Tile['level']): Tile => ({ kind: 'tile', color, level });
   const at = (cell: Cell): Placement[] => [{ pos: spot, cell }];
   const merged = (level: Tile['level'], count: number): Placement[] => {
     const cells = [spot];
@@ -209,12 +220,12 @@ function groupOutcome(group: MatchGroup, spot: Position, option?: ChoiceOption):
       case 'line4':
         return {
           pointsPerCell: base,
-          placements: at(tile(1, { type: 'rocket', direction: lineDirection(group) })),
+          placements: at({ kind: 'piece', type: 'rocket', direction: lineDirection(group) }),
         };
       case 'square':
         return { pointsPerCell: base, placements: at({ kind: 'piece', type: 'manipulator' }) };
       case 'lt':
-        return { pointsPerCell: base, placements: at(tile(1, { type: 'bomb' })) };
+        return { pointsPerCell: base, placements: at({ kind: 'piece', type: 'bomb' }) };
       case 'line5':
         return { pointsPerCell: base, placements: at({ kind: 'piece', type: 'rainbow' }) };
     }

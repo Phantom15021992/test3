@@ -21,6 +21,7 @@ import {
   MEGA_BOMB_COLOR,
   MEGA_BOMB_RING_COLOR,
   SELECTION_COLOR,
+  SPECIAL_BODY_COLOR,
   SPECIAL_MARK_COLOR,
   TILE_COLORS,
 } from './palette';
@@ -178,35 +179,42 @@ export class BoardView {
       g.lineStyle(3, LEVEL3_MARKER_COLOR);
       g.strokeCircle(0, 0, radius * 0.6);
     }
-
-    if (tile.special?.type === 'rocket') {
-      // Полоса с наконечниками вдоль направления удара
-      const len = radius * 0.8;
-      const head = radius * 0.3;
-      const horizontal = tile.special.direction === 'row';
-      g.fillStyle(SPECIAL_MARK_COLOR);
-      if (horizontal) {
-        g.fillRect(-len, -3, len * 2, 6);
-        g.fillTriangle(len + head, 0, len, -head, len, head);
-        g.fillTriangle(-len - head, 0, -len, -head, -len, head);
-      } else {
-        g.fillRect(-3, -len, 6, len * 2);
-        g.fillTriangle(0, len + head, -head, len, head, len);
-        g.fillTriangle(0, -len - head, -head, -len, head, -len);
-      }
-    }
-    if (tile.special?.type === 'bomb') {
-      g.fillStyle(BOMB_CORE_COLOR);
-      g.fillCircle(0, 0, radius * 0.5);
-      g.fillStyle(SPECIAL_MARK_COLOR);
-      g.fillCircle(radius * 0.18, -radius * 0.18, radius * 0.12);
-    }
   }
 
   /** Возвращает дополнительные объекты (подписи), которые нужно положить в контейнер */
   private drawPiece(g: Phaser.GameObjects.Graphics, piece: Piece): Phaser.GameObjects.GameObject[] {
     const radius = this.cellSize * 0.4;
     switch (piece.type) {
+      case 'rocket': {
+        g.fillStyle(SPECIAL_BODY_COLOR);
+        g.fillCircle(0, 0, radius);
+        // Полоса с наконечниками вдоль направления удара
+        const len = radius * 0.55;
+        const head = radius * 0.32;
+        g.fillStyle(SPECIAL_MARK_COLOR);
+        if (piece.direction === 'row') {
+          g.fillRect(-len, -4, len * 2, 8);
+          g.fillTriangle(len + head, 0, len, -head, len, head);
+          g.fillTriangle(-len - head, 0, -len, -head, -len, head);
+        } else {
+          g.fillRect(-4, -len, 8, len * 2);
+          g.fillTriangle(0, len + head, -head, len, head, len);
+          g.fillTriangle(0, -len - head, -head, -len, head, -len);
+        }
+        return [];
+      }
+      case 'bomb': {
+        g.fillStyle(BOMB_CORE_COLOR);
+        g.fillCircle(0, 0, radius * 0.85);
+        g.lineStyle(3, SPECIAL_BODY_COLOR);
+        g.strokeCircle(0, 0, radius * 0.85);
+        // Фитиль с искрой
+        g.fillStyle(SPECIAL_BODY_COLOR);
+        g.fillRect(radius * 0.35, -radius * 0.95, radius * 0.22, radius * 0.4);
+        g.fillStyle(MEGA_BOMB_RING_COLOR);
+        g.fillCircle(radius * 0.46, -radius * 1.0, radius * 0.16);
+        return [];
+      }
       case 'rainbow': {
         const step = (Math.PI * 2) / TILE_COLORS.length;
         TILE_COLORS.forEach((color, i) => {
