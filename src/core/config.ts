@@ -23,6 +23,18 @@ export const MEGA_BOMB_BOMB_SIZE = 7;
 export const ROCKET_BOMB_WIDTH = 3;
 export const MEGA_BOMB_ROCKET_WIDTH = 5;
 
+// Шкала бонусов: копит очки до потолка, взятый бонус обнуляет её
+export const BONUS_METER_MAX = 1000;
+export const BONUS_TIERS: readonly {
+  cost: number;
+  type: 'bomb' | 'rocket' | 'manipulator' | 'rainbow';
+}[] = [
+  { cost: 250, type: 'bomb' },
+  { cost: 500, type: 'rocket' },
+  { cost: 750, type: 'manipulator' },
+  { cost: 1000, type: 'rainbow' },
+];
+
 // Временное поле, пока нет уровней
 export const DEMO_BOARD_ROWS = 8;
 export const DEMO_BOARD_COLS = 8;

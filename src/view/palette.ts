@@ -24,6 +24,10 @@ export const MANIPULATOR_COLOR = 0xeef1ff;
 export const MANIPULATOR_MARK_COLOR = 0x2b3150;
 export const HIGHLIGHT_COLOR = 0xffd54a;
 
+export const BONUS_BAR_BG_COLOR = 0x3a4160;
+export const BONUS_BAR_FILL_COLOR = 0x8e5cf7;
+export const BONUS_READY_COLOR = 0xffd54a;
+
 export const UI_PANEL_COLOR = 0x2c3249;
 export const UI_BUTTON_COLOR = 0x4a6cf7;
 export const UI_BUTTON_ALT_COLOR = 0x8e5cf7;

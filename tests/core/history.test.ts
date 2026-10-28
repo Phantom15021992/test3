@@ -34,6 +34,18 @@ describe('History', () => {
   });
 });
 
+describe('History.reset', () => {
+  it('после сброса нельзя вернуться к прежним состояниям', () => {
+    const history = new History('a');
+    history.push('b');
+    history.undo();
+    history.reset('c');
+    expect(history.current).toBe('c');
+    expect(history.canUndo).toBe(false);
+    expect(history.canRedo).toBe(false);
+  });
+});
+
 describe('Rng.getState', () => {
   it('ГСЧ, восстановленный из состояния, продолжает ту же последовательность', () => {
     const rng = createRng(42);

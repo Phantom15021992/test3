@@ -28,6 +28,12 @@ export class History<T> {
     this.index++;
   }
 
+  /** Забыть всё: state становится единственным состоянием, назад и вперёд идти некуда */
+  reset(state: T): void {
+    this.states.splice(0, this.states.length, state);
+    this.index = 0;
+  }
+
   undo(): T | null {
     if (!this.canUndo) return null;
     this.index--;

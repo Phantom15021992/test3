@@ -15,12 +15,14 @@ import {
   SWIPE_THRESHOLD,
 } from '../core/config';
 import { generateStartBoard } from '../core/generate';
+import { addToMeter, placeBonus, type BonusType } from '../core/bonus';
 import { History } from '../core/history';
 import { areAdjacent, isValidSwap } from '../core/moves';
 import { resolveMove, type ChoiceOption, type Move } from '../core/resolve';
 import { createRng, type Rng } from '../core/rng';
 import { comboNeedsColor, isCombo } from '../core/specials';
 import { ArrowButton } from '../ui/ArrowButton';
+import { BonusMeter } from '../ui/BonusMeter';
 import { ChoiceDialog } from '../ui/ChoiceDialog';
 import { UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
 import { BoardView } from '../view/BoardView';
@@ -38,6 +40,7 @@ type Mode =
 interface Snapshot {
   board: Board;
   score: number;
+  meter: number;
   rngState: number;
 }
 
@@ -49,6 +52,9 @@ export class GameScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private hintText!: Phaser.GameObjects.Text;
   private score = 0;
+  /** Шкала бонусов: копит те же очки, что и счёт, но обнуляется при взятии бонуса */
+  private meter = 0;
+  private bonusMeter!: BonusMeter;
   private mode: Mode = { type: 'idle' };
   private selected: Position | null = null;
   private pressed: { cell: Position; x: number; y: number } | null = null;
@@ -87,14 +93,14 @@ export class GameScene extends Phaser.Scene {
 
     const centerX = this.scale.width / 2;
     this.add
-      .text(centerX, originY - 130, 'Три в ряд', {
+      .text(centerX, originY - 275, 'Три в ряд', {
         fontFamily: 'sans-serif',
         fontSize: '44px',
         color: UI_TEXT_COLOR,
       })
       .setOrigin(0.5);
     this.scoreText = this.add
-      .text(centerX, originY - 60, '', {
+      .text(centerX, originY - 205, '', {
         fontFamily: 'sans-serif',
         fontSize: '34px',
         color: UI_TEXT_COLOR,
@@ -108,11 +114,14 @@ export class GameScene extends Phaser.Scene {
         align: 'center',
       })
       .setOrigin(0.5);
+    const boardRight = originX + cellSize * DEMO_BOARD_COLS;
+    this.bonusMeter = new BonusMeter(this, originX + 30, boardRight - 30, originY - 140, (type) =>
+      this.takeBonus(type),
+    );
     this.addScore(0);
 
-    const boardRight = originX + cellSize * DEMO_BOARD_COLS;
-    this.undoButton = new ArrowButton(this, originX + 36, originY - 60, 'left', () => this.undo());
-    this.redoButton = new ArrowButton(this, boardRight - 36, originY - 60, 'right', () =>
+    this.undoButton = new ArrowButton(this, originX + 36, originY - 205, 'left', () => this.undo());
+    this.redoButton = new ArrowButton(this, boardRight - 36, originY - 205, 'right', () =>
       this.redo(),
     );
     this.history = new History(this.snapshot());
@@ -134,7 +143,12 @@ export class GameScene extends Phaser.Scene {
   // ---------- Шаг назад / вперёд ----------
 
   private snapshot(): Snapshot {
-    return { board: this.board, score: this.score, rngState: this.rng.getState() };
+    return {
+      board: this.board,
+      score: this.score,
+      meter: this.meter,
+      rngState: this.rng.getState(),
+    };
   }
 
   private undo(): void {
@@ -153,8 +167,9 @@ export class GameScene extends Phaser.Scene {
     this.board = state.board;
     // ГСЧ тоже откатывается: повтор того же хода даст тот же результат
     this.rng = createRng(state.rngState);
-    this.score = 0;
-    this.addScore(state.score);
+    this.score = state.score;
+    this.meter = state.meter;
+    this.addScore(0);
     this.setSelected(null);
     this.setMode({ type: 'idle' });
     this.view.render(this.board);
@@ -164,6 +179,7 @@ export class GameScene extends Phaser.Scene {
   private updateHistoryButtons(): void {
     this.undoButton.setEnabled(!this.busy && this.history.canUndo);
     this.redoButton.setEnabled(!this.busy && this.history.canRedo);
+    this.updateBonusMeter();
   }
 
   // ---------- Ввод ----------
@@ -313,6 +329,25 @@ export class GameScene extends Phaser.Scene {
     this.updateHistoryButtons();
   }
 
+  // ---------- Бонусы ----------
+
+  /** Спецфишка за очки шкалы: встаёт на случайную фишку 1 уровня, хода не тратит */
+  private async takeBonus(type: BonusType): Promise<void> {
+    if (this.busy || this.mode.type !== 'idle') return;
+    const result = placeBonus(this.board, type, this.rng);
+    if (!result) return;
+    this.busy = true;
+    this.meter = 0;
+    this.setSelected(null);
+    this.updateHistoryButtons();
+    await this.view.place([{ pos: result.pos, cell: result.piece }]);
+    this.board = result.board;
+    this.busy = false;
+    // В игре отменить взятие бонуса нельзя, поэтому и тестовая история «назад» до него не идёт
+    this.history.reset(this.snapshot());
+    this.updateHistoryButtons();
+  }
+
   // ---------- Состояние интерфейса ----------
 
   private setMode(mode: Mode): void {
@@ -323,6 +358,7 @@ export class GameScene extends Phaser.Scene {
         : null;
     this.view.select(marked);
     this.hintText.setText(hintFor(mode));
+    this.updateBonusMeter();
   }
 
   private setSelected(pos: Position | null): void {
@@ -332,7 +368,14 @@ export class GameScene extends Phaser.Scene {
 
   private addScore(points: number): void {
     this.score += points;
+    this.meter = addToMeter(this.meter, points);
     this.scoreText.setText(`Очки: ${this.score}`);
+    this.updateBonusMeter();
+  }
+
+  private updateBonusMeter(): void {
+    // Бонус берётся только в спокойном состоянии: не во время хода и не в режиме выбора клеток
+    this.bonusMeter.update(this.meter, !this.busy && this.mode.type === 'idle');
   }
 }
 
