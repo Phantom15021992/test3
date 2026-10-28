@@ -180,6 +180,20 @@ describe('resolveMove: срабатывание спецфишек', () => {
     ]);
   });
 
+  it('манипулятор, сдвинутый в совпадение, просто переезжает и остаётся', () => {
+    const board = parseBoard(`
+      R1 R1 M
+      G1 B1 R1
+    `);
+    const result = runMove(board, { type: 'swap', from: p(0, 2), to: p(1, 2) }, ctx());
+    expect(sortCells(stepsOf(result.steps, 'clear')[0]!.cells)).toEqual([
+      p(0, 0),
+      p(0, 1),
+      p(0, 2),
+    ]);
+    expect(result.board[1]?.[2]).toEqual({ kind: 'piece', type: 'manipulator' });
+  });
+
   it('цепная реакция: ракета задевает бомбу', () => {
     const board = parseBoard(`
       G1 B1 Y1

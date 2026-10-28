@@ -1,4 +1,12 @@
-import { cloneBoard, getCell, isTile, type Board, type Position } from './board';
+import {
+  cloneBoard,
+  getCell,
+  isPiece,
+  isTile,
+  type Board,
+  type Cell,
+  type Position,
+} from './board';
 import { findMatches } from './match';
 import { activationSwapTarget, isCombo } from './specials';
 
@@ -24,14 +32,20 @@ export function swapCells(board: Board, a: Position, b: Position): Board {
 
 /**
  * Допустимый обмен соседних клеток: две спецфишки (комбо), ракета/бомба с любой клеткой
- * (срабатывает) или две фишки, после обмена которых появляется совпадение.
- * Радугу, мега-бомбу и манипулятор с обычной фишкой не меняют.
+ * (срабатывает) или обмен, после которого появляется совпадение — двух фишек или фишки
+ * с манипулятором (манипулятор просто переезжает). Радугу и мега-бомбу с фишкой не меняют.
  */
 export function isValidSwap(board: Board, a: Position, b: Position): boolean {
   if (!areAdjacent(a, b)) return false;
   if (isCombo(board, a, b) || activationSwapTarget(board, a, b) !== null) return true;
-  if (!isTile(getCell(board, a)) || !isTile(getCell(board, b))) return false;
+  if (!isMovable(getCell(board, a)) || !isMovable(getCell(board, b))) return false;
+  if (!isTile(getCell(board, a)) && !isTile(getCell(board, b))) return false;
   return findMatches(swapCells(board, a, b)).length > 0;
+}
+
+/** Что можно двигать обычным обменом: фишки и манипулятор */
+function isMovable(cell: Cell | undefined): boolean {
+  return isTile(cell) || (isPiece(cell) && cell.type === 'manipulator');
 }
 
 export function findPossibleMoves(board: Board): SwapMove[] {
