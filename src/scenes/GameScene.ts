@@ -17,7 +17,7 @@ import {
 import { generateStartBoard } from '../core/generate';
 import { addToMeter, placeBonus, type BonusType } from '../core/bonus';
 import { History } from '../core/history';
-import { areAdjacent, isValidSwap } from '../core/moves';
+import { areAdjacent, hasTileMove, isValidSwap, shuffleBoard } from '../core/moves';
 import { resolveMove, type ChoiceOption, type Move } from '../core/resolve';
 import { createRng, type Rng } from '../core/rng';
 import { comboNeedsColor, isCombo } from '../core/specials';
@@ -324,9 +324,19 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.board = next.value.board;
+    await this.ensureMoves();
     this.busy = false;
     this.history.push(this.snapshot());
     this.updateHistoryButtons();
+  }
+
+  /** Если ходов обычными фишками не осталось — перемешать поле */
+  private async ensureMoves(): Promise<void> {
+    if (hasTileMove(this.board)) return;
+    this.hintText.setText('Ходов нет — перемешиваем поле');
+    this.board = shuffleBoard(this.board, DEMO_COLOR_COUNT, this.rng);
+    await this.view.shuffle(this.board);
+    this.hintText.setText(hintFor(this.mode));
   }
 
   // ---------- Бонусы ----------
@@ -342,6 +352,7 @@ export class GameScene extends Phaser.Scene {
     this.updateHistoryButtons();
     await this.view.place([{ pos: result.pos, cell: result.piece }]);
     this.board = result.board;
+    await this.ensureMoves();
     this.busy = false;
     // В игре отменить взятие бонуса нельзя, поэтому и тестовая история «назад» до него не идёт
     this.history.reset(this.snapshot());

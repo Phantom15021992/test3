@@ -5,6 +5,7 @@ import {
   FALL_DURATION_PER_CELL_MS,
   MATCH_PULSE_DURATION_MS,
   PLACE_DURATION_MS,
+  SHUFFLE_DURATION_MS,
   SWAP_DURATION_MS,
 } from '../core/config';
 import type { Fall, Spawn } from '../core/gravity';
@@ -91,6 +92,30 @@ export class BoardView {
   setHighlight(cells: Position[]): void {
     this.highlight.clear();
     for (const pos of cells) this.outline(this.highlight, pos, HIGHLIGHT_COLOR);
+  }
+
+  /** Перемешивание: все фишки сжимаются и появляются уже на новых местах */
+  async shuffle(board: Board): Promise<void> {
+    const old = this.sprites.flat().filter((s) => s !== null);
+    if (old.length > 0) {
+      await this.tween({
+        targets: old,
+        scale: 0,
+        duration: SHUFFLE_DURATION_MS,
+        ease: 'Back.easeIn',
+      });
+    }
+    this.render(board);
+    const fresh = this.sprites.flat().filter((s) => s !== null);
+    fresh.forEach((s) => s.setScale(0));
+    if (fresh.length > 0) {
+      await this.tween({
+        targets: fresh,
+        scale: 1,
+        duration: SHUFFLE_DURATION_MS,
+        ease: 'Back.easeOut',
+      });
+    }
   }
 
   /** Замена клеток: созданные спецфишки и объединённые ячейки «выпрыгивают» на месте */
