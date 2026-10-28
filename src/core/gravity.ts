@@ -14,7 +14,8 @@ export interface Spawn {
 export function removeCells(board: Board, cells: Position[]): Board {
   const next = cloneBoard(board);
   for (const { row, col } of cells) {
-    if (next[row]?.[col]?.kind === 'tile') next[row]![col] = null;
+    const kind = next[row]?.[col]?.kind;
+    if (kind === 'tile' || kind === 'piece') next[row]![col] = null;
   }
   return next;
 }

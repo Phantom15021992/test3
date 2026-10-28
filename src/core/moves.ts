@@ -1,7 +1,8 @@
 import { cloneBoard, getCell, isTile, type Board, type Position } from './board';
 import { findMatches } from './match';
+import { isCombo } from './specials';
 
-export interface Move {
+export interface SwapMove {
   from: Position;
   to: Position;
 }
@@ -21,15 +22,19 @@ export function swapCells(board: Board, a: Position, b: Position): Board {
   return next;
 }
 
-/** Обычный ход: соседние фишки, после обмена появляется совпадение */
+/**
+ * Допустимый обмен соседних клеток: две спецфишки (комбо) или две фишки, после обмена
+ * которых появляется совпадение. Радугу, мега-бомбу и манипулятор с обычной фишкой не меняют.
+ */
 export function isValidSwap(board: Board, a: Position, b: Position): boolean {
   if (!areAdjacent(a, b)) return false;
+  if (isCombo(board, a, b)) return true;
   if (!isTile(getCell(board, a)) || !isTile(getCell(board, b))) return false;
   return findMatches(swapCells(board, a, b)).length > 0;
 }
 
-export function findPossibleMoves(board: Board): Move[] {
-  const moves: Move[] = [];
+export function findPossibleMoves(board: Board): SwapMove[] {
+  const moves: SwapMove[] = [];
   board.forEach((row, r) =>
     row.forEach((_, c) => {
       const from = { row: r, col: c };

@@ -1,18 +1,27 @@
 import Phaser from 'phaser';
-import type { Board, Position, Tile } from '../core/board';
+import type { Board, Cell, Piece, Position, Tile } from '../core/board';
 import {
   CLEAR_DURATION_MS,
   FALL_DURATION_PER_CELL_MS,
   MATCH_PULSE_DURATION_MS,
+  PLACE_DURATION_MS,
   SWAP_DURATION_MS,
 } from '../core/config';
 import type { Fall, Spawn } from '../core/gravity';
+import type { Placement } from '../core/resolve';
 import {
   BOARD_CELL_DARK,
   BOARD_CELL_LIGHT,
+  BOMB_CORE_COLOR,
+  HIGHLIGHT_COLOR,
   LEVEL2_MARKER_COLOR,
   LEVEL3_MARKER_COLOR,
+  MANIPULATOR_COLOR,
+  MANIPULATOR_MARK_COLOR,
+  MEGA_BOMB_COLOR,
+  MEGA_BOMB_RING_COLOR,
   SELECTION_COLOR,
+  SPECIAL_MARK_COLOR,
   TILE_COLORS,
 } from './palette';
 
@@ -22,6 +31,7 @@ type TileSprite = Phaser.GameObjects.Container;
 export class BoardView {
   private readonly background: Phaser.GameObjects.Graphics;
   private readonly selection: Phaser.GameObjects.Graphics;
+  private readonly highlight: Phaser.GameObjects.Graphics;
   // Новые фишки появляются над полем — маска скрывает их, пока не долетят до поля
   private readonly maskShape: Phaser.GameObjects.Graphics;
   private readonly mask: Phaser.Display.Masks.GeometryMask;
@@ -37,6 +47,7 @@ export class BoardView {
   ) {
     this.background = scene.add.graphics();
     this.selection = scene.add.graphics().setDepth(1);
+    this.highlight = scene.add.graphics().setDepth(1);
     this.maskShape = scene.make.graphics({}, false);
     this.mask = this.maskShape.createGeometryMask();
   }
@@ -63,7 +74,7 @@ export class BoardView {
         const y = this.originY + r * this.cellSize;
         this.background.fillStyle((r + c) % 2 === 0 ? BOARD_CELL_DARK : BOARD_CELL_LIGHT);
         this.background.fillRect(x, y, this.cellSize, this.cellSize);
-        return cell ? this.createTile(cell, { row: r, col: c }) : null;
+        return cell ? this.createSprite(cell, { row: r, col: c }) : null;
       }),
     );
   }
@@ -77,16 +88,27 @@ export class BoardView {
 
   select(pos: Position | null): void {
     this.selection.clear();
-    if (!pos) return;
-    const { x, y } = this.centerOf(pos);
-    this.selection.lineStyle(4, SELECTION_COLOR, 0.9);
-    this.selection.strokeRoundedRect(
-      x - this.cellSize / 2 + 3,
-      y - this.cellSize / 2 + 3,
-      this.cellSize - 6,
-      this.cellSize - 6,
-      10,
-    );
+    if (pos) this.outline(this.selection, pos, SELECTION_COLOR);
+  }
+
+  /** Подсветка группы, по которой игрок делает выбор */
+  setHighlight(cells: Position[]): void {
+    this.highlight.clear();
+    for (const pos of cells) this.outline(this.highlight, pos, HIGHLIGHT_COLOR);
+  }
+
+  /** Замена клеток: созданные спецфишки и объединённые ячейки «выпрыгивают» на месте */
+  async place(placements: Placement[]): Promise<void> {
+    const created = placements.map(({ pos, cell }) => {
+      this.spriteAt(pos)?.destroy();
+      const sprite = cell && cell.kind !== 'hole' ? this.createSprite(cell, pos) : null;
+      this.sprites[pos.row]![pos.col] = sprite;
+      return sprite?.setScale(0);
+    });
+    const targets = created.filter((s) => s !== undefined);
+    if (targets.length > 0) {
+      await this.tween({ targets, scale: 1, duration: PLACE_DURATION_MS, ease: 'Back.easeOut' });
+    }
   }
 
   /** Меняет спрайты местами с анимацией */
@@ -120,7 +142,7 @@ export class BoardView {
       spawnsPerColumn.set(to.col, (spawnsPerColumn.get(to.col) ?? 0) + 1);
     const created = spawns.map(({ to, tile }) => {
       const start = { row: to.row - (spawnsPerColumn.get(to.col) ?? 0), col: to.col };
-      const sprite = this.createTile(tile, start);
+      const sprite = this.createSprite(tile, start);
       this.sprites[to.row]![to.col] = sprite;
       return { sprite, from: start, to };
     });
@@ -131,28 +153,106 @@ export class BoardView {
     ]);
   }
 
-  private createTile(tile: Tile, pos: Position): TileSprite {
+  private createSprite(cell: Exclude<Cell, null | { kind: 'hole' }>, pos: Position): TileSprite {
     const { x, y } = this.centerOf(pos);
-    const radius = this.cellSize * 0.38;
-    const color = TILE_COLORS[tile.color] ?? 0xffffff;
-
     const body = this.scene.add.graphics();
-    body.fillStyle(color);
-    body.fillCircle(0, 0, radius);
+    const children: Phaser.GameObjects.GameObject[] = [body];
+    if (cell.kind === 'tile') this.drawTile(body, cell);
+    else children.push(...this.drawPiece(body, cell));
+    return this.scene.add.container(x, y, children).setMask(this.mask);
+  }
+
+  private drawTile(g: Phaser.GameObjects.Graphics, tile: Tile): void {
+    const radius = this.cellSize * 0.38;
+    g.fillStyle(TILE_COLORS[tile.color] ?? 0xffffff);
+    g.fillCircle(0, 0, radius);
     // Блик сверху, чтобы фишка выглядела объёмной
-    body.fillStyle(0xffffff, 0.25);
-    body.fillCircle(-radius * 0.3, -radius * 0.35, radius * 0.35);
+    g.fillStyle(0xffffff, 0.25);
+    g.fillCircle(-radius * 0.3, -radius * 0.35, radius * 0.35);
 
     if (tile.level >= 2) {
-      body.lineStyle(4, LEVEL2_MARKER_COLOR);
-      body.strokeCircle(0, 0, radius - 2);
+      g.lineStyle(4, LEVEL2_MARKER_COLOR);
+      g.strokeCircle(0, 0, radius - 2);
     }
     if (tile.level === 3) {
-      body.lineStyle(3, LEVEL3_MARKER_COLOR);
-      body.strokeCircle(0, 0, radius * 0.6);
+      g.lineStyle(3, LEVEL3_MARKER_COLOR);
+      g.strokeCircle(0, 0, radius * 0.6);
     }
 
-    return this.scene.add.container(x, y, [body]).setMask(this.mask);
+    if (tile.special?.type === 'rocket') {
+      // Полоса с наконечниками вдоль направления удара
+      const len = radius * 0.8;
+      const head = radius * 0.3;
+      const horizontal = tile.special.direction === 'row';
+      g.fillStyle(SPECIAL_MARK_COLOR);
+      if (horizontal) {
+        g.fillRect(-len, -3, len * 2, 6);
+        g.fillTriangle(len + head, 0, len, -head, len, head);
+        g.fillTriangle(-len - head, 0, -len, -head, -len, head);
+      } else {
+        g.fillRect(-3, -len, 6, len * 2);
+        g.fillTriangle(0, len + head, -head, len, head, len);
+        g.fillTriangle(0, -len - head, -head, -len, head, -len);
+      }
+    }
+    if (tile.special?.type === 'bomb') {
+      g.fillStyle(BOMB_CORE_COLOR);
+      g.fillCircle(0, 0, radius * 0.5);
+      g.fillStyle(SPECIAL_MARK_COLOR);
+      g.fillCircle(radius * 0.18, -radius * 0.18, radius * 0.12);
+    }
+  }
+
+  /** Возвращает дополнительные объекты (подписи), которые нужно положить в контейнер */
+  private drawPiece(g: Phaser.GameObjects.Graphics, piece: Piece): Phaser.GameObjects.GameObject[] {
+    const radius = this.cellSize * 0.4;
+    switch (piece.type) {
+      case 'rainbow': {
+        const step = (Math.PI * 2) / TILE_COLORS.length;
+        TILE_COLORS.forEach((color, i) => {
+          g.fillStyle(color);
+          g.slice(0, 0, radius, i * step, (i + 1) * step);
+          g.fillPath();
+        });
+        g.fillStyle(0xffffff);
+        g.fillCircle(0, 0, radius * 0.3);
+        return [];
+      }
+      case 'megaBomb': {
+        g.fillStyle(MEGA_BOMB_COLOR);
+        g.fillCircle(0, 0, radius);
+        g.lineStyle(4, MEGA_BOMB_RING_COLOR);
+        g.strokeCircle(0, 0, radius - 3);
+        g.strokeCircle(0, 0, radius * 0.55);
+        g.fillStyle(MEGA_BOMB_RING_COLOR);
+        g.fillCircle(0, 0, radius * 0.2);
+        return [];
+      }
+      case 'manipulator': {
+        g.fillStyle(MANIPULATOR_COLOR);
+        g.fillRoundedRect(-radius, -radius, radius * 2, radius * 2, radius * 0.4);
+        const label = this.scene.add
+          .text(0, 0, '⇄', {
+            fontFamily: 'sans-serif',
+            fontSize: `${Math.round(radius * 1.3)}px`,
+            color: `#${MANIPULATOR_MARK_COLOR.toString(16).padStart(6, '0')}`,
+          })
+          .setOrigin(0.5);
+        return [label];
+      }
+    }
+  }
+
+  private outline(g: Phaser.GameObjects.Graphics, pos: Position, color: number): void {
+    const { x, y } = this.centerOf(pos);
+    g.lineStyle(4, color, 0.9);
+    g.strokeRoundedRect(
+      x - this.cellSize / 2 + 3,
+      y - this.cellSize / 2 + 3,
+      this.cellSize - 6,
+      this.cellSize - 6,
+      10,
+    );
   }
 
   private spriteAt(pos: Position): TileSprite | null {

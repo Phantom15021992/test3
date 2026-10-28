@@ -1,25 +1,46 @@
 import Phaser from 'phaser';
-import { createEmptyBoard, getCell, isTile, type Board, type Position } from '../core/board';
+import {
+  createEmptyBoard,
+  getCell,
+  isPiece,
+  isTile,
+  samePos,
+  type Board,
+  type Position,
+} from '../core/board';
 import {
   DEMO_BOARD_COLS,
   DEMO_BOARD_ROWS,
   DEMO_COLOR_COUNT,
   SWIPE_THRESHOLD,
 } from '../core/config';
-import { resolveCascades } from '../core/cascade';
 import { generateStartBoard } from '../core/generate';
-import { areAdjacent, isValidSwap, swapCells } from '../core/moves';
+import { areAdjacent, isValidSwap } from '../core/moves';
+import { resolveMove, type ChoiceOption, type Move } from '../core/resolve';
 import { createRng, type Rng } from '../core/rng';
+import { comboNeedsColor, isCombo } from '../core/specials';
+import { ChoiceDialog } from '../ui/ChoiceDialog';
+import { UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
 import { BoardView } from '../view/BoardView';
 
 const BOARD_MARGIN = 40;
 
-// Игровая сцена. Пока без спецфишек, объединения и очков: совпадения просто удаляются,
-// фишки падают, сверху появляются новые, каскады разбираются до конца.
+/** Режим ввода: обычный, выбор цвета (радуга / мега-бомба + радуга), выбор клеток манипулятором */
+type Mode =
+  | { type: 'idle' }
+  | { type: 'rainbowColor'; at: Position }
+  | { type: 'comboColor'; from: Position; to: Position }
+  | { type: 'manipulator'; at: Position; first: Position | null };
+
 export class GameScene extends Phaser.Scene {
   private board: Board = [];
   private rng!: Rng;
   private view!: BoardView;
+  private dialog!: ChoiceDialog;
+  private scoreText!: Phaser.GameObjects.Text;
+  private hintText!: Phaser.GameObjects.Text;
+  private score = 0;
+  private mode: Mode = { type: 'idle' };
   private selected: Position | null = null;
   private pressed: { cell: Position; x: number; y: number } | null = null;
   private busy = false;
@@ -29,7 +50,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.rng = createRng(Date.now() >>> 0);
+    // ?seed=123 — одинаковое поле при каждом запуске (удобно для отладки)
+    const seedParam = Number(new URLSearchParams(window.location.search).get('seed'));
+    this.rng = createRng(
+      Number.isFinite(seedParam) && seedParam > 0 ? seedParam : Date.now() >>> 0,
+    );
+    if (import.meta.env.DEV) {
+      // Доступ к сцене из консоли браузера для ручной проверки
+      (window as unknown as { gameScene: GameScene }).gameScene = this;
+    }
     this.board = generateStartBoard(
       createEmptyBoard(DEMO_BOARD_ROWS, DEMO_BOARD_COLS),
       DEMO_COLOR_COUNT,
@@ -39,21 +68,48 @@ export class GameScene extends Phaser.Scene {
     const cellSize = Math.floor((this.scale.width - BOARD_MARGIN * 2) / DEMO_BOARD_COLS);
     const originX = (this.scale.width - cellSize * DEMO_BOARD_COLS) / 2;
     const originY = (this.scale.height - cellSize * DEMO_BOARD_ROWS) / 2;
+    const boardBottom = originY + cellSize * DEMO_BOARD_ROWS;
     this.view = new BoardView(this, originX, originY, cellSize);
     this.view.render(this.board);
+    this.dialog = new ChoiceDialog(this, boardBottom + 30);
 
+    const centerX = this.scale.width / 2;
     this.add
-      .text(this.scale.width / 2, originY - 60, 'Три в ряд', {
+      .text(centerX, originY - 130, 'Три в ряд', {
         fontFamily: 'sans-serif',
         fontSize: '44px',
-        color: '#ffffff',
+        color: UI_TEXT_COLOR,
       })
       .setOrigin(0.5);
+    this.scoreText = this.add
+      .text(centerX, originY - 60, '', {
+        fontFamily: 'sans-serif',
+        fontSize: '34px',
+        color: UI_TEXT_COLOR,
+      })
+      .setOrigin(0.5);
+    this.hintText = this.add
+      .text(centerX, boardBottom + 60, '', {
+        fontFamily: 'sans-serif',
+        fontSize: '28px',
+        color: UI_MUTED_TEXT_COLOR,
+        align: 'center',
+      })
+      .setOrigin(0.5);
+    this.addScore(0);
 
     this.input.on('pointerdown', this.onPointerDown, this);
     this.input.on('pointermove', this.onPointerMove, this);
     this.input.on('pointerup', this.onPointerUp, this);
   }
+
+  /** Только для отладки: подменить поле */
+  debugSetBoard(board: Board): void {
+    this.board = board;
+    this.view.render(board);
+  }
+
+  // ---------- Ввод ----------
 
   private onPointerDown(pointer: Phaser.Input.Pointer): void {
     if (this.busy) return;
@@ -74,49 +130,161 @@ export class GameScene extends Phaser.Scene {
         ? { row: from.row, col: from.col + Math.sign(dx) }
         : { row: from.row + Math.sign(dy), col: from.col };
     this.pressed = null;
+    this.setMode({ type: 'idle' });
     void this.trySwap(from, to);
   }
 
-  /** Тап: первый выбирает фишку, второй по соседней — меняет */
   private onPointerUp(): void {
     if (!this.pressed || this.busy) return;
     const cell = this.pressed.cell;
     this.pressed = null;
-    if (!isTile(getCell(this.board, cell))) return;
-
-    const selected = this.selected;
-    if (selected && areAdjacent(selected, cell)) {
-      void this.trySwap(selected, cell);
-    } else if (selected && selected.row === cell.row && selected.col === cell.col) {
-      this.setSelected(null);
-    } else {
-      this.setSelected(cell);
-    }
+    this.onTap(cell);
   }
 
-  private async trySwap(a: Position, b: Position): Promise<void> {
-    if (!isTile(getCell(this.board, a)) || !isTile(getCell(this.board, b))) return;
-    this.busy = true;
-    this.setSelected(null);
+  private onTap(cell: Position): void {
+    const content = getCell(this.board, cell);
+    const mode = this.mode;
 
-    await this.view.swap(a, b);
-    if (isValidSwap(this.board, a, b)) {
-      // Логика считается сразу целиком, вид лишь проигрывает шаги
-      const result = resolveCascades(swapCells(this.board, a, b), DEMO_COLOR_COUNT, this.rng);
-      this.board = result.board;
-      for (const step of result.steps) {
-        if (step.kind === 'clear') await this.view.clear(step.cells);
-        else await this.view.drop(step.falls, step.spawns);
+    if (mode.type === 'rainbowColor') {
+      if (samePos(mode.at, cell)) return this.setMode({ type: 'idle' });
+      // Радугу можно и совместить с соседней спецфишкой
+      if (areAdjacent(mode.at, cell) && isCombo(this.board, mode.at, cell)) {
+        this.setMode({ type: 'idle' });
+        return void this.trySwap(mode.at, cell);
       }
-    } else {
-      await this.view.swap(a, b);
+      if (isTile(content)) {
+        this.setMode({ type: 'idle' });
+        return void this.play({ type: 'rainbow', at: mode.at, color: content.color });
+      }
+      return;
     }
 
+    if (mode.type === 'comboColor') {
+      if (isTile(content)) {
+        this.setMode({ type: 'idle' });
+        return void this.play({ type: 'swap', from: mode.from, to: mode.to, color: content.color });
+      }
+      return;
+    }
+
+    if (mode.type === 'manipulator') {
+      if (samePos(mode.at, cell)) return this.setMode({ type: 'idle' });
+      if (content == null || content.kind === 'hole') return;
+      if (!mode.first) return this.setMode({ ...mode, first: cell });
+      if (samePos(mode.first, cell)) return this.setMode({ ...mode, first: null });
+      this.setMode({ type: 'idle' });
+      return void this.play({ type: 'manipulator', at: mode.at, a: mode.first, b: cell });
+    }
+
+    // Обычный режим
+    const selected = this.selected;
+    if (selected && areAdjacent(selected, cell)) {
+      this.setSelected(null);
+      return void this.trySwap(selected, cell);
+    }
+    if (selected && samePos(selected, cell)) return this.setSelected(null);
+
+    if (isPiece(content)) {
+      this.setSelected(null);
+      if (content.type === 'megaBomb') return void this.play({ type: 'megaBomb', at: cell });
+      if (content.type === 'rainbow') return this.setMode({ type: 'rainbowColor', at: cell });
+      return this.setMode({ type: 'manipulator', at: cell, first: null });
+    }
+    if (isTile(content)) this.setSelected(cell);
+  }
+
+  // ---------- Ходы ----------
+
+  private async trySwap(a: Position, b: Position): Promise<void> {
+    const cellA = getCell(this.board, a);
+    const cellB = getCell(this.board, b);
+    if (cellA == null || cellB == null || cellA.kind === 'hole' || cellB.kind === 'hole') return;
+
+    if (!isValidSwap(this.board, a, b)) {
+      // Показываем, что так нельзя: туда и обратно
+      this.busy = true;
+      await this.view.swap(a, b);
+      await this.view.swap(a, b);
+      this.busy = false;
+      return;
+    }
+    if (comboNeedsColor(this.board, a, b)) {
+      return this.setMode({ type: 'comboColor', from: a, to: b });
+    }
+    await this.play({ type: 'swap', from: a, to: b });
+  }
+
+  /** Проигрывает ход: логика отдаёт шаги, сцена их анимирует и отвечает на выборы */
+  private async play(move: Move): Promise<void> {
+    this.busy = true;
+    this.setSelected(null);
+    const steps = resolveMove(this.board, move, { colorCount: DEMO_COLOR_COUNT, rng: this.rng });
+
+    let next = steps.next();
+    while (!next.done) {
+      const step = next.value;
+      let answer: ChoiceOption | undefined;
+      switch (step.kind) {
+        case 'swap':
+          await this.view.swap(step.a, step.b);
+          break;
+        case 'clear':
+          this.addScore(step.points);
+          await this.view.clear(step.cells);
+          break;
+        case 'transform':
+          await this.view.place(step.placements);
+          break;
+        case 'drop':
+          await this.view.drop(step.falls, step.spawns);
+          break;
+        case 'choice':
+          this.view.setHighlight(step.group.cells);
+          answer = await this.dialog.ask(step.group, step.options);
+          this.view.setHighlight([]);
+          break;
+      }
+      next = steps.next(answer);
+    }
+
+    this.board = next.value.board;
     this.busy = false;
+  }
+
+  // ---------- Состояние интерфейса ----------
+
+  private setMode(mode: Mode): void {
+    this.mode = mode;
+    const marked: Position | null =
+      mode.type === 'rainbowColor' || mode.type === 'manipulator'
+        ? (mode.type === 'manipulator' && mode.first) || mode.at
+        : null;
+    this.view.select(marked);
+    this.hintText.setText(hintFor(mode));
   }
 
   private setSelected(pos: Position | null): void {
     this.selected = pos;
     this.view.select(pos);
+  }
+
+  private addScore(points: number): void {
+    this.score += points;
+    this.scoreText.setText(`Очки: ${this.score}`);
+  }
+}
+
+function hintFor(mode: Mode): string {
+  switch (mode.type) {
+    case 'idle':
+      return '';
+    case 'rainbowColor':
+      return 'Радуга: нажмите на фишку нужного цвета\n(повторный тап по радуге — отмена)';
+    case 'comboColor':
+      return 'Мега-бомба + радуга: нажмите на фишку,\nцвет которой станет бомбами';
+    case 'manipulator':
+      return mode.first
+        ? 'Манипулятор: выберите вторую клетку'
+        : 'Манипулятор: выберите две клетки для обмена\n(повторный тап по нему — отмена)';
   }
 }
