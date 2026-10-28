@@ -156,6 +156,26 @@ describe('resolveMove: ячейки 2–3 уровня', () => {
 });
 
 describe('resolveMove: срабатывание спецфишек', () => {
+  it('мега-бомба, сдвинутая на соседнюю клетку, взрывается 5×5 на новом месте', () => {
+    const board = parseBoard(`
+      R1 G1 B1 Y1 P1 O1 R1
+      G1 B1 Y1 P1 O1 R1 G1
+      B1 Y1 P1 O1 R1 G1 B1
+      X  P1 O1 R1 G1 B1 Y1
+      P1 O1 R1 G1 B1 Y1 P1
+      O1 R1 G1 B1 Y1 P1 O1
+      R1 G1 B1 Y1 P1 O1 R1
+    `);
+    const result = runMove(board, { type: 'swap', from: p(3, 0), to: p(3, 1) }, ctx());
+    expect(result.steps[0]).toEqual({ kind: 'swap', a: p(3, 0), b: p(3, 1) });
+    const cleared = sortCells(stepsOf(result.steps, 'clear')[0]!.cells);
+    // Центр взрыва — (3, 1): столбцы 0–3, строки 1–5
+    const expected: Position[] = [];
+    for (let row = 1; row <= 5; row++)
+      for (let col = 0; col <= 3; col++) expected.push(p(row, col));
+    expect(cleared).toEqual(expected);
+  });
+
   it('ракета, сдвинутая на обычную фишку, срабатывает на новом месте', () => {
     const board = parseBoard(`
       G1 B1 Y1

@@ -146,12 +146,15 @@ export function isCombo(board: Board, a: Position, b: Position): boolean {
   return comboKind(getCell(board, a)) !== null && comboKind(getCell(board, b)) !== null;
 }
 
-function isRocketOrBomb(cell: Cell | undefined): boolean {
-  return isPiece(cell) && (cell.type === 'rocket' || cell.type === 'bomb');
+/** Спецфишки, которые срабатывают от обмена с соседней клеткой */
+function firesOnSwap(cell: Cell | undefined): boolean {
+  return (
+    isPiece(cell) && (cell.type === 'rocket' || cell.type === 'bomb' || cell.type === 'megaBomb')
+  );
 }
 
 /**
- * Ракета или бомба меняется с соседней клеткой, которая не даёт комбо
+ * Ракета, бомба или мега-бомба меняется с соседней клеткой, которая не даёт комбо
  * (обычная фишка или манипулятор), — и срабатывает там, куда её передвинули.
  * Возвращает клетку срабатывания уже после обмена, или null.
  */
@@ -160,8 +163,8 @@ export function activationSwapTarget(board: Board, a: Position, b: Position): Po
   const cellA = getCell(board, a);
   const cellB = getCell(board, b);
   if (cellA == null || cellB == null || cellA.kind === 'hole' || cellB.kind === 'hole') return null;
-  if (isRocketOrBomb(cellA)) return b;
-  if (isRocketOrBomb(cellB)) return a;
+  if (firesOnSwap(cellA)) return b;
+  if (firesOnSwap(cellB)) return a;
   return null;
 }
 

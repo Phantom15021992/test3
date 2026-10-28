@@ -40,6 +40,7 @@ type Mode =
 interface Snapshot {
   board: Board;
   score: number;
+  moves: number;
   meter: number;
   rngState: number;
 }
@@ -50,8 +51,11 @@ export class GameScene extends Phaser.Scene {
   private view!: BoardView;
   private dialog!: ChoiceDialog;
   private scoreText!: Phaser.GameObjects.Text;
+  private movesText!: Phaser.GameObjects.Text;
   private hintText!: Phaser.GameObjects.Text;
   private score = 0;
+  /** Сколько ходов сделано (взятие бонуса и перемешивание не считаются) */
+  private moves = 0;
   /** Шкала бонусов: копит те же очки, что и счёт, но обнуляется при взятии бонуса */
   private meter = 0;
   private bonusMeter!: BonusMeter;
@@ -99,13 +103,9 @@ export class GameScene extends Phaser.Scene {
         color: UI_TEXT_COLOR,
       })
       .setOrigin(0.5);
-    this.scoreText = this.add
-      .text(centerX, originY - 205, '', {
-        fontFamily: 'sans-serif',
-        fontSize: '34px',
-        color: UI_TEXT_COLOR,
-      })
-      .setOrigin(0.5);
+    const hudStyle = { fontFamily: 'sans-serif', fontSize: '34px', color: UI_TEXT_COLOR };
+    this.scoreText = this.add.text(centerX - 100, originY - 205, '', hudStyle).setOrigin(0.5);
+    this.movesText = this.add.text(centerX + 115, originY - 205, '', hudStyle).setOrigin(0.5);
     this.hintText = this.add
       .text(centerX, boardBottom + 60, '', {
         fontFamily: 'sans-serif',
@@ -119,6 +119,7 @@ export class GameScene extends Phaser.Scene {
       this.takeBonus(type),
     );
     this.addScore(0);
+    this.updateMoves();
 
     this.undoButton = new ArrowButton(this, originX + 36, originY - 205, 'left', () => this.undo());
     this.redoButton = new ArrowButton(this, boardRight - 36, originY - 205, 'right', () =>
@@ -146,6 +147,7 @@ export class GameScene extends Phaser.Scene {
     return {
       board: this.board,
       score: this.score,
+      moves: this.moves,
       meter: this.meter,
       rngState: this.rng.getState(),
     };
@@ -168,6 +170,8 @@ export class GameScene extends Phaser.Scene {
     // ГСЧ тоже откатывается: повтор того же хода даст тот же результат
     this.rng = createRng(state.rngState);
     this.score = state.score;
+    this.moves = state.moves;
+    this.updateMoves();
     this.meter = state.meter;
     this.addScore(0);
     this.setSelected(null);
@@ -292,6 +296,8 @@ export class GameScene extends Phaser.Scene {
   /** Проигрывает ход: логика отдаёт шаги, сцена их анимирует и отвечает на выборы */
   private async play(move: Move): Promise<void> {
     this.busy = true;
+    this.moves++;
+    this.updateMoves();
     this.updateHistoryButtons();
     this.setSelected(null);
     const steps = resolveMove(this.board, move, { colorCount: DEMO_COLOR_COUNT, rng: this.rng });
@@ -382,6 +388,10 @@ export class GameScene extends Phaser.Scene {
     this.meter = addToMeter(this.meter, points);
     this.scoreText.setText(`Очки: ${this.score}`);
     this.updateBonusMeter();
+  }
+
+  private updateMoves(): void {
+    this.movesText.setText(`Ходы: ${this.moves}`);
   }
 
   private updateBonusMeter(): void {
