@@ -6,18 +6,19 @@ import {
   DEMO_COLOR_COUNT,
   SWIPE_THRESHOLD,
 } from '../core/config';
+import { resolveCascades } from '../core/cascade';
 import { generateStartBoard } from '../core/generate';
-import { findMatches } from '../core/match';
 import { areAdjacent, isValidSwap, swapCells } from '../core/moves';
-import { createRng } from '../core/rng';
+import { createRng, type Rng } from '../core/rng';
 import { BoardView } from '../view/BoardView';
 
 const BOARD_MARGIN = 40;
 
-// Игровая сцена. Пока без удаления совпадений: допустимый обмен выполняется,
-// найденные совпадения подсвечиваются; недопустимый — откатывается.
+// Игровая сцена. Пока без спецфишек, объединения и очков: совпадения просто удаляются,
+// фишки падают, сверху появляются новые, каскады разбираются до конца.
 export class GameScene extends Phaser.Scene {
   private board: Board = [];
+  private rng!: Rng;
   private view!: BoardView;
   private selected: Position | null = null;
   private pressed: { cell: Position; x: number; y: number } | null = null;
@@ -28,11 +29,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
-    const seed = Date.now() >>> 0;
+    this.rng = createRng(Date.now() >>> 0);
     this.board = generateStartBoard(
       createEmptyBoard(DEMO_BOARD_ROWS, DEMO_BOARD_COLS),
       DEMO_COLOR_COUNT,
-      createRng(seed),
+      this.rng,
     );
 
     const cellSize = Math.floor((this.scale.width - BOARD_MARGIN * 2) / DEMO_BOARD_COLS);
@@ -100,8 +101,13 @@ export class GameScene extends Phaser.Scene {
 
     await this.view.swap(a, b);
     if (isValidSwap(this.board, a, b)) {
-      this.board = swapCells(this.board, a, b);
-      await this.view.pulse(findMatches(this.board).flatMap((group) => group.cells));
+      // Логика считается сразу целиком, вид лишь проигрывает шаги
+      const result = resolveCascades(swapCells(this.board, a, b), DEMO_COLOR_COUNT, this.rng);
+      this.board = result.board;
+      for (const step of result.steps) {
+        if (step.kind === 'clear') await this.view.clear(step.cells);
+        else await this.view.drop(step.falls, step.spawns);
+      }
     } else {
       await this.view.swap(a, b);
     }

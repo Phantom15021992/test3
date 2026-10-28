@@ -22,7 +22,9 @@ export const DEMO_COLOR_COUNT = 6;
 
 // Анимации, мс
 export const SWAP_DURATION_MS = 150;
-export const MATCH_PULSE_DURATION_MS = 180;
+export const MATCH_PULSE_DURATION_MS = 120;
+export const CLEAR_DURATION_MS = 150;
+export const FALL_DURATION_PER_CELL_MS = 70;
 
 /** Доля размера клетки, на которую нужно провести пальцем, чтобы засчитать свайп */
 export const SWIPE_THRESHOLD = 0.3;

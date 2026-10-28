@@ -1,6 +1,12 @@
 import Phaser from 'phaser';
 import type { Board, Position, Tile } from '../core/board';
-import { MATCH_PULSE_DURATION_MS, SWAP_DURATION_MS } from '../core/config';
+import {
+  CLEAR_DURATION_MS,
+  FALL_DURATION_PER_CELL_MS,
+  MATCH_PULSE_DURATION_MS,
+  SWAP_DURATION_MS,
+} from '../core/config';
+import type { Fall, Spawn } from '../core/gravity';
 import {
   BOARD_CELL_DARK,
   BOARD_CELL_LIGHT,
@@ -16,6 +22,9 @@ type TileSprite = Phaser.GameObjects.Container;
 export class BoardView {
   private readonly background: Phaser.GameObjects.Graphics;
   private readonly selection: Phaser.GameObjects.Graphics;
+  // Новые фишки появляются над полем — маска скрывает их, пока не долетят до поля
+  private readonly maskShape: Phaser.GameObjects.Graphics;
+  private readonly mask: Phaser.Display.Masks.GeometryMask;
   private sprites: (TileSprite | null)[][] = [];
   private rows = 0;
   private cols = 0;
@@ -28,12 +37,23 @@ export class BoardView {
   ) {
     this.background = scene.add.graphics();
     this.selection = scene.add.graphics().setDepth(1);
+    this.maskShape = scene.make.graphics({}, false);
+    this.mask = this.maskShape.createGeometryMask();
   }
 
   render(board: Board): void {
     this.sprites.flat().forEach((sprite) => sprite?.destroy());
     this.rows = board.length;
     this.cols = board[0]?.length ?? 0;
+
+    this.maskShape.clear();
+    this.maskShape.fillStyle(0xffffff);
+    this.maskShape.fillRect(
+      this.originX,
+      this.originY,
+      this.cols * this.cellSize,
+      this.rows * this.cellSize,
+    );
 
     this.background.clear();
     this.sprites = board.map((row, r) =>
@@ -78,19 +98,37 @@ export class BoardView {
     this.sprites[b.row]![b.col] = spriteA;
   }
 
-  /** Подсвечивает клетки совпадения пульсацией */
-  async pulse(cells: Position[]): Promise<void> {
+  /** Совпавшие фишки пульсируют и исчезают */
+  async clear(cells: Position[]): Promise<void> {
     const targets = cells.map((pos) => this.spriteAt(pos)).filter((s) => s !== null);
     if (targets.length === 0) return;
-    await new Promise<void>((resolve) =>
-      this.scene.tweens.add({
-        targets,
-        scale: 1.2,
-        duration: MATCH_PULSE_DURATION_MS,
-        yoyo: true,
-        onComplete: () => resolve(),
-      }),
-    );
+    await this.tween({ targets, scale: 1.2, duration: MATCH_PULSE_DURATION_MS });
+    await this.tween({ targets, scale: 0, alpha: 0, duration: CLEAR_DURATION_MS });
+    targets.forEach((sprite) => sprite.destroy());
+    for (const { row, col } of cells) this.sprites[row]![col] = null;
+  }
+
+  /** Падение оставшихся фишек и появление новых сверху — одновременно */
+  async drop(falls: Fall[], spawns: Spawn[]): Promise<void> {
+    const moving = falls.map((fall) => ({ sprite: this.spriteAt(fall.from), fall }));
+    for (const { fall } of moving) this.sprites[fall.from.row]![fall.from.col] = null;
+    for (const { sprite, fall } of moving) this.sprites[fall.to.row]![fall.to.col] = sprite;
+
+    // Новые фишки столбца выстраиваются стопкой над полем и падают вместе
+    const spawnsPerColumn = new Map<number, number>();
+    for (const { to } of spawns)
+      spawnsPerColumn.set(to.col, (spawnsPerColumn.get(to.col) ?? 0) + 1);
+    const created = spawns.map(({ to, tile }) => {
+      const start = { row: to.row - (spawnsPerColumn.get(to.col) ?? 0), col: to.col };
+      const sprite = this.createTile(tile, start);
+      this.sprites[to.row]![to.col] = sprite;
+      return { sprite, from: start, to };
+    });
+
+    await Promise.all([
+      ...moving.map(({ sprite, fall }) => this.fallTo(sprite, fall.from, fall.to)),
+      ...created.map(({ sprite, from, to }) => this.fallTo(sprite, from, to)),
+    ]);
   }
 
   private createTile(tile: Tile, pos: Position): TileSprite {
@@ -114,7 +152,7 @@ export class BoardView {
       body.strokeCircle(0, 0, radius * 0.6);
     }
 
-    return this.scene.add.container(x, y, [body]);
+    return this.scene.add.container(x, y, [body]).setMask(this.mask);
   }
 
   private spriteAt(pos: Position): TileSprite | null {
@@ -131,15 +169,28 @@ export class BoardView {
   private moveTo(sprite: TileSprite | null, pos: Position): Promise<void> {
     if (!sprite) return Promise.resolve();
     const { x, y } = this.centerOf(pos);
+    return this.tween({
+      targets: sprite,
+      x,
+      y,
+      duration: SWAP_DURATION_MS,
+      ease: 'Quad.easeInOut',
+    });
+  }
+
+  private fallTo(sprite: TileSprite | null, from: Position, to: Position): Promise<void> {
+    if (!sprite) return Promise.resolve();
+    return this.tween({
+      targets: sprite,
+      y: this.centerOf(to).y,
+      duration: FALL_DURATION_PER_CELL_MS * Math.max(1, to.row - from.row),
+      ease: 'Quad.easeIn',
+    });
+  }
+
+  private tween(config: Phaser.Types.Tweens.TweenBuilderConfig): Promise<void> {
     return new Promise((resolve) =>
-      this.scene.tweens.add({
-        targets: sprite,
-        x,
-        y,
-        duration: SWAP_DURATION_MS,
-        ease: 'Quad.easeInOut',
-        onComplete: () => resolve(),
-      }),
+      this.scene.tweens.add({ ...config, onComplete: () => resolve() }),
     );
   }
 }
