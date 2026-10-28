@@ -13,6 +13,7 @@ import {
 import {
   BASE_POINTS_PER_TILE,
   LEVEL2_SCORE_MULTIPLIER,
+  LEVEL3_PIECE_BY_MATCH_SIZE,
   LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE,
   MEGA_BOMB_SIZE,
 } from './config';
@@ -186,8 +187,8 @@ interface GroupOutcome {
 }
 
 // Любое совпадение 1–2 уровня сразу объединяется на уровень выше (3–4 клетки → 1 ячейка,
-// 5+ → 2), и все клетки группы приносят очки. Спецфишки из совпадений больше не создаются —
-// их активация и комбо остаются в коде на будущее.
+// 5+ → 2), и все клетки группы приносят очки. Совпадение 3 уровня дальше не объединяется,
+// а даёт спецфишку: 3 → мега-бомба, 4 → манипулятор, 5+ → радуга.
 function groupOutcome(group: MatchGroup, spot: Position): GroupOutcome {
   const merged = (level: Tile['level']): Placement[] => {
     const cells = [spot];
@@ -203,7 +204,9 @@ function groupOutcome(group: MatchGroup, spot: Position): GroupOutcome {
     };
   return {
     pointsPerCell: BASE_POINTS_PER_TILE * LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE[group.size],
-    placements: [],
+    placements: [
+      { pos: spot, cell: { kind: 'piece', type: LEVEL3_PIECE_BY_MATCH_SIZE[group.size] } },
+    ],
   };
 }
 

@@ -118,24 +118,40 @@ describe('resolveMove: ячейки 2–3 уровня', () => {
     ]);
   });
 
-  it('3 уровень, 4 ячейки — только ×20, без мега-бомбы', () => {
+  it('3 уровень, 3 ячейки — ×15 и мега-бомба на месте сдвинутой фишки', () => {
+    const board = parseBoard(`
+      R3 R3 G1 Y1
+      B1 Y1 R3 P1
+    `);
+    const result = runMove(board, move, ctx());
+    expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(450);
+    expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
+      { pos: p(0, 2), cell: { kind: 'piece', type: 'megaBomb' } },
+    ]);
+  });
+
+  it('3 уровень, 4 ячейки — ×20 и манипулятор', () => {
     const board = parseBoard(`
       R3 R3 G1 R3
       B1 Y1 R3 P1
     `);
     const result = runMove(board, move, ctx());
     expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(800);
-    expect(stepsOf(result.steps, 'transform')).toEqual([]);
+    expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
+      { pos: p(0, 2), cell: { kind: 'piece', type: 'manipulator' } },
+    ]);
   });
 
-  it('3 уровень, 5 ячеек — только ×25, без радуги', () => {
+  it('3 уровень, 5 ячеек — ×25 и радуга', () => {
     const board = parseBoard(`
       R3 R3 G1 R3 R3
       B1 Y1 R3 P1 O1
     `);
     const result = runMove(board, move, ctx());
     expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(1250);
-    expect(stepsOf(result.steps, 'transform')).toEqual([]);
+    expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
+      { pos: p(0, 2), cell: { kind: 'piece', type: 'rainbow' } },
+    ]);
   });
 });
 

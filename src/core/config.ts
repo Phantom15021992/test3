@@ -13,6 +13,14 @@ export const LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE: Readonly<Record<3 | 4 | 5, n
 };
 
 /** Множитель для ячейки 3 уровня, уничтоженной спецфишкой (не в совпадении) */
+// Награда за совпадение 3 уровня — спецфишка по размеру группы
+export const LEVEL3_PIECE_BY_MATCH_SIZE: Readonly<
+  Record<3 | 4 | 5, 'megaBomb' | 'manipulator' | 'rainbow'>
+> = {
+  3: 'megaBomb',
+  4: 'manipulator',
+  5: 'rainbow',
+};
 export const LEVEL3_HIT_MULTIPLIER = 15;
 
 // Размеры взрывов (сторона квадрата) и ширина полос
