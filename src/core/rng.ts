@@ -6,6 +6,8 @@ export interface Rng {
   next(): number;
   /** Целое в [0, maxExclusive) */
   int(maxExclusive: number): number;
+  /** Внутреннее состояние: createRng(getState()) продолжит ту же последовательность */
+  getState(): number;
 }
 
 export function createRng(seed: number): Rng {
@@ -22,5 +24,6 @@ export function createRng(seed: number): Rng {
   return {
     next,
     int: (maxExclusive) => Math.floor(next() * maxExclusive),
+    getState: () => state,
   };
 }

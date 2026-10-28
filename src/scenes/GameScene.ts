@@ -15,10 +15,12 @@ import {
   SWIPE_THRESHOLD,
 } from '../core/config';
 import { generateStartBoard } from '../core/generate';
+import { History } from '../core/history';
 import { areAdjacent, isValidSwap } from '../core/moves';
 import { resolveMove, type ChoiceOption, type Move } from '../core/resolve';
 import { createRng, type Rng } from '../core/rng';
 import { comboNeedsColor, isCombo } from '../core/specials';
+import { ArrowButton } from '../ui/ArrowButton';
 import { ChoiceDialog } from '../ui/ChoiceDialog';
 import { UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
 import { BoardView } from '../view/BoardView';
@@ -32,6 +34,13 @@ type Mode =
   | { type: 'comboColor'; from: Position; to: Position }
   | { type: 'manipulator'; at: Position; first: Position | null };
 
+/** Снимок партии для шага назад / вперёд */
+interface Snapshot {
+  board: Board;
+  score: number;
+  rngState: number;
+}
+
 export class GameScene extends Phaser.Scene {
   private board: Board = [];
   private rng!: Rng;
@@ -44,6 +53,9 @@ export class GameScene extends Phaser.Scene {
   private selected: Position | null = null;
   private pressed: { cell: Position; x: number; y: number } | null = null;
   private busy = false;
+  private history!: History<Snapshot>;
+  private undoButton!: ArrowButton;
+  private redoButton!: ArrowButton;
 
   constructor() {
     super('Game');
@@ -98,6 +110,14 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5);
     this.addScore(0);
 
+    const boardRight = originX + cellSize * DEMO_BOARD_COLS;
+    this.undoButton = new ArrowButton(this, originX + 36, originY - 60, 'left', () => this.undo());
+    this.redoButton = new ArrowButton(this, boardRight - 36, originY - 60, 'right', () =>
+      this.redo(),
+    );
+    this.history = new History(this.snapshot());
+    this.updateHistoryButtons();
+
     this.input.on('pointerdown', this.onPointerDown, this);
     this.input.on('pointermove', this.onPointerMove, this);
     this.input.on('pointerup', this.onPointerUp, this);
@@ -107,6 +127,43 @@ export class GameScene extends Phaser.Scene {
   debugSetBoard(board: Board): void {
     this.board = board;
     this.view.render(board);
+    this.history.push(this.snapshot());
+    this.updateHistoryButtons();
+  }
+
+  // ---------- Шаг назад / вперёд ----------
+
+  private snapshot(): Snapshot {
+    return { board: this.board, score: this.score, rngState: this.rng.getState() };
+  }
+
+  private undo(): void {
+    if (this.busy) return;
+    const state = this.history.undo();
+    if (state) this.restore(state);
+  }
+
+  private redo(): void {
+    if (this.busy) return;
+    const state = this.history.redo();
+    if (state) this.restore(state);
+  }
+
+  private restore(state: Snapshot): void {
+    this.board = state.board;
+    // ГСЧ тоже откатывается: повтор того же хода даст тот же результат
+    this.rng = createRng(state.rngState);
+    this.score = 0;
+    this.addScore(state.score);
+    this.setSelected(null);
+    this.setMode({ type: 'idle' });
+    this.view.render(this.board);
+    this.updateHistoryButtons();
+  }
+
+  private updateHistoryButtons(): void {
+    this.undoButton.setEnabled(!this.busy && this.history.canUndo);
+    this.redoButton.setEnabled(!this.busy && this.history.canRedo);
   }
 
   // ---------- Ввод ----------
@@ -219,6 +276,7 @@ export class GameScene extends Phaser.Scene {
   /** Проигрывает ход: логика отдаёт шаги, сцена их анимирует и отвечает на выборы */
   private async play(move: Move): Promise<void> {
     this.busy = true;
+    this.updateHistoryButtons();
     this.setSelected(null);
     const steps = resolveMove(this.board, move, { colorCount: DEMO_COLOR_COUNT, rng: this.rng });
 
@@ -251,6 +309,8 @@ export class GameScene extends Phaser.Scene {
 
     this.board = next.value.board;
     this.busy = false;
+    this.history.push(this.snapshot());
+    this.updateHistoryButtons();
   }
 
   // ---------- Состояние интерфейса ----------
