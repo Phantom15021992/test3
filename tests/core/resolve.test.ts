@@ -18,8 +18,8 @@ function expectSettled(board: ReturnType<typeof runMove>['board']) {
   expect(board.flat().includes(null)).toBe(false);
 }
 
-describe('resolveMove: совпадения 1 уровня', () => {
-  it('3 в ряд — просто очки', () => {
+describe('resolveMove: совпадения 1 уровня — сразу объединение во 2 уровень', () => {
+  it('3 в ряд — 1 ячейка 2 уровня на месте сдвинутой фишки, очки за все фишки', () => {
     const board = parseBoard(`
       R1 G1 R1 R1
       G1 B1 Y1 P1
@@ -28,122 +28,114 @@ describe('resolveMove: совпадения 1 уровня', () => {
     const [clear] = stepsOf(result.steps, 'clear');
     expect(sortCells(clear!.cells)).toEqual([p(0, 1), p(0, 2), p(0, 3)]);
     expect(clear!.points).toBe(30);
+    expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
+      { pos: p(0, 1), cell: { kind: 'tile', color: 0, level: 2 } },
+    ]);
     expect(stepsOf(result.steps, 'choice')).toEqual([]);
     expectSettled(result.board);
   });
 
-  it('4 в ряд — ракета вдоль линии на месте сдвинутой фишки', () => {
+  it('4 в ряд — 1 ячейка 2 уровня, без ракеты', () => {
     const board = parseBoard(`
       R1 G1 R1 R1 R1
       B1 Y1 P1 O1 B1
     `);
     const result = runMove(board, { type: 'swap', from: p(0, 0), to: p(0, 1) }, ctx());
-    const [transform] = stepsOf(result.steps, 'transform');
-    expect(transform!.placements).toEqual([
-      {
-        pos: p(0, 1),
-        cell: { kind: 'piece', type: 'rocket', direction: 'row' },
-      },
-    ]);
     expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(40);
+    expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
+      { pos: p(0, 1), cell: { kind: 'tile', color: 0, level: 2 } },
+    ]);
   });
 
-  it('квадрат 2×2 — манипулятор', () => {
+  it('квадрат 2×2 — как 4 фишки: 1 ячейка 2 уровня, без манипулятора', () => {
     const board = parseBoard(`
       R1 G1 R1
       R1 R1 B1
     `);
     const result = runMove(board, { type: 'swap', from: p(0, 2), to: p(0, 1) }, ctx());
+    expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(40);
     expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
-      { pos: p(0, 1), cell: { kind: 'piece', type: 'manipulator' } },
+      { pos: p(0, 1), cell: { kind: 'tile', color: 0, level: 2 } },
     ]);
   });
 
-  const lBoard = () =>
-    parseBoard(`
+  it('L/T из 5 фишек — 2 ячейки 2 уровня без выбора, очки за все фишки', () => {
+    const board = parseBoard(`
       R1 G1 B1
       R1 B1 G1
       G1 R1 R1
       R1 Y1 P1
     `);
-  const lMove = { type: 'swap', from: p(3, 0), to: p(2, 0) } as const;
-
-  it('L/T — выбор: бомба', () => {
-    const result = runMove(lBoard(), lMove, ctx(), ['bomb']);
-    const [choice] = stepsOf(result.steps, 'choice');
-    expect(choice!.options).toEqual(['bomb', 'merge']);
+    const result = runMove(board, { type: 'swap', from: p(3, 0), to: p(2, 0) }, ctx());
+    expect(stepsOf(result.steps, 'choice')).toEqual([]);
     expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(50);
-    expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
-      { pos: p(2, 0), cell: { kind: 'piece', type: 'bomb' } },
-    ]);
-  });
-
-  it('L/T — выбор: 2 ячейки 2 уровня без очков', () => {
-    const result = runMove(lBoard(), lMove, ctx(), ['merge']);
-    expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(0);
     expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
       { pos: p(2, 0), cell: { kind: 'tile', color: 0, level: 2 } },
       { pos: p(2, 1), cell: { kind: 'tile', color: 0, level: 2 } },
     ]);
   });
 
-  const line5 = () =>
-    parseBoard(`
-      R1 R1 G1 R1 R1
-      B1 Y1 R1 P1 O1
+  it('6 в ряд — тоже 2 ячейки 2 уровня', () => {
+    const board = parseBoard(`
+      R1 R1 G1 R1 R1 R1
+      B1 Y1 R1 P1 O1 B1
     `);
-  const line5Move = { type: 'swap', from: p(1, 2), to: p(0, 2) } as const;
-
-  it('5 в ряд — выбор: радуга', () => {
-    const result = runMove(line5(), line5Move, ctx(), ['rainbow']);
-    expect(stepsOf(result.steps, 'choice')[0]!.options).toEqual(['rainbow', 'merge']);
+    const result = runMove(board, { type: 'swap', from: p(1, 2), to: p(0, 2) }, ctx());
+    expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(60);
     expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
-      { pos: p(0, 2), cell: { kind: 'piece', type: 'rainbow' } },
-    ]);
-  });
-
-  it('5 в ряд — выбор: 2 ячейки 2 уровня', () => {
-    const result = runMove(line5(), line5Move, ctx(), ['merge']);
-    expect(stepsOf(result.steps, 'transform')[0]!.placements.map((pl) => pl.pos)).toEqual([
-      p(0, 2),
-      p(0, 3),
+      { pos: p(0, 2), cell: { kind: 'tile', color: 0, level: 2 } },
+      { pos: p(0, 3), cell: { kind: 'tile', color: 0, level: 2 } },
     ]);
   });
 });
 
 describe('resolveMove: ячейки 2–3 уровня', () => {
-  const level2 = () =>
-    parseBoard(`
+  const move = { type: 'swap', from: p(1, 2), to: p(0, 2) } as const;
+
+  it('2 уровень, 3 ячейки — сразу 1 ячейка 3 уровня и очки ×5', () => {
+    const board = parseBoard(`
       B2 B2 G1 Y1
       R1 P1 B2 O1
     `);
-  const move = { type: 'swap', from: p(1, 2), to: p(0, 2) } as const;
-
-  it('2 уровень — выбор: очки ×5', () => {
-    const result = runMove(level2(), move, ctx(), ['score']);
-    expect(stepsOf(result.steps, 'choice')[0]!.options).toEqual(['score', 'merge']);
+    const result = runMove(board, move, ctx());
+    expect(stepsOf(result.steps, 'choice')).toEqual([]);
     expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(150);
-    expect(stepsOf(result.steps, 'transform')).toEqual([]);
-  });
-
-  it('2 уровень — выбор: объединение в 3 уровень', () => {
-    const result = runMove(level2(), move, ctx(), ['merge']);
-    expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(0);
     expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
       { pos: p(0, 2), cell: { kind: 'tile', color: 2, level: 3 } },
     ]);
   });
 
-  it('3 уровень, 4 ячейки — ×20 и мега-бомба', () => {
+  it('2 уровень, 5 ячеек — 2 ячейки 3 уровня', () => {
+    const board = parseBoard(`
+      B2 B2 G1 B2 B2
+      R1 P1 B2 O1 Y1
+    `);
+    const result = runMove(board, move, ctx());
+    expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(250);
+    expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
+      { pos: p(0, 2), cell: { kind: 'tile', color: 2, level: 3 } },
+      { pos: p(0, 3), cell: { kind: 'tile', color: 2, level: 3 } },
+    ]);
+  });
+
+  it('3 уровень, 4 ячейки — только ×20, без мега-бомбы', () => {
     const board = parseBoard(`
       R3 R3 G1 R3
       B1 Y1 R3 P1
     `);
     const result = runMove(board, move, ctx());
     expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(800);
-    expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
-      { pos: p(0, 2), cell: { kind: 'piece', type: 'megaBomb' } },
-    ]);
+    expect(stepsOf(result.steps, 'transform')).toEqual([]);
+  });
+
+  it('3 уровень, 5 ячеек — только ×25, без радуги', () => {
+    const board = parseBoard(`
+      R3 R3 G1 R3 R3
+      B1 Y1 R3 P1 O1
+    `);
+    const result = runMove(board, move, ctx());
+    expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(1250);
+    expect(stepsOf(result.steps, 'transform')).toEqual([]);
   });
 });
 

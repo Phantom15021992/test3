@@ -34,6 +34,7 @@ import {
 //
 // Это генератор: он отдаёт шаги для анимации по одному. На шаге 'choice' он останавливается,
 // и вызывающий передаёт выбор игрока через next(option).
+// Сейчас совпадения выбора не требуют, но шаг оставлен — он понадобится, если выбор вернётся.
 
 export type Move =
   /** Обычный ход или комбо двух спецфишек. color — только для мега-бомбы + радуги */
@@ -155,14 +156,7 @@ export function* resolveMove(
       const points = new Map<string, number>();
 
       for (const group of groups) {
-        const spot = pickSpot(group, landing);
-        const options = choiceOptions(group);
-        let option: ChoiceOption | undefined;
-        if (options) {
-          const answer = yield { kind: 'choice', group, options };
-          option = answer && options.includes(answer) ? answer : options[0];
-        }
-        const outcome = groupOutcome(group, spot, option);
+        const outcome = groupOutcome(group, pickSpot(group, landing));
         removal.push(...group.cells);
         for (const pos of group.cells) points.set(posKey(pos), outcome.pointsPerCell);
         placements.push(...outcome.placements);
@@ -186,68 +180,31 @@ function hasEmpty(board: Board): boolean {
   return board.some((line) => line.includes(null));
 }
 
-/** Какой выбор нужен игроку для группы, или null — если результат однозначен */
-function choiceOptions(group: MatchGroup): readonly [ChoiceOption, ChoiceOption] | null {
-  if (group.level === 1) {
-    if (group.shape === 'lt') return ['bomb', 'merge'];
-    if (group.shape === 'line5') return ['rainbow', 'merge'];
-    return null;
-  }
-  return group.level === 2 ? ['score', 'merge'] : null;
-}
-
 interface GroupOutcome {
   pointsPerCell: number;
   placements: Placement[];
 }
 
-function groupOutcome(group: MatchGroup, spot: Position, option?: ChoiceOption): GroupOutcome {
-  const color = group.color;
-  const tile = (level: Tile['level']): Tile => ({ kind: 'tile', color, level });
-  const at = (cell: Cell): Placement[] => [{ pos: spot, cell }];
-  const merged = (level: Tile['level'], count: number): Placement[] => {
+// Любое совпадение 1–2 уровня сразу объединяется на уровень выше (3–4 клетки → 1 ячейка,
+// 5+ → 2), и все клетки группы приносят очки. Спецфишки из совпадений больше не создаются —
+// их активация и комбо остаются в коде на будущее.
+function groupOutcome(group: MatchGroup, spot: Position): GroupOutcome {
+  const merged = (level: Tile['level']): Placement[] => {
     const cells = [spot];
-    if (count === 2) cells.push(neighborInGroup(group, spot));
-    return cells.map((pos) => ({ pos, cell: tile(level) }));
+    if (group.cells.length >= 5) cells.push(neighborInGroup(group, spot));
+    return cells.map((pos) => ({ pos, cell: { kind: 'tile', color: group.color, level } }));
   };
 
-  if (group.level === 1) {
-    const base = BASE_POINTS_PER_TILE;
-    if (option === 'merge') return { pointsPerCell: 0, placements: merged(2, 2) };
-    switch (group.shape) {
-      case 'line3':
-        return { pointsPerCell: base, placements: [] };
-      case 'line4':
-        return {
-          pointsPerCell: base,
-          placements: at({ kind: 'piece', type: 'rocket', direction: lineDirection(group) }),
-        };
-      case 'square':
-        return { pointsPerCell: base, placements: at({ kind: 'piece', type: 'manipulator' }) };
-      case 'lt':
-        return { pointsPerCell: base, placements: at({ kind: 'piece', type: 'bomb' }) };
-      case 'line5':
-        return { pointsPerCell: base, placements: at({ kind: 'piece', type: 'rainbow' }) };
-    }
-  }
-
-  if (group.level === 2) {
-    if (option === 'merge')
-      return { pointsPerCell: 0, placements: merged(3, group.size === 5 ? 2 : 1) };
-    return { pointsPerCell: BASE_POINTS_PER_TILE * LEVEL2_SCORE_MULTIPLIER, placements: [] };
-  }
-
-  const pointsPerCell = BASE_POINTS_PER_TILE * LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE[group.size];
-  if (group.size === 4)
-    return { pointsPerCell, placements: at({ kind: 'piece', type: 'megaBomb' }) };
-  if (group.size === 5)
-    return { pointsPerCell, placements: at({ kind: 'piece', type: 'rainbow' }) };
-  return { pointsPerCell, placements: [] };
-}
-
-function lineDirection(group: MatchGroup): 'row' | 'col' {
-  const row = group.cells[0]!.row;
-  return group.cells.every((p) => p.row === row) ? 'row' : 'col';
+  if (group.level === 1) return { pointsPerCell: BASE_POINTS_PER_TILE, placements: merged(2) };
+  if (group.level === 2)
+    return {
+      pointsPerCell: BASE_POINTS_PER_TILE * LEVEL2_SCORE_MULTIPLIER,
+      placements: merged(3),
+    };
+  return {
+    pointsPerCell: BASE_POINTS_PER_TILE * LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE[group.size],
+    placements: [],
+  };
 }
 
 /**
