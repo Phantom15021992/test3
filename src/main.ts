@@ -3,7 +3,7 @@ import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
 
 // Портретная ориентация под телефон; на ПК масштабируется с сохранением пропорций.
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'app',
   backgroundColor: '#1b1f2e',
@@ -15,3 +15,8 @@ new Phaser.Game({
   },
   scene: [BootScene, GameScene],
 });
+
+// Phaser не всегда замечает изменение размера окна (смена размера окна, поворот телефона)
+// и оставляет поле в старом масштабе — пересчитываем сами при любом изменении контейнера.
+const container = document.getElementById('app');
+if (container) new ResizeObserver(() => game.scale.refresh()).observe(container);
