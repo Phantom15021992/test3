@@ -24,8 +24,8 @@ export const ROCKET_BOMB_WIDTH = 3;
 export const MEGA_BOMB_ROCKET_WIDTH = 5;
 
 // Временное поле, пока нет уровней
-export const DEMO_BOARD_ROWS = 8;
-export const DEMO_BOARD_COLS = 8;
+export const DEMO_BOARD_ROWS = 15;
+export const DEMO_BOARD_COLS = 15;
 export const DEMO_COLOR_COUNT = 6;
 
 // Анимации, мс
