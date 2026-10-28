@@ -21,6 +21,24 @@ export type Cell = Tile | Hole | null;
 
 export type Board = Cell[][];
 
+export interface Position {
+  row: number;
+  col: number;
+}
+
+export function getCell(board: Board, pos: Position): Cell | undefined {
+  return board[pos.row]?.[pos.col];
+}
+
+export function isTile(cell: Cell | undefined): cell is Tile {
+  return cell != null && cell.kind === 'tile';
+}
+
+/** Совпадают ли фишки: одинаковый цвет и одинаковый уровень */
+export function sameKind(a: Cell | undefined, b: Cell | undefined): boolean {
+  return isTile(a) && isTile(b) && a.color === b.color && a.level === b.level;
+}
+
 export function createEmptyBoard(rows: number, cols: number): Board {
   return Array.from({ length: rows }, () => Array.from({ length: cols }, (): Cell => null));
 }
