@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "simulate": "vite-node scripts/simulate.ts"
   },
   "dependencies": {
     "phaser": "^3.90.0"

@@ -29,6 +29,7 @@ npm run build      # сборка в dist/
 npm run test       # Vitest
 npm run lint
 npm run typecheck  # tsc --noEmit
+npm run simulate   # бот играет партии и считает очки по режимам: [-- <партий> <ходов>]
 ```
 
 Задача считается выполненной, только когда проходят `test`, `lint` и `typecheck`.
@@ -268,6 +269,7 @@ src/
   storage/     # прогресс в localStorage
   main.ts
 tests/         # зеркалят src/core; tests/helpers/ — parseBoard и прочие утилиты
+scripts/       # служебные скрипты (simulate.ts — симуляция партий для баланса)
 public/assets/
 ```
 
