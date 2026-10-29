@@ -8,12 +8,12 @@ import {
   type Cell,
   type ColorId,
   type Position,
-  type Tile,
 } from './board';
 import {
   BASE_POINTS_PER_TILE,
   LEVEL2_SCORE_MULTIPLIER,
-  LEVEL3_PIECE_BY_MATCH_SIZE,
+  LEVEL2_BIG_MATCH_POINTS,
+  MATCH_REWARDS,
   LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE,
   MEGA_BOMB_SIZE,
 } from './config';
@@ -159,7 +159,7 @@ export function* resolveMove(
       for (const group of groups) {
         const outcome = groupOutcome(group, pickSpot(group, landing));
         removal.push(...group.cells);
-        for (const pos of group.cells) points.set(posKey(pos), outcome.pointsPerCell);
+        spreadPoints(group.cells, outcome.points, points);
         placements.push(...outcome.placements);
       }
 
@@ -182,32 +182,41 @@ function hasEmpty(board: Board): boolean {
 }
 
 interface GroupOutcome {
-  pointsPerCell: number;
+  /** Очки за всю группу */
+  points: number;
   placements: Placement[];
 }
 
-// Любое совпадение 1–2 уровня сразу объединяется на уровень выше (3–4 клетки → 1 ячейка,
-// 5+ → 2), и все клетки группы приносят очки. Совпадение 3 уровня дальше не объединяется,
-// а даёт спецфишку: 3 → мега-бомба, 4 → манипулятор, 5+ → радуга.
+// Совпадение сразу превращается в награду из MATCH_REWARDS (объединённые ячейки или спецфишки),
+// и вся группа приносит очки. Вторая награда, если их две, встаёт в соседнюю клетку группы.
 function groupOutcome(group: MatchGroup, spot: Position): GroupOutcome {
-  const merged = (level: Tile['level']): Placement[] => {
-    const cells = [spot];
-    if (group.cells.length >= 5) cells.push(neighborInGroup(group, spot));
-    return cells.map((pos) => ({ pos, cell: { kind: 'tile', color: group.color, level } }));
-  };
+  const size = Math.min(group.cells.length, 5) as 3 | 4 | 5;
+  const reward = MATCH_REWARDS[group.level][size];
+  const cells = reward.count === 2 ? [spot, neighborInGroup(group, spot)] : [spot];
+  const cell: Cell =
+    reward.kind === 'tiles'
+      ? { kind: 'tile', color: group.color, level: reward.level }
+      : { kind: 'piece', type: reward.type };
+  return { points: groupPoints(group, size), placements: cells.map((pos) => ({ pos, cell })) };
+}
 
-  if (group.level === 1) return { pointsPerCell: BASE_POINTS_PER_TILE, placements: merged(2) };
-  if (group.level === 2)
-    return {
-      pointsPerCell: BASE_POINTS_PER_TILE * LEVEL2_SCORE_MULTIPLIER,
-      placements: merged(3),
-    };
-  return {
-    pointsPerCell: BASE_POINTS_PER_TILE * LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE[group.size],
-    placements: [
-      { pos: spot, cell: { kind: 'piece', type: LEVEL3_PIECE_BY_MATCH_SIZE[group.size] } },
-    ],
-  };
+function groupPoints(group: MatchGroup, size: 3 | 4 | 5): number {
+  const cells = group.cells.length;
+  if (group.level === 1) return cells * BASE_POINTS_PER_TILE;
+  if (group.level === 2) {
+    return size === 5
+      ? LEVEL2_BIG_MATCH_POINTS
+      : cells * BASE_POINTS_PER_TILE * LEVEL2_SCORE_MULTIPLIER;
+  }
+  return cells * BASE_POINTS_PER_TILE * LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE[size];
+}
+
+/** Делит очки группы по клеткам (остаток — первой клетке), чтобы сумма совпала точно */
+function spreadPoints(cells: Position[], total: number, into: Map<string, number>): void {
+  const share = Math.floor(total / cells.length);
+  cells.forEach((pos, i) => {
+    into.set(posKey(pos), share + (i === 0 ? total - share * cells.length : 0));
+  });
 }
 
 /**

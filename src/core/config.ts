@@ -12,15 +12,35 @@ export const LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE: Readonly<Record<3 | 4 | 5, n
   5: 25,
 };
 
-/** Множитель для ячейки 3 уровня, уничтоженной спецфишкой (не в совпадении) */
-// Награда за совпадение 3 уровня — спецфишка по размеру группы
-export const LEVEL3_PIECE_BY_MATCH_SIZE: Readonly<
-  Record<3 | 4 | 5, 'megaBomb' | 'manipulator' | 'rainbow'>
-> = {
-  3: 'megaBomb',
-  4: 'manipulator',
-  5: 'rainbow',
+/** Очки за всю группу из 5+ ячеек 2 уровня — как за 3 ячейки 3 уровня (3 × 150) */
+export const LEVEL2_BIG_MATCH_POINTS =
+  3 * BASE_POINTS_PER_TILE * LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE[3];
+
+/** Что появляется на месте совпадения: объединённые ячейки или спецфишки */
+export type MatchReward =
+  | { kind: 'tiles'; level: 2 | 3; count: 1 | 2 }
+  | { kind: 'pieces'; type: 'megaBomb' | 'rainbow'; count: 1 | 2 };
+
+// Награда по уровню группы и её размеру (6+ клеток считаются как 5)
+export const MATCH_REWARDS: Readonly<Record<1 | 2 | 3, Record<3 | 4 | 5, MatchReward>>> = {
+  1: {
+    3: { kind: 'tiles', level: 2, count: 1 },
+    4: { kind: 'tiles', level: 2, count: 2 },
+    5: { kind: 'tiles', level: 3, count: 1 },
+  },
+  2: {
+    3: { kind: 'tiles', level: 3, count: 1 },
+    4: { kind: 'tiles', level: 3, count: 2 },
+    5: { kind: 'pieces', type: 'megaBomb', count: 1 },
+  },
+  3: {
+    3: { kind: 'pieces', type: 'megaBomb', count: 1 },
+    4: { kind: 'pieces', type: 'rainbow', count: 1 },
+    5: { kind: 'pieces', type: 'rainbow', count: 2 },
+  },
 };
+
+/** Множитель для ячейки 3 уровня, уничтоженной спецфишкой (не в совпадении) */
 export const LEVEL3_HIT_MULTIPLIER = 15;
 
 // Размеры взрывов (сторона квадрата) и ширина полос

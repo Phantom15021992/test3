@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Position } from '../../src/core/board';
 import { findMatches } from '../../src/core/match';
+import { isValidSwap } from '../../src/core/moves';
 import { runMove, type ResolveStep } from '../../src/core/resolve';
 import { createRng } from '../../src/core/rng';
 import { parseBoard } from '../helpers/parseBoard';
@@ -18,7 +19,7 @@ function expectSettled(board: ReturnType<typeof runMove>['board']) {
   expect(board.flat().includes(null)).toBe(false);
 }
 
-describe('resolveMove: совпадения 1 уровня — сразу объединение во 2 уровень', () => {
+describe('resolveMove: совпадения 1 уровня — сразу объединение', () => {
   it('3 в ряд — 1 ячейка 2 уровня на месте сдвинутой фишки, очки за все фишки', () => {
     const board = parseBoard(`
       R1 G1 R1 R1
@@ -35,7 +36,7 @@ describe('resolveMove: совпадения 1 уровня — сразу объ
     expectSettled(result.board);
   });
 
-  it('4 в ряд — 1 ячейка 2 уровня, без ракеты', () => {
+  it('4 в ряд — 2 ячейки 2 уровня', () => {
     const board = parseBoard(`
       R1 G1 R1 R1 R1
       B1 Y1 P1 O1 B1
@@ -44,10 +45,11 @@ describe('resolveMove: совпадения 1 уровня — сразу объ
     expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(40);
     expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
       { pos: p(0, 1), cell: { kind: 'tile', color: 0, level: 2 } },
+      { pos: p(0, 2), cell: { kind: 'tile', color: 0, level: 2 } },
     ]);
   });
 
-  it('квадрат 2×2 — как 4 фишки: 1 ячейка 2 уровня, без манипулятора', () => {
+  it('квадрат 2×2 — как 4 фишки: 2 ячейки 2 уровня', () => {
     const board = parseBoard(`
       R1 G1 R1
       R1 R1 B1
@@ -56,10 +58,11 @@ describe('resolveMove: совпадения 1 уровня — сразу объ
     expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(40);
     expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
       { pos: p(0, 1), cell: { kind: 'tile', color: 0, level: 2 } },
+      { pos: p(0, 0), cell: { kind: 'tile', color: 0, level: 2 } },
     ]);
   });
 
-  it('L/T из 5 фишек — 2 ячейки 2 уровня без выбора, очки за все фишки', () => {
+  it('L/T из 5 фишек — сразу 1 ячейка 3 уровня, очки за все фишки', () => {
     const board = parseBoard(`
       R1 G1 B1
       R1 B1 G1
@@ -70,12 +73,11 @@ describe('resolveMove: совпадения 1 уровня — сразу объ
     expect(stepsOf(result.steps, 'choice')).toEqual([]);
     expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(50);
     expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
-      { pos: p(2, 0), cell: { kind: 'tile', color: 0, level: 2 } },
-      { pos: p(2, 1), cell: { kind: 'tile', color: 0, level: 2 } },
+      { pos: p(2, 0), cell: { kind: 'tile', color: 0, level: 3 } },
     ]);
   });
 
-  it('6 в ряд — тоже 2 ячейки 2 уровня', () => {
+  it('6 в ряд — как 5: 1 ячейка 3 уровня', () => {
     const board = parseBoard(`
       R1 R1 G1 R1 R1 R1
       B1 Y1 R1 P1 O1 B1
@@ -83,8 +85,7 @@ describe('resolveMove: совпадения 1 уровня — сразу объ
     const result = runMove(board, { type: 'swap', from: p(1, 2), to: p(0, 2) }, ctx());
     expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(60);
     expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
-      { pos: p(0, 2), cell: { kind: 'tile', color: 0, level: 2 } },
-      { pos: p(0, 3), cell: { kind: 'tile', color: 0, level: 2 } },
+      { pos: p(0, 2), cell: { kind: 'tile', color: 0, level: 3 } },
     ]);
   });
 });
@@ -92,7 +93,7 @@ describe('resolveMove: совпадения 1 уровня — сразу объ
 describe('resolveMove: ячейки 2–3 уровня', () => {
   const move = { type: 'swap', from: p(1, 2), to: p(0, 2) } as const;
 
-  it('2 уровень, 3 ячейки — сразу 1 ячейка 3 уровня и очки ×5', () => {
+  it('2 уровень, 3 ячейки — 1 ячейка 3 уровня и очки ×5', () => {
     const board = parseBoard(`
       B2 B2 G1 Y1
       R1 P1 B2 O1
@@ -105,16 +106,40 @@ describe('resolveMove: ячейки 2–3 уровня', () => {
     ]);
   });
 
-  it('2 уровень, 5 ячеек — 2 ячейки 3 уровня', () => {
+  it('2 уровень, 4 ячейки — 2 ячейки 3 уровня', () => {
+    const board = parseBoard(`
+      B2 B2 G1 B2
+      R1 P1 B2 O1
+    `);
+    const result = runMove(board, move, ctx());
+    expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(200);
+    expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
+      { pos: p(0, 2), cell: { kind: 'tile', color: 2, level: 3 } },
+      { pos: p(0, 3), cell: { kind: 'tile', color: 2, level: 3 } },
+    ]);
+  });
+
+  it('2 уровень, 5 ячеек — 450 очков (как за 3 ячейки 3 уровня) и мега-бомба', () => {
     const board = parseBoard(`
       B2 B2 G1 B2 B2
       R1 P1 B2 O1 Y1
     `);
     const result = runMove(board, move, ctx());
-    expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(250);
+    expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(450);
     expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
-      { pos: p(0, 2), cell: { kind: 'tile', color: 2, level: 3 } },
-      { pos: p(0, 3), cell: { kind: 'tile', color: 2, level: 3 } },
+      { pos: p(0, 2), cell: { kind: 'piece', type: 'megaBomb' } },
+    ]);
+  });
+
+  it('2 уровень, 6 ячеек — как 5: тоже 450 очков и мега-бомба', () => {
+    const board = parseBoard(`
+      B2 B2 G1 B2 B2 B2
+      R1 P1 B2 O1 Y1 R1
+    `);
+    const result = runMove(board, move, ctx());
+    expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(450);
+    expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
+      { pos: p(0, 2), cell: { kind: 'piece', type: 'megaBomb' } },
     ]);
   });
 
@@ -130,7 +155,7 @@ describe('resolveMove: ячейки 2–3 уровня', () => {
     ]);
   });
 
-  it('3 уровень, 4 ячейки — ×20 и манипулятор', () => {
+  it('3 уровень, 4 ячейки — ×20 и радуга', () => {
     const board = parseBoard(`
       R3 R3 G1 R3
       B1 Y1 R3 P1
@@ -138,11 +163,11 @@ describe('resolveMove: ячейки 2–3 уровня', () => {
     const result = runMove(board, move, ctx());
     expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(800);
     expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
-      { pos: p(0, 2), cell: { kind: 'piece', type: 'manipulator' } },
+      { pos: p(0, 2), cell: { kind: 'piece', type: 'rainbow' } },
     ]);
   });
 
-  it('3 уровень, 5 ячеек — ×25 и радуга', () => {
+  it('3 уровень, 5 ячеек — ×25 и 2 радуги рядом, которые можно поменять между собой', () => {
     const board = parseBoard(`
       R3 R3 G1 R3 R3
       B1 Y1 R3 P1 O1
@@ -151,7 +176,10 @@ describe('resolveMove: ячейки 2–3 уровня', () => {
     expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(1250);
     expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
       { pos: p(0, 2), cell: { kind: 'piece', type: 'rainbow' } },
+      { pos: p(0, 3), cell: { kind: 'piece', type: 'rainbow' } },
     ]);
+    // Радуги стоят рядом, а их обмен — комбо «очистка поля»
+    expect(isValidSwap(result.board, p(0, 2), p(0, 3))).toBe(true);
   });
 });
 
