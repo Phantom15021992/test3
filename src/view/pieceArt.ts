@@ -7,9 +7,14 @@ import {
   MEGA_BOMB_COLOR,
   MEGA_BOMB_RING_COLOR,
   SPECIAL_BODY_COLOR,
-  SPECIAL_MARK_COLOR,
   TILE_COLORS,
 } from './palette';
+
+/** Картинки спецфишек: ключ текстуры и путь к файлу (грузятся в BootScene) */
+export const PIECE_TEXTURES = { rocket: 'piece-rocket' } as const;
+export const PIECE_IMAGE_FILES: readonly { key: string; path: string }[] = [
+  { key: PIECE_TEXTURES.rocket, path: 'assets/pieces/rocket.png' },
+];
 
 /**
  * Рисует спецфишку в g с центром в (0, 0). Возвращает дополнительные объекты (подписи),
@@ -25,22 +30,12 @@ export function drawPiece(
 ): Phaser.GameObjects.GameObject[] {
   switch (piece.type) {
     case 'rocket': {
-      g.fillStyle(SPECIAL_BODY_COLOR);
-      g.fillCircle(0, 0, radius);
-      // Полоса с наконечниками вдоль направления удара
-      const len = radius * 0.55;
-      const head = radius * 0.32;
-      g.fillStyle(SPECIAL_MARK_COLOR);
-      if (piece.direction === 'row') {
-        g.fillRect(-len, -4, len * 2, 8);
-        g.fillTriangle(len + head, 0, len, -head, len, head);
-        g.fillTriangle(-len - head, 0, -len, -head, -len, head);
-      } else {
-        g.fillRect(-4, -len, 8, len * 2);
-        g.fillTriangle(0, len + head, -head, len, head, len);
-        g.fillTriangle(0, -len - head, -head, -len, head, -len);
-      }
-      return [];
+      // Картинка ракеты стоит вертикально — для удара по строке поворачиваем её набок
+      const size = radius * 2.3;
+      const image = scene.add.image(0, 0, PIECE_TEXTURES.rocket);
+      image.setScale(size / image.height);
+      if (piece.direction === 'row') image.setAngle(90);
+      return [image];
     }
     case 'bomb': {
       g.fillStyle(BOMB_CORE_COLOR);

@@ -1,9 +1,14 @@
 import Phaser from 'phaser';
+import { PIECE_IMAGE_FILES } from '../view/pieceArt';
 
-// Загрузка ассетов. Пока ассетов нет — сразу переходим к игре.
+// Загрузка картинок, затем — меню
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('Boot');
+  }
+
+  preload(): void {
+    for (const { key, path } of PIECE_IMAGE_FILES) this.load.image(key, path);
   }
 
   create(): void {
