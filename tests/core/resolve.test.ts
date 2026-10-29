@@ -106,7 +106,7 @@ describe('resolveMove: ячейки 2–3 уровня', () => {
     ]);
   });
 
-  it('2 уровень, 4 ячейки — 2 ячейки 3 уровня', () => {
+  it('2 уровень, линия из 4 — 2 ячейки 3 уровня и ракета вдоль линии', () => {
     const board = parseBoard(`
       B2 B2 G1 B2
       R1 P1 B2 O1
@@ -116,6 +116,22 @@ describe('resolveMove: ячейки 2–3 уровня', () => {
     expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
       { pos: p(0, 2), cell: { kind: 'tile', color: 2, level: 3 } },
       { pos: p(0, 3), cell: { kind: 'tile', color: 2, level: 3 } },
+      { pos: p(0, 1), cell: { kind: 'piece', type: 'rocket', direction: 'row' } },
+    ]);
+  });
+
+  it('2 уровень, вертикальная линия из 4 — ракета по столбцу', () => {
+    const board = parseBoard(`
+      B2 R1
+      B2 G1
+      R1 B2
+      B2 Y1
+    `);
+    const result = runMove(board, { type: 'swap', from: p(2, 1), to: p(2, 0) }, ctx());
+    expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
+      { pos: p(2, 0), cell: { kind: 'tile', color: 2, level: 3 } },
+      { pos: p(3, 0), cell: { kind: 'tile', color: 2, level: 3 } },
+      { pos: p(1, 0), cell: { kind: 'piece', type: 'rocket', direction: 'col' } },
     ]);
   });
 

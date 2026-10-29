@@ -201,12 +201,19 @@ interface GroupOutcome {
 function groupOutcome(group: MatchGroup, spot: Position): GroupOutcome {
   const size = Math.min(group.cells.length, 5) as 3 | 4 | 5;
   const reward = MATCH_REWARDS[group.level][size];
-  const cells = reward.count === 2 ? [spot, neighborInGroup(group, spot)] : [spot];
+  const cells = reward.count === 2 ? [spot, neighborInGroup(group, spot, [spot])] : [spot];
   const cell: Cell =
     reward.kind === 'tiles'
       ? { kind: 'tile', color: group.color, level: reward.level }
       : { kind: 'piece', type: reward.type };
-  return { points: groupPoints(group, size), placements: cells.map((pos) => ({ pos, cell })) };
+  const placements: Placement[] = cells.map((pos) => ({ pos, cell }));
+
+  const direction = lineDirection(group);
+  if (reward.kind === 'tiles' && reward.lineRocket && direction) {
+    const pos = neighborInGroup(group, spot, cells);
+    placements.push({ pos, cell: { kind: 'piece', type: 'rocket', direction } });
+  }
+  return { points: groupPoints(group, size), placements };
 }
 
 function groupPoints(group: MatchGroup, size: 3 | 4 | 5): number {
@@ -280,8 +287,18 @@ export function pickSpot(group: MatchGroup, landing: Position[]): Position {
   return crossing ?? sorted[0]!;
 }
 
-/** Соседняя со spot клетка группы — для второй объединённой ячейки */
-function neighborInGroup(group: MatchGroup, spot: Position): Position {
+/** Направление группы, если все её клетки на одной строке или в одном столбце; иначе null */
+function lineDirection(group: MatchGroup): 'row' | 'col' | null {
+  const [first] = group.cells;
+  if (group.cells.every((p) => p.row === first!.row)) return 'row';
+  if (group.cells.every((p) => p.col === first!.col)) return 'col';
+  return null;
+}
+
+/** Свободная (не из taken) клетка группы рядом со spot — для второй награды */
+function neighborInGroup(group: MatchGroup, spot: Position, taken: Position[]): Position {
+  const free = (pos: Position) =>
+    group.cells.some((c) => samePos(c, pos)) && !taken.some((t) => samePos(t, pos));
   const offsets = [
     [0, 1],
     [0, -1],
@@ -290,9 +307,9 @@ function neighborInGroup(group: MatchGroup, spot: Position): Position {
   ] as const;
   for (const [dr, dc] of offsets) {
     const pos = { row: spot.row + dr, col: spot.col + dc };
-    if (group.cells.some((c) => samePos(c, pos))) return pos;
+    if (free(pos)) return pos;
   }
-  return group.cells.find((c) => !samePos(c, spot))!;
+  return group.cells.find(free)!;
 }
 
 /** Прогоняет ход до конца, отвечая на выборы по порядку (для тестов и автоигры) */

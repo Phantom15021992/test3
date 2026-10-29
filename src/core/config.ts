@@ -18,7 +18,13 @@ export const LEVEL2_BIG_MATCH_POINTS =
 
 /** Что появляется на месте совпадения: объединённые ячейки или спецфишки */
 export type MatchReward =
-  | { kind: 'tiles'; level: 2 | 3; count: 1 | 2 }
+  | {
+      kind: 'tiles';
+      level: 2 | 3;
+      count: 1 | 2;
+      /** Если группа — прямая линия, вдобавок ракета вдоль неё (квадрат её не даёт) */
+      lineRocket?: true;
+    }
   | { kind: 'pieces'; type: 'megaBomb' | 'rainbow'; count: 1 | 2 };
 
 // Награда по уровню группы и её размеру (6+ клеток считаются как 5)
@@ -30,7 +36,7 @@ export const MATCH_REWARDS: Readonly<Record<1 | 2 | 3, Record<3 | 4 | 5, MatchRe
   },
   2: {
     3: { kind: 'tiles', level: 3, count: 1 },
-    4: { kind: 'tiles', level: 3, count: 2 },
+    4: { kind: 'tiles', level: 3, count: 2, lineRocket: true },
     5: { kind: 'pieces', type: 'megaBomb', count: 1 },
   },
   3: {
