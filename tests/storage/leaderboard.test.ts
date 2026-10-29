@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PLAYER_NAME,
   insertEntry,
+  loadLeaderboard,
   normalizeName,
+  saveLeaderboard,
   type LeaderboardEntry,
 } from '../../src/storage/leaderboard';
 
@@ -38,5 +40,12 @@ describe('таблица лидеров', () => {
   it('имя обрезается до 16 символов, пустое — «Игрок»', () => {
     expect(normalizeName('  Очень-очень длинное имя  ')).toBe('Очень-очень длин');
     expect(normalizeName('   ')).toBe(DEFAULT_PLAYER_NAME);
+  });
+});
+
+describe('хранилище таблицы лидеров', () => {
+  it('без localStorage (как в тестах под Node) таблица просто пустая, без ошибок', () => {
+    expect(loadLeaderboard('medium')).toEqual([]);
+    expect(() => saveLeaderboard('medium', [])).not.toThrow();
   });
 });

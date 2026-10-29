@@ -74,7 +74,20 @@ export const PLAYER_NAME_MAX_LENGTH = 16;
 // Временное поле, пока нет уровней
 export const DEMO_BOARD_ROWS = 10;
 export const DEMO_BOARD_COLS = 10;
+/** Число цветов по умолчанию — для симуляции (как на «среднем») */
 export const DEMO_COLOR_COUNT = 5;
+
+// Уровни сложности: выбираются в меню, у каждого своя таблица лидеров
+export const DIFFICULTIES = [
+  { id: 'kids', name: 'Детский', colors: 3 },
+  { id: 'easy', name: 'Лёгкий', colors: 4 },
+  { id: 'medium', name: 'Средний', colors: 5 },
+  { id: 'hard', name: 'Сложный', colors: 6 },
+  { id: 'hell', name: 'АД', colors: 7 },
+] as const;
+
+export type Difficulty = (typeof DIFFICULTIES)[number];
+export type DifficultyId = Difficulty['id'];
 
 // Анимации, мс
 export const SWAP_DURATION_MS = 150;

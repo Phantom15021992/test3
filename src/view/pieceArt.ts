@@ -20,6 +20,8 @@ export function drawPiece(
   g: Phaser.GameObjects.Graphics,
   piece: Piece,
   radius: number,
+  /** Сколько цветов в игре — столько секторов у радуги */
+  colorCount = TILE_COLORS.length,
 ): Phaser.GameObjects.GameObject[] {
   switch (piece.type) {
     case 'rocket': {
@@ -53,8 +55,9 @@ export function drawPiece(
       return [];
     }
     case 'rainbow': {
-      const step = (Math.PI * 2) / TILE_COLORS.length;
-      TILE_COLORS.forEach((color, i) => {
+      const colors = TILE_COLORS.slice(0, colorCount);
+      const step = (Math.PI * 2) / colors.length;
+      colors.forEach((color, i) => {
         g.fillStyle(color);
         g.slice(0, 0, radius, i * step, (i + 1) * step);
         g.fillPath();

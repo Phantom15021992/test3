@@ -61,6 +61,7 @@ export class BoardView {
     private readonly originX: number,
     private readonly originY: number,
     readonly cellSize: number,
+    private readonly colorCount: number,
   ) {
     this.background = scene.add.graphics();
     this.selection = scene.add.graphics().setDepth(1);
@@ -201,7 +202,7 @@ export class BoardView {
     children.push(
       ...(cell.kind === 'tile'
         ? this.drawTile(body, cell)
-        : drawPiece(this.scene, body, cell, this.cellSize * 0.4)),
+        : drawPiece(this.scene, body, cell, this.cellSize * 0.4, this.colorCount)),
     );
     return this.scene.add.container(x, y, children).setMask(this.mask);
   }

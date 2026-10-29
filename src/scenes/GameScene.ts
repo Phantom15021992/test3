@@ -12,9 +12,11 @@ import {
 import {
   DEMO_BOARD_COLS,
   DEMO_BOARD_ROWS,
-  DEMO_COLOR_COUNT,
+  DIFFICULTIES,
   MOVE_LIMIT,
   SWIPE_THRESHOLD,
+  type Difficulty,
+  type DifficultyId,
 } from '../core/config';
 import { generateStartBoard } from '../core/generate';
 import { buyBonus, placeBonus, type BonusType } from '../core/bonus';
@@ -41,6 +43,7 @@ type Mode =
 
 export class GameScene extends Phaser.Scene {
   private board: Board = [];
+  private difficulty!: Difficulty;
   private rng!: Rng;
   private view!: BoardView;
   private dialog!: ChoiceDialog;
@@ -58,6 +61,11 @@ export class GameScene extends Phaser.Scene {
 
   constructor() {
     super('Game');
+  }
+
+  /** Сложность приходит из меню; при «Играть снова» — та же */
+  init(data: { difficulty?: DifficultyId }): void {
+    this.difficulty = DIFFICULTIES.find((d) => d.id === data.difficulty) ?? DIFFICULTIES[2];
   }
 
   create(): void {
@@ -79,7 +87,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.board = generateStartBoard(
       createEmptyBoard(DEMO_BOARD_ROWS, DEMO_BOARD_COLS),
-      DEMO_COLOR_COUNT,
+      this.difficulty.colors,
       this.rng,
     );
 
@@ -87,13 +95,13 @@ export class GameScene extends Phaser.Scene {
     const originX = (this.scale.width - cellSize * DEMO_BOARD_COLS) / 2;
     const originY = (this.scale.height - cellSize * DEMO_BOARD_ROWS) / 2;
     const boardBottom = originY + cellSize * DEMO_BOARD_ROWS;
-    this.view = new BoardView(this, originX, originY, cellSize);
+    this.view = new BoardView(this, originX, originY, cellSize, this.difficulty.colors);
     this.view.render(this.board);
     this.dialog = new ChoiceDialog(this, boardBottom + 30);
 
     const centerX = this.scale.width / 2;
     this.add
-      .text(centerX, originY - 275, 'Три в ряд', {
+      .text(centerX, originY - 275, `Три в ряд · ${this.difficulty.name}`, {
         fontFamily: 'sans-serif',
         fontSize: '44px',
         color: UI_TEXT_COLOR,
@@ -111,8 +119,13 @@ export class GameScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     const boardRight = originX + cellSize * DEMO_BOARD_COLS;
-    this.bonusShop = new BonusShop(this, originX, boardRight, originY - 115, (type) =>
-      this.takeBonus(type),
+    this.bonusShop = new BonusShop(
+      this,
+      originX,
+      boardRight,
+      originY - 115,
+      this.difficulty.colors,
+      (type) => this.takeBonus(type),
     );
     this.addScore(0);
     this.updateMoves();
@@ -254,7 +267,10 @@ export class GameScene extends Phaser.Scene {
 
   /** Логика отдаёт шаги хода, сцена их анимирует и отвечает на выборы */
   private async animate(move: Move): Promise<void> {
-    const steps = resolveMove(this.board, move, { colorCount: DEMO_COLOR_COUNT, rng: this.rng });
+    const steps = resolveMove(this.board, move, {
+      colorCount: this.difficulty.colors,
+      rng: this.rng,
+    });
     let next = steps.next();
     while (!next.done) {
       const step = next.value;
@@ -295,14 +311,17 @@ export class GameScene extends Phaser.Scene {
       await this.animate({ type: 'finale' });
     }
     this.hintText.setText('');
-    new GameOverDialog(this).show(this.score, () => this.scene.restart());
+    new GameOverDialog(this).show(this.score, this.difficulty, {
+      onRestart: () => this.scene.restart({ difficulty: this.difficulty.id }),
+      onMenu: () => this.scene.start('Menu'),
+    });
   }
 
   /** Если ходов обычными фишками не осталось — перемешать поле */
   private async ensureMoves(): Promise<void> {
     if (hasTileMove(this.board)) return;
     this.hintText.setText('Ходов нет — перемешиваем поле');
-    this.board = shuffleBoard(this.board, DEMO_COLOR_COUNT, this.rng);
+    this.board = shuffleBoard(this.board, this.difficulty.colors, this.rng);
     await this.view.shuffle(this.board);
     this.hintText.setText(hintFor(this.mode));
   }

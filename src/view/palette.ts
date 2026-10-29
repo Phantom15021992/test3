@@ -5,6 +5,8 @@ export const TILE_COLORS: readonly number[] = [
   0x3498db, // синий
   0x9b59b6, // фиолетовый
   0xf1c40f, // жёлтый
+  0xe67e22, // оранжевый (с «сложного»)
+  0xff6fb5, // розовый (только «АД»)
 ];
 
 export const BOARD_CELL_DARK = 0x262b40;

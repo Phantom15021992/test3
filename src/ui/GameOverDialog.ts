@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PLAYER_NAME_MAX_LENGTH } from '../core/config';
+import { PLAYER_NAME_MAX_LENGTH, type Difficulty } from '../core/config';
 import {
   insertEntry,
   loadLastName,
@@ -18,8 +18,8 @@ import {
 } from '../view/palette';
 
 const PANEL_WIDTH = 620;
-const PANEL_HEIGHT = 900;
-const ROW_HEIGHT = 50;
+const PANEL_HEIGHT = 960;
+const ROW_HEIGHT = 46;
 const OVERLAY_ALPHA = 0.75;
 const DEPTH = 20;
 
@@ -34,7 +34,15 @@ const textStyle = (
 
 const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
 
-// Окно конца партии: сначала ввод имени, затем таблица лидеров и «Играть снова».
+export interface GameOverActions {
+  /** Новая партия на той же сложности */
+  onRestart: () => void;
+  /** Вернуться в меню выбора сложности */
+  onMenu: () => void;
+}
+
+// Окно конца партии: сначала ввод имени, затем таблица лидеров этой сложности
+// и кнопки «Играть снова» / «Меню».
 // Поле имени — настоящий <input> (DOM-элемент Phaser), чтобы на телефоне открывалась клавиатура.
 export class GameOverDialog {
   private readonly objects: Phaser.GameObjects.GameObject[] = [];
@@ -46,7 +54,7 @@ export class GameOverDialog {
     this.top = (scene.scale.height - PANEL_HEIGHT) / 2;
   }
 
-  show(score: number, onRestart: () => void): void {
+  show(score: number, difficulty: Difficulty, actions: GameOverActions): void {
     const { width, height } = this.scene.scale;
     // Затемнение перехватывает нажатия, чтобы поле под окном не реагировало
     this.add(
@@ -61,11 +69,12 @@ export class GameOverDialog {
     this.add(panel);
 
     this.add(this.text(this.top + 70, 'Игра окончена', 48));
-    this.add(this.text(this.top + 140, `Очки: ${score}`, 40, hex(HIGHLIGHT_COLOR)));
-    this.askName(score, onRestart);
+    this.add(this.text(this.top + 125, difficulty.name, 28, UI_MUTED_TEXT_COLOR));
+    this.add(this.text(this.top + 180, `Очки: ${score}`, 40, hex(HIGHLIGHT_COLOR)));
+    this.askName(score, difficulty, actions);
   }
 
-  private askName(score: number, onRestart: () => void): void {
+  private askName(score: number, difficulty: Difficulty, actions: GameOverActions): void {
     const label = this.add(this.text(this.top + 250, 'Ваше имя:', 30, UI_MUTED_TEXT_COLOR));
 
     const input = document.createElement('input');
@@ -90,28 +99,28 @@ export class GameOverDialog {
       const name = normalizeName(input.value);
       saveLastName(name);
       const entry: LeaderboardEntry = { name, score, playedAt: Date.now() };
-      const { entries, rank } = insertEntry(loadLeaderboard(), entry);
-      saveLeaderboard(entries);
+      const { entries, rank } = insertEntry(loadLeaderboard(difficulty.id), entry);
+      saveLeaderboard(difficulty.id, entries);
       [label, field, button].forEach((obj) => obj.destroy());
-      this.showTable(entries, rank, score, onRestart);
+      this.showTable(entries, rank, score, actions);
     };
     input.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') submit();
     });
-    const button = this.button(this.top + 450, 'Сохранить', submit);
+    const button = this.button(this.centerX, this.top + 450, 360, 'Сохранить', submit);
   }
 
   private showTable(
     entries: LeaderboardEntry[],
     rank: number | null,
     score: number,
-    onRestart: () => void,
+    actions: GameOverActions,
   ): void {
-    this.add(this.text(this.top + 230, 'Таблица лидеров', 34, UI_MUTED_TEXT_COLOR));
+    this.add(this.text(this.top + 260, 'Таблица лидеров', 34, UI_MUTED_TEXT_COLOR));
     const left = this.centerX - PANEL_WIDTH / 2 + 50;
     const right = this.centerX + PANEL_WIDTH / 2 - 50;
     entries.forEach((entry, i) => {
-      const y = this.top + 300 + i * ROW_HEIGHT;
+      const y = this.top + 310 + i * ROW_HEIGHT;
       const color = i === rank ? hex(HIGHLIGHT_COLOR) : UI_TEXT_COLOR;
       this.add(this.scene.add.text(left, y, `${i + 1}. ${entry.name}`, textStyle(30, color)));
       this.add(
@@ -119,17 +128,25 @@ export class GameOverDialog {
       );
     });
     if (rank === null) {
-      const y = this.top + 300 + entries.length * ROW_HEIGHT + 10;
+      const y = this.top + 310 + entries.length * ROW_HEIGHT + 10;
       this.add(this.text(y + 15, `Ваш результат ${score} — не в десятке лучших`, 26));
     }
-    this.button(this.top + PANEL_HEIGHT - 80, 'Играть снова', () => {
+    const y = this.top + PANEL_HEIGHT - 70;
+    const close = (action: () => void) => () => {
       this.destroy();
-      onRestart();
-    });
+      action();
+    };
+    this.button(this.centerX - 140, y, 260, 'Играть снова', close(actions.onRestart));
+    this.button(this.centerX + 140, y, 260, 'Меню', close(actions.onMenu));
   }
 
-  private button(y: number, label: string, onClick: () => void): Phaser.GameObjects.Container {
-    const width = 360;
+  private button(
+    x: number,
+    y: number,
+    width: number,
+    label: string,
+    onClick: () => void,
+  ): Phaser.GameObjects.Container {
     const height = 84;
     const bg = this.scene.add.graphics();
     bg.fillStyle(UI_BUTTON_COLOR);
@@ -139,7 +156,7 @@ export class GameOverDialog {
       .zone(0, 0, width, height)
       .setInteractive({ useHandCursor: true })
       .on('pointerup', onClick);
-    return this.add(this.scene.add.container(this.centerX, y, [bg, text, hit]));
+    return this.add(this.scene.add.container(x, y, [bg, text, hit]));
   }
 
   private text(y: number, content: string, size: number, color?: string): Phaser.GameObjects.Text {

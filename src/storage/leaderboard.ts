@@ -1,6 +1,6 @@
-import { LEADERBOARD_SIZE, PLAYER_NAME_MAX_LENGTH } from '../core/config';
+import { LEADERBOARD_SIZE, PLAYER_NAME_MAX_LENGTH, type DifficultyId } from '../core/config';
 
-// Таблица лидеров в localStorage этого браузера.
+// Таблицы лидеров в localStorage этого браузера — своя для каждой сложности.
 // Хранилище может быть недоступно (приватный режим, запрет сайта) — тогда игра работает
 // дальше, просто без сохранения.
 
@@ -11,7 +11,7 @@ export interface LeaderboardEntry {
   playedAt: number;
 }
 
-const ENTRIES_KEY = 'match3.leaderboard';
+const entriesKey = (difficulty: DifficultyId) => `match3.leaderboard.${difficulty}`;
 const LAST_NAME_KEY = 'match3.lastName';
 export const DEFAULT_PLAYER_NAME = 'Игрок';
 
@@ -42,9 +42,9 @@ function isEntry(value: unknown): value is LeaderboardEntry {
   );
 }
 
-export function loadLeaderboard(): LeaderboardEntry[] {
+export function loadLeaderboard(difficulty: DifficultyId): LeaderboardEntry[] {
   try {
-    const raw = localStorage.getItem(ENTRIES_KEY);
+    const raw = localStorage.getItem(entriesKey(difficulty));
     const parsed: unknown = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed.filter(isEntry) : [];
   } catch {
@@ -52,9 +52,12 @@ export function loadLeaderboard(): LeaderboardEntry[] {
   }
 }
 
-export function saveLeaderboard(entries: readonly LeaderboardEntry[]): void {
+export function saveLeaderboard(
+  difficulty: DifficultyId,
+  entries: readonly LeaderboardEntry[],
+): void {
   try {
-    localStorage.setItem(ENTRIES_KEY, JSON.stringify(entries));
+    localStorage.setItem(entriesKey(difficulty), JSON.stringify(entries));
   } catch {
     // Без хранилища таблица живёт только до перезагрузки
   }
