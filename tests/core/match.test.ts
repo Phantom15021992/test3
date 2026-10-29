@@ -140,12 +140,27 @@ describe('findMatches: 2–3 уровень', () => {
     expect(single(`R3 R3 R3 R3 R3 R3`)).toMatchObject({ level: 3, size: 5 });
   });
 
-  it('квадрат 2×2 из ячеек 2 уровня не является совпадением', () => {
+  it('квадрат 2×2 из ячеек 2 и 3 уровня — совпадение из 4 ячеек', () => {
+    expect(
+      single(`
+        R2 R2
+        R2 R2
+      `),
+    ).toMatchObject({ level: 2, size: 4 });
+    expect(
+      single(`
+        B3 B3
+        B3 B3
+      `),
+    ).toMatchObject({ level: 3, size: 4 });
+  });
+
+  it('квадрат из ячеек разных уровней — не совпадение', () => {
     expect(
       findMatches(
         parseBoard(`
           R2 R2
-          R2 R2
+          R2 R3
         `),
       ),
     ).toEqual([]);

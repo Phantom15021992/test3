@@ -167,6 +167,31 @@ describe('resolveMove: ячейки 2–3 уровня', () => {
     ]);
   });
 
+  it('квадрат 2×2 из ячеек 2 уровня — как 4 ячейки: 2 ячейки 3 уровня', () => {
+    const board = parseBoard(`
+      B2 G1 B2
+      B2 B2 R1
+    `);
+    const result = runMove(board, { type: 'swap', from: p(0, 2), to: p(0, 1) }, ctx());
+    expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(200);
+    expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
+      { pos: p(0, 1), cell: { kind: 'tile', color: 2, level: 3 } },
+      { pos: p(0, 0), cell: { kind: 'tile', color: 2, level: 3 } },
+    ]);
+  });
+
+  it('квадрат 2×2 из ячеек 3 уровня — как 4 ячейки: ×20 и радуга', () => {
+    const board = parseBoard(`
+      R3 G1 R3
+      R3 R3 B1
+    `);
+    const result = runMove(board, { type: 'swap', from: p(0, 2), to: p(0, 1) }, ctx());
+    expect(stepsOf(result.steps, 'clear')[0]!.points).toBe(800);
+    expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
+      { pos: p(0, 1), cell: { kind: 'piece', type: 'rainbow' } },
+    ]);
+  });
+
   it('3 уровень, 5 ячеек — ×25 и 2 радуги рядом, которые можно поменять между собой', () => {
     const board = parseBoard(`
       R3 R3 G1 R3 R3
