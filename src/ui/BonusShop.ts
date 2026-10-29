@@ -41,7 +41,6 @@ export class BonusShop {
     left: number,
     right: number,
     y: number,
-    colorCount: number,
     onBuy: (type: BonusType) => void,
   ) {
     const step = (right - left) / BONUS_TIERS.length;
@@ -51,7 +50,7 @@ export class BonusShop {
       circle.fillStyle(UI_PANEL_COLOR);
       circle.fillCircle(0, 0, BUTTON_RADIUS);
       const icon = scene.add.graphics();
-      const extras = drawPiece(scene, icon, BONUS_ICONS[type], BUTTON_RADIUS * 0.62, colorCount);
+      const extras = drawPiece(scene, icon, BONUS_ICONS[type], BUTTON_RADIUS * 0.62);
       const ring = scene.add.graphics();
       ring.lineStyle(4, BONUS_READY_COLOR);
       ring.strokeCircle(0, 0, BUTTON_RADIUS);

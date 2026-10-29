@@ -7,13 +7,13 @@ import {
   MEGA_BOMB_COLOR,
   MEGA_BOMB_RING_COLOR,
   SPECIAL_BODY_COLOR,
-  TILE_COLORS,
 } from './palette';
 
 /** Картинки спецфишек: ключ текстуры и путь к файлу (грузятся в BootScene) */
-export const PIECE_TEXTURES = { rocket: 'piece-rocket' } as const;
+export const PIECE_TEXTURES = { rocket: 'piece-rocket', rainbow: 'piece-rainbow' } as const;
 export const PIECE_IMAGE_FILES: readonly { key: string; path: string }[] = [
   { key: PIECE_TEXTURES.rocket, path: 'assets/pieces/rocket.png' },
+  { key: PIECE_TEXTURES.rainbow, path: 'assets/pieces/rainbow.png' },
 ];
 
 /**
@@ -25,8 +25,6 @@ export function drawPiece(
   g: Phaser.GameObjects.Graphics,
   piece: Piece,
   radius: number,
-  /** Сколько цветов в игре — столько секторов у радуги */
-  colorCount = TILE_COLORS.length,
 ): Phaser.GameObjects.GameObject[] {
   switch (piece.type) {
     case 'rocket': {
@@ -50,16 +48,9 @@ export function drawPiece(
       return [];
     }
     case 'rainbow': {
-      const colors = TILE_COLORS.slice(0, colorCount);
-      const step = (Math.PI * 2) / colors.length;
-      colors.forEach((color, i) => {
-        g.fillStyle(color);
-        g.slice(0, 0, radius, i * step, (i + 1) * step);
-        g.fillPath();
-      });
-      g.fillStyle(0xffffff);
-      g.fillCircle(0, 0, radius * 0.3);
-      return [];
+      const image = scene.add.image(0, 0, PIECE_TEXTURES.rainbow);
+      image.setScale((radius * 2.2) / image.width);
+      return [image];
     }
     case 'megaBomb': {
       g.fillStyle(MEGA_BOMB_COLOR);

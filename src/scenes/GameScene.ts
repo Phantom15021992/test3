@@ -95,7 +95,7 @@ export class GameScene extends Phaser.Scene {
     const originX = (this.scale.width - cellSize * DEMO_BOARD_COLS) / 2;
     const originY = (this.scale.height - cellSize * DEMO_BOARD_ROWS) / 2;
     const boardBottom = originY + cellSize * DEMO_BOARD_ROWS;
-    this.view = new BoardView(this, originX, originY, cellSize, this.difficulty.colors);
+    this.view = new BoardView(this, originX, originY, cellSize);
     this.view.render(this.board);
     this.dialog = new ChoiceDialog(this, boardBottom + 30);
 
@@ -119,13 +119,8 @@ export class GameScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     const boardRight = originX + cellSize * DEMO_BOARD_COLS;
-    this.bonusShop = new BonusShop(
-      this,
-      originX,
-      boardRight,
-      originY - 115,
-      this.difficulty.colors,
-      (type) => this.takeBonus(type),
+    this.bonusShop = new BonusShop(this, originX, boardRight, originY - 115, (type) =>
+      this.takeBonus(type),
     );
     this.addScore(0);
     this.updateMoves();
