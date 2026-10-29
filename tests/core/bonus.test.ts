@@ -1,28 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { getCell } from '../../src/core/board';
-import { addToMeter, canTakeBonus, nextBonus, placeBonus } from '../../src/core/bonus';
+import { buyBonus, canBuyBonus, placeBonus } from '../../src/core/bonus';
 import { createRng } from '../../src/core/rng';
 import { parseBoard } from '../helpers/parseBoard';
 
-describe('шкала бонусов', () => {
-  it('копит очки и останавливается на 1000', () => {
-    expect(addToMeter(0, 30)).toBe(30);
-    expect(addToMeter(980, 50)).toBe(1000);
+describe('покупка спецфишек за очки', () => {
+  it('купить можно, когда очков хватает на цену', () => {
+    expect(canBuyBonus(249, 'bomb')).toBe(false);
+    expect(canBuyBonus(250, 'bomb')).toBe(true);
+    expect(canBuyBonus(600, 'rocket')).toBe(true);
+    expect(canBuyBonus(600, 'manipulator')).toBe(false);
+    expect(canBuyBonus(1000, 'rainbow')).toBe(true);
   });
 
-  it('бонус доступен, когда набрана его цена', () => {
-    expect(canTakeBonus(249, 'bomb')).toBe(false);
-    expect(canTakeBonus(250, 'bomb')).toBe(true);
-    expect(canTakeBonus(600, 'rocket')).toBe(true);
-    expect(canTakeBonus(600, 'manipulator')).toBe(false);
-    expect(canTakeBonus(1000, 'rainbow')).toBe(true);
-  });
-
-  it('сколько осталось до следующего бонуса', () => {
-    expect(nextBonus(0)).toEqual({ type: 'bomb', remaining: 250 });
-    expect(nextBonus(250)).toEqual({ type: 'rocket', remaining: 250 });
-    expect(nextBonus(720)).toEqual({ type: 'manipulator', remaining: 30 });
-    expect(nextBonus(1000)).toBeNull();
+  it('цена списывается со счёта', () => {
+    expect(buyBonus(600, 'bomb')).toBe(350);
+    expect(buyBonus(1500, 'rainbow')).toBe(500);
+    expect(buyBonus(740, 'manipulator')).toBeNull();
   });
 });
 

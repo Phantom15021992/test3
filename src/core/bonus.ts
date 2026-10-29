@@ -7,30 +7,24 @@ import {
   type Piece,
   type Position,
 } from './board';
-import { BONUS_METER_MAX, BONUS_TIERS } from './config';
+import { BONUS_TIERS } from './config';
 import type { Rng } from './rng';
 
-// Шкала бонусов: очки копятся до BONUS_METER_MAX, за набранную сумму игрок берёт спецфишку.
-// Взятие обнуляет шкалу (общий счёт не трогается) и хода не тратит.
+// Покупка спецфишек за очки: цена списывается со счёта, покупка хода не тратит.
 
 export type BonusType = (typeof BONUS_TIERS)[number]['type'];
-
-export function addToMeter(meter: number, points: number): number {
-  return Math.min(BONUS_METER_MAX, meter + points);
-}
 
 export function bonusCost(type: BonusType): number {
   return BONUS_TIERS.find((tier) => tier.type === type)!.cost;
 }
 
-export function canTakeBonus(meter: number, type: BonusType): boolean {
-  return meter >= bonusCost(type);
+export function canBuyBonus(score: number, type: BonusType): boolean {
+  return score >= bonusCost(type);
 }
 
-/** Ближайший ещё не накопленный бонус, или null — если шкала полна */
-export function nextBonus(meter: number): { type: BonusType; remaining: number } | null {
-  const tier = BONUS_TIERS.find((t) => meter < t.cost);
-  return tier ? { type: tier.type, remaining: tier.cost - meter } : null;
+/** Счёт после покупки, или null — если очков не хватает */
+export function buyBonus(score: number, type: BonusType): number | null {
+  return canBuyBonus(score, type) ? score - bonusCost(type) : null;
 }
 
 function bonusPiece(type: BonusType, rng: Rng): Piece {

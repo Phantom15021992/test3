@@ -31,8 +31,7 @@ export const MEGA_BOMB_BOMB_SIZE = 7;
 export const ROCKET_BOMB_WIDTH = 3;
 export const MEGA_BOMB_ROCKET_WIDTH = 5;
 
-// Шкала бонусов: копит очки до потолка, взятый бонус обнуляет её
-export const BONUS_METER_MAX = 1000;
+// Спецфишки, которые можно купить за очки счёта
 export const BONUS_TIERS: readonly {
   cost: number;
   type: 'bomb' | 'rocket' | 'manipulator' | 'rainbow';

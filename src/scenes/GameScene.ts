@@ -15,14 +15,14 @@ import {
   SWIPE_THRESHOLD,
 } from '../core/config';
 import { generateStartBoard } from '../core/generate';
-import { addToMeter, placeBonus, type BonusType } from '../core/bonus';
+import { buyBonus, placeBonus, type BonusType } from '../core/bonus';
 import { History } from '../core/history';
 import { areAdjacent, hasTileMove, isValidSwap, shuffleBoard } from '../core/moves';
 import { resolveMove, type ChoiceOption, type Move } from '../core/resolve';
 import { createRng, type Rng } from '../core/rng';
 import { comboNeedsColor, isCombo } from '../core/specials';
 import { ArrowButton } from '../ui/ArrowButton';
-import { BonusMeter } from '../ui/BonusMeter';
+import { BonusShop } from '../ui/BonusShop';
 import { ChoiceDialog } from '../ui/ChoiceDialog';
 import { UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
 import { BoardView } from '../view/BoardView';
@@ -41,7 +41,6 @@ interface Snapshot {
   board: Board;
   score: number;
   moves: number;
-  meter: number;
   rngState: number;
 }
 
@@ -56,9 +55,7 @@ export class GameScene extends Phaser.Scene {
   private score = 0;
   /** Сколько ходов сделано (взятие бонуса и перемешивание не считаются) */
   private moves = 0;
-  /** Шкала бонусов: копит те же очки, что и счёт, но обнуляется при взятии бонуса */
-  private meter = 0;
-  private bonusMeter!: BonusMeter;
+  private bonusShop!: BonusShop;
   private mode: Mode = { type: 'idle' };
   private selected: Position | null = null;
   private pressed: { cell: Position; x: number; y: number } | null = null;
@@ -115,7 +112,7 @@ export class GameScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     const boardRight = originX + cellSize * DEMO_BOARD_COLS;
-    this.bonusMeter = new BonusMeter(this, originX + 30, boardRight - 30, originY - 140, (type) =>
+    this.bonusShop = new BonusShop(this, originX, boardRight, originY - 115, (type) =>
       this.takeBonus(type),
     );
     this.addScore(0);
@@ -148,7 +145,6 @@ export class GameScene extends Phaser.Scene {
       board: this.board,
       score: this.score,
       moves: this.moves,
-      meter: this.meter,
       rngState: this.rng.getState(),
     };
   }
@@ -172,7 +168,6 @@ export class GameScene extends Phaser.Scene {
     this.score = state.score;
     this.moves = state.moves;
     this.updateMoves();
-    this.meter = state.meter;
     this.addScore(0);
     this.setSelected(null);
     this.setMode({ type: 'idle' });
@@ -183,7 +178,7 @@ export class GameScene extends Phaser.Scene {
   private updateHistoryButtons(): void {
     this.undoButton.setEnabled(!this.busy && this.history.canUndo);
     this.redoButton.setEnabled(!this.busy && this.history.canRedo);
-    this.updateBonusMeter();
+    this.updateBonusShop();
   }
 
   // ---------- Ввод ----------
@@ -347,20 +342,23 @@ export class GameScene extends Phaser.Scene {
 
   // ---------- Бонусы ----------
 
-  /** Спецфишка за очки шкалы: встаёт на случайную фишку 1 уровня, хода не тратит */
+  /** Покупка спецфишки за очки: встаёт на случайную фишку 1 уровня, хода не тратит */
   private async takeBonus(type: BonusType): Promise<void> {
     if (this.busy || this.mode.type !== 'idle') return;
+    const scoreAfter = buyBonus(this.score, type);
+    if (scoreAfter === null) return;
     const result = placeBonus(this.board, type, this.rng);
     if (!result) return;
     this.busy = true;
-    this.meter = 0;
+    this.score = scoreAfter;
+    this.addScore(0);
     this.setSelected(null);
     this.updateHistoryButtons();
     await this.view.place([{ pos: result.pos, cell: result.piece }]);
     this.board = result.board;
     await this.ensureMoves();
     this.busy = false;
-    // В игре отменить взятие бонуса нельзя, поэтому и тестовая история «назад» до него не идёт
+    // В игре отменить покупку нельзя, поэтому и тестовая история «назад» до него не идёт
     this.history.reset(this.snapshot());
     this.updateHistoryButtons();
   }
@@ -375,7 +373,7 @@ export class GameScene extends Phaser.Scene {
         : null;
     this.view.select(marked);
     this.hintText.setText(hintFor(mode));
-    this.updateBonusMeter();
+    this.updateBonusShop();
   }
 
   private setSelected(pos: Position | null): void {
@@ -385,18 +383,17 @@ export class GameScene extends Phaser.Scene {
 
   private addScore(points: number): void {
     this.score += points;
-    this.meter = addToMeter(this.meter, points);
     this.scoreText.setText(`Очки: ${this.score}`);
-    this.updateBonusMeter();
+    this.updateBonusShop();
   }
 
   private updateMoves(): void {
     this.movesText.setText(`Ходы: ${this.moves}`);
   }
 
-  private updateBonusMeter(): void {
-    // Бонус берётся только в спокойном состоянии: не во время хода и не в режиме выбора клеток
-    this.bonusMeter.update(this.meter, !this.busy && this.mode.type === 'idle');
+  private updateBonusShop(): void {
+    // Покупка — только в спокойном состоянии: не во время хода и не в режиме выбора клеток
+    this.bonusShop.update(this.score, !this.busy && this.mode.type === 'idle');
   }
 }
 
