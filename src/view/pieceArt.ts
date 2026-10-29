@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { Piece } from '../core/board';
+import { DEMO_COLOR_COUNT } from '../core/config';
 import {
   BOMB_CORE_COLOR,
   MANIPULATOR_COLOR,
@@ -53,8 +54,10 @@ export function drawPiece(
       return [];
     }
     case 'rainbow': {
-      const step = (Math.PI * 2) / TILE_COLORS.length;
-      TILE_COLORS.forEach((color, i) => {
+      // Сектора — только цвета, которые есть в игре
+      const colors = TILE_COLORS.slice(0, DEMO_COLOR_COUNT);
+      const step = (Math.PI * 2) / colors.length;
+      colors.forEach((color, i) => {
         g.fillStyle(color);
         g.slice(0, 0, radius, i * step, (i + 1) * step);
         g.fillPath();
