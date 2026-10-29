@@ -196,13 +196,13 @@ export class BoardView {
 
   private createSprite(cell: Exclude<Cell, null | { kind: 'hole' }>, pos: Position): TileSprite {
     const { x, y } = this.centerOf(pos);
-    const body = this.scene.add.graphics();
-    const children: Phaser.GameObjects.GameObject[] = [body];
-    children.push(
-      ...(cell.kind === 'tile'
-        ? this.drawTile(body, cell)
-        : drawPiece(this.scene, body, cell, this.cellSize * 0.4)),
-    );
+    let children: Phaser.GameObjects.GameObject[];
+    if (cell.kind === 'tile') {
+      const body = this.scene.add.graphics();
+      children = [body, ...this.drawTile(body, cell)];
+    } else {
+      children = [drawPiece(this.scene, cell, this.cellSize * 0.4)];
+    }
     return this.scene.add.container(x, y, children).setMask(this.mask);
   }
 

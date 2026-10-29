@@ -15,13 +15,6 @@ export const BOARD_CELL_DARK = 0x262b40;
 export const BOARD_CELL_LIGHT = 0x2c3249;
 export const SELECTION_COLOR = 0xffffff;
 
-// Спецфишки бесцветные — рисуем их нейтральными цветами, не похожими на цвета фишек
-export const SPECIAL_BODY_COLOR = 0xdfe3f2;
-export const BOMB_CORE_COLOR = 0x1e1e28;
-export const MEGA_BOMB_COLOR = 0x15151c;
-export const MEGA_BOMB_RING_COLOR = 0xff3b3b;
-export const MANIPULATOR_COLOR = 0xeef1ff;
-export const MANIPULATOR_MARK_COLOR = 0x2b3150;
 export const HIGHLIGHT_COLOR = 0xffd54a;
 
 export const BONUS_READY_COLOR = 0xffd54a;

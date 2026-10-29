@@ -49,8 +49,7 @@ export class BonusShop {
       const circle = scene.add.graphics();
       circle.fillStyle(UI_PANEL_COLOR);
       circle.fillCircle(0, 0, BUTTON_RADIUS);
-      const icon = scene.add.graphics();
-      const extras = drawPiece(scene, icon, BONUS_ICONS[type], BUTTON_RADIUS * 0.62);
+      const icon = drawPiece(scene, BONUS_ICONS[type], BUTTON_RADIUS * 0.62);
       const ring = scene.add.graphics();
       ring.lineStyle(4, BONUS_READY_COLOR);
       ring.strokeCircle(0, 0, BUTTON_RADIUS);
@@ -60,7 +59,7 @@ export class BonusShop {
         .on('pointerup', () => {
           if (this.enabled && this.score >= cost) onBuy(type);
         });
-      const container = scene.add.container(x, y, [circle, icon, ...extras, ring, hit]);
+      const container = scene.add.container(x, y, [circle, icon, ring, hit]);
       const costText = scene.add
         .text(x, y + BUTTON_RADIUS + 16, String(cost), {
           fontFamily: 'sans-serif',
