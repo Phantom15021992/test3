@@ -16,12 +16,10 @@ import {
 } from '../core/config';
 import { generateStartBoard } from '../core/generate';
 import { buyBonus, placeBonus, type BonusType } from '../core/bonus';
-import { History } from '../core/history';
 import { areAdjacent, hasTileMove, isValidSwap, shuffleBoard } from '../core/moves';
 import { resolveMove, type ChoiceOption, type Move } from '../core/resolve';
 import { createRng, type Rng } from '../core/rng';
 import { comboNeedsColor, isCombo } from '../core/specials';
-import { ArrowButton } from '../ui/ArrowButton';
 import { BonusShop } from '../ui/BonusShop';
 import { ChoiceDialog } from '../ui/ChoiceDialog';
 import { UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
@@ -35,14 +33,6 @@ type Mode =
   | { type: 'rainbowColor'; at: Position }
   | { type: 'comboColor'; from: Position; to: Position }
   | { type: 'manipulator'; at: Position; first: Position | null };
-
-/** Снимок партии для шага назад / вперёд */
-interface Snapshot {
-  board: Board;
-  score: number;
-  moves: number;
-  rngState: number;
-}
 
 export class GameScene extends Phaser.Scene {
   private board: Board = [];
@@ -60,9 +50,6 @@ export class GameScene extends Phaser.Scene {
   private selected: Position | null = null;
   private pressed: { cell: Position; x: number; y: number } | null = null;
   private busy = false;
-  private history!: History<Snapshot>;
-  private undoButton!: ArrowButton;
-  private redoButton!: ArrowButton;
 
   constructor() {
     super('Game');
@@ -118,13 +105,6 @@ export class GameScene extends Phaser.Scene {
     this.addScore(0);
     this.updateMoves();
 
-    this.undoButton = new ArrowButton(this, originX + 36, originY - 205, 'left', () => this.undo());
-    this.redoButton = new ArrowButton(this, boardRight - 36, originY - 205, 'right', () =>
-      this.redo(),
-    );
-    this.history = new History(this.snapshot());
-    this.updateHistoryButtons();
-
     this.input.on('pointerdown', this.onPointerDown, this);
     this.input.on('pointermove', this.onPointerMove, this);
     this.input.on('pointerup', this.onPointerUp, this);
@@ -134,51 +114,6 @@ export class GameScene extends Phaser.Scene {
   debugSetBoard(board: Board): void {
     this.board = board;
     this.view.render(board);
-    this.history.push(this.snapshot());
-    this.updateHistoryButtons();
-  }
-
-  // ---------- Шаг назад / вперёд ----------
-
-  private snapshot(): Snapshot {
-    return {
-      board: this.board,
-      score: this.score,
-      moves: this.moves,
-      rngState: this.rng.getState(),
-    };
-  }
-
-  private undo(): void {
-    if (this.busy) return;
-    const state = this.history.undo();
-    if (state) this.restore(state);
-  }
-
-  private redo(): void {
-    if (this.busy) return;
-    const state = this.history.redo();
-    if (state) this.restore(state);
-  }
-
-  private restore(state: Snapshot): void {
-    this.board = state.board;
-    // ГСЧ тоже откатывается: повтор того же хода даст тот же результат
-    this.rng = createRng(state.rngState);
-    this.score = state.score;
-    this.moves = state.moves;
-    this.updateMoves();
-    this.addScore(0);
-    this.setSelected(null);
-    this.setMode({ type: 'idle' });
-    this.view.render(this.board);
-    this.updateHistoryButtons();
-  }
-
-  private updateHistoryButtons(): void {
-    this.undoButton.setEnabled(!this.busy && this.history.canUndo);
-    this.redoButton.setEnabled(!this.busy && this.history.canRedo);
-    this.updateBonusShop();
   }
 
   // ---------- Ввод ----------
@@ -293,7 +228,7 @@ export class GameScene extends Phaser.Scene {
     this.busy = true;
     this.moves++;
     this.updateMoves();
-    this.updateHistoryButtons();
+    this.updateBonusShop();
     this.setSelected(null);
     const steps = resolveMove(this.board, move, { colorCount: DEMO_COLOR_COUNT, rng: this.rng });
 
@@ -327,8 +262,7 @@ export class GameScene extends Phaser.Scene {
     this.board = next.value.board;
     await this.ensureMoves();
     this.busy = false;
-    this.history.push(this.snapshot());
-    this.updateHistoryButtons();
+    this.updateBonusShop();
   }
 
   /** Если ходов обычными фишками не осталось — перемешать поле */
@@ -353,14 +287,12 @@ export class GameScene extends Phaser.Scene {
     this.score = scoreAfter;
     this.addScore(0);
     this.setSelected(null);
-    this.updateHistoryButtons();
+    this.updateBonusShop();
     await this.view.place([{ pos: result.pos, cell: result.piece }]);
     this.board = result.board;
     await this.ensureMoves();
     this.busy = false;
-    // В игре отменить покупку нельзя, поэтому и тестовая история «назад» до него не идёт
-    this.history.reset(this.snapshot());
-    this.updateHistoryButtons();
+    this.updateBonusShop();
   }
 
   // ---------- Состояние интерфейса ----------
