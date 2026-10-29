@@ -19,6 +19,7 @@ import {
   SELECTION_COLOR,
   TILE_COLORS,
 } from './palette';
+import { tileTextureKey } from './assets';
 import { drawPiece } from './pieceArt';
 
 type TileSprite = Phaser.GameObjects.Container;
@@ -187,6 +188,13 @@ export class BoardView {
 
   /** Возвращает картинку фишки, если она есть; иначе рисует кружок в g */
   private drawTile(g: Phaser.GameObjects.Graphics, tile: Tile): Phaser.GameObjects.GameObject[] {
+    // Уровень у фишки-картинки виден по самой картинке, поэтому кольца-маркеры ей не нужны
+    const key = tileTextureKey(tile);
+    if (key) {
+      const size = this.cellSize * 0.88;
+      return [this.scene.add.image(0, 0, key).setDisplaySize(size, size)];
+    }
+
     const radius = this.cellSize * 0.38;
     g.fillStyle(TILE_COLORS[tile.color] ?? 0xffffff);
     g.fillCircle(0, 0, radius);
