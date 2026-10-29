@@ -29,7 +29,7 @@ npm run build      # сборка в dist/
 npm run test       # Vitest
 npm run lint
 npm run typecheck  # tsc --noEmit
-npm run simulate   # бот играет партии и считает очки по режимам: [-- <партий> <ходов>]
+npm run simulate   # бот играет партии и считает очки: [-- <партий> <ходов> [цены] [режимы]]
 ```
 
 Задача считается выполненной, только когда проходят `test`, `lint` и `typecheck`.

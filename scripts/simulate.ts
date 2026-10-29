@@ -1,5 +1,5 @@
 // Симуляция партий ботом — для оценки баланса очков.
-// Запуск: npm run simulate [-- <партий> <ходов>]
+// Запуск: npm run simulate [-- <партий> <ходов> [цены через запятую] [режимы через запятую]]
 //
 // Бот на каждом ходу пробует все доступные ходы и выбирает тот, что даёт больше очков.
 // Оценка хода идёт на отдельном ГСЧ, поэтому бот не «подглядывает», какие фишки упадут сверху.
@@ -11,7 +11,7 @@ import {
   type Board,
   type Position,
 } from '../src/core/board';
-import { buyBonus, placeBonus, type BonusType } from '../src/core/bonus';
+import { placeBonus, type BonusType } from '../src/core/bonus';
 import {
   BONUS_TIERS,
   DEMO_BOARD_COLS,
@@ -118,8 +118,12 @@ function ensureMoves(board: Board, rng: Rng): Board {
   return hasTileMove(board) ? board : shuffleBoard(board, DEMO_COLOR_COUNT, rng);
 }
 
+function costOf(type: BonusType): number {
+  return tiers.find((tier) => tier.type === type)!.cost;
+}
+
 function affordable(score: number): BonusType[] {
-  return BONUS_TIERS.filter((tier) => score >= tier.cost).map((tier) => tier.type);
+  return tiers.filter((tier) => score >= tier.cost).map((tier) => tier.type);
 }
 
 /**
@@ -144,7 +148,7 @@ function chooseBonus(
     const placed = placeBonus(board, type, createRng(rng.getState()));
     if (!placed) continue;
     const best = bestMove(placed.board, mode, createRng(evalSeed), evalSeed)?.score ?? 0;
-    const gain = best - (score - buyBonus(score, type)!);
+    const gain = best - costOf(type);
     if (gain > withoutBuying && (!choice || gain > choice.gain)) choice = { type, gain };
   }
   return choice?.type ?? null;
@@ -169,7 +173,7 @@ function playGame(seed: number, moves: number, mode: Mode): GameResult {
       const type = chooseBonus(board, score, mode, rng, evalSeed);
       const placed = type ? placeBonus(board, type, rng) : null;
       if (type && placed) {
-        score = buyBonus(score, type)!;
+        score -= costOf(type);
         board = ensureMoves(placed.board, rng);
         bought++;
       }
@@ -202,7 +206,15 @@ function stats(values: number[]) {
 
 const games = Number(process.argv[2] ?? 100);
 const moves = Number(process.argv[3] ?? 35);
-const modes: Mode[] = ['plain', 'specials', 'buyAlways', 'buySmart'];
+// Цены можно переопределить для подбора баланса: 250,500,750,1000 (бомба, ракета, манипулятор, радуга)
+const prices = process.argv[4]?.split(',').map(Number);
+const tiers = BONUS_TIERS.map((tier, i) => ({ ...tier, cost: prices?.[i] ?? tier.cost }));
+const modes = (process.argv[5]?.split(',') ?? [
+  'plain',
+  'specials',
+  'buyAlways',
+  'buySmart',
+]) as Mode[];
 const summary: Record<string, string | number>[] = [];
 const perGame = (results: GameResult[], key: keyof GameResult) =>
   (results.reduce((s, r) => s + r[key], 0) / games).toFixed(1);
@@ -225,6 +237,9 @@ for (const mode of modes) {
   console.log(`${MODE_TITLES[mode]}: готово`);
 }
 
-console.log(`\n${games} партий по ${moves} ходов, поле ${DEMO_BOARD_ROWS}×${DEMO_BOARD_COLS}`);
+const priceList = tiers.map((tier) => tier.cost).join('/');
+console.log(
+  `\n${games} партий по ${moves} ходов, поле ${DEMO_BOARD_ROWS}×${DEMO_BOARD_COLS}, цены ${priceList}`,
+);
 console.table(summary);
 console.log(JSON.stringify(summary));
