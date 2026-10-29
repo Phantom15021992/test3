@@ -407,6 +407,50 @@ describe('resolveMove: активация тапом', () => {
   });
 });
 
+describe('resolveMove: финал партии', () => {
+  it('все спецфишки срабатывают на месте, манипулятор даёт 250 очков', () => {
+    const board = parseBoard(`
+      M  G1 B1 R1 G1
+      B1 R1 G1 B1 R1
+      G1 B1 R1 G1 B1
+      R1 G1 B1 -  G1
+      B1 R1 G1 B1 R1
+    `);
+    const result = runMove(board, { type: 'finale' }, ctx());
+    const [clear] = stepsOf(result.steps, 'clear');
+    // Ракета бьёт всю строку 3; манипулятор просто исчезает с 250 очками
+    expect(sortCells(clear!.cells)).toEqual([p(0, 0), p(3, 0), p(3, 1), p(3, 2), p(3, 3), p(3, 4)]);
+    expect(clear!.points).toBe(250 + 4 * 10);
+  });
+
+  it('радуга убирает все фишки случайного цвета, который есть на поле', () => {
+    const board = parseBoard(`
+      @  G1 R1
+      R1 G1 R1
+      G1 R1 G1
+    `);
+    const result = runMove(board, { type: 'finale' }, ctx());
+    const [clear] = stepsOf(result.steps, 'clear');
+    const cleared = clear!.cells.filter((pos) => !(pos.row === 0 && pos.col === 0));
+    const colors = new Set(cleared.map((pos) => JSON.stringify(board[pos.row]![pos.col])));
+    // Все убранные фишки одного цвета, и это все фишки этого цвета
+    expect(colors.size).toBe(1);
+    const [color] = colors;
+    const allOfColor = board.flat().filter((cell) => JSON.stringify(cell) === color);
+    expect(cleared.length).toBe(allOfColor.length);
+  });
+
+  it('без спецфишек на поле финал ничего не делает', () => {
+    const board = parseBoard(`
+      R1 G1 B1
+      G1 B1 R1
+    `);
+    const result = runMove(board, { type: 'finale' }, ctx());
+    expect(result.steps).toEqual([]);
+    expect(result.score).toBe(0);
+  });
+});
+
 describe('resolveMove: каскады', () => {
   it('после падения возникает новое совпадение', () => {
     const board = parseBoard(`

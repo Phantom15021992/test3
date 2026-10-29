@@ -13,6 +13,8 @@ const game = new Phaser.Game({
     width: 720,
     height: 1280,
   },
+  // DOM-элементы поверх холста — для поля ввода имени в таблице лидеров
+  dom: { createContainer: true },
   scene: [BootScene, GameScene],
 });
 

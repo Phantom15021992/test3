@@ -76,6 +76,11 @@ export function setCell(board: Board, { row, col }: Position, cell: Cell): void 
 }
 
 /** Все клетки поля, кроме дыр */
+/** Есть ли на поле спецфишки */
+export function hasPieces(board: Board): boolean {
+  return board.some((line) => line.some((cell) => isPiece(cell)));
+}
+
 export function allPositions(board: Board): Position[] {
   return board.flatMap((line, row) =>
     line.flatMap((cell, col) => (cell?.kind === 'hole' ? [] : [{ row, col }])),

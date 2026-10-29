@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import {
   createEmptyBoard,
   getCell,
+  hasPieces,
   isPiece,
   isTile,
   samePos,
@@ -12,6 +13,7 @@ import {
   DEMO_BOARD_COLS,
   DEMO_BOARD_ROWS,
   DEMO_COLOR_COUNT,
+  MOVE_LIMIT,
   SWIPE_THRESHOLD,
 } from '../core/config';
 import { generateStartBoard } from '../core/generate';
@@ -22,10 +24,13 @@ import { createRng, type Rng } from '../core/rng';
 import { comboNeedsColor, isCombo } from '../core/specials';
 import { BonusShop } from '../ui/BonusShop';
 import { ChoiceDialog } from '../ui/ChoiceDialog';
+import { GameOverDialog } from '../ui/GameOverDialog';
 import { UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
 import { BoardView } from '../view/BoardView';
 
 const BOARD_MARGIN = 40;
+/** Защита от зацикливания финала, если каскады всё время создают новые спецфишки */
+const FINALE_MAX_ROUNDS = 50;
 
 /** Режим ввода: обычный, выбор цвета (радуга / мега-бомба + радуга), выбор клеток манипулятором */
 type Mode =
@@ -43,7 +48,7 @@ export class GameScene extends Phaser.Scene {
   private movesText!: Phaser.GameObjects.Text;
   private hintText!: Phaser.GameObjects.Text;
   private score = 0;
-  /** Сколько ходов сделано (взятие бонуса и перемешивание не считаются) */
+  /** Сколько ходов сделано (покупка спецфишки и перемешивание не считаются); лимит — MOVE_LIMIT */
   private moves = 0;
   private bonusShop!: BonusShop;
   private mode: Mode = { type: 'idle' };
@@ -56,6 +61,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    // При «Играть снова» сцена перезапускается, а поля класса сами не сбрасываются
+    this.score = 0;
+    this.moves = 0;
+    this.mode = { type: 'idle' };
+    this.selected = null;
+    this.pressed = null;
+    this.busy = false;
     // ?seed=123 — одинаковое поле при каждом запуске (удобно для отладки)
     const seedParam = Number(new URLSearchParams(window.location.search).get('seed'));
     this.rng = createRng(
@@ -230,8 +242,19 @@ export class GameScene extends Phaser.Scene {
     this.updateMoves();
     this.updateBonusShop();
     this.setSelected(null);
-    const steps = resolveMove(this.board, move, { colorCount: DEMO_COLOR_COUNT, rng: this.rng });
+    await this.animate(move);
+    await this.ensureMoves();
+    if (this.moves >= MOVE_LIMIT) {
+      await this.finishGame();
+      return;
+    }
+    this.busy = false;
+    this.updateBonusShop();
+  }
 
+  /** Логика отдаёт шаги хода, сцена их анимирует и отвечает на выборы */
+  private async animate(move: Move): Promise<void> {
+    const steps = resolveMove(this.board, move, { colorCount: DEMO_COLOR_COUNT, rng: this.rng });
     let next = steps.next();
     while (!next.done) {
       const step = next.value;
@@ -260,9 +283,19 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.board = next.value.board;
-    await this.ensureMoves();
-    this.busy = false;
-    this.updateBonusShop();
+  }
+
+  /**
+   * Ходы кончились: все спецфишки срабатывают на месте, пока на поле не останется ни одной
+   * (в каскадах могут появиться новые), затем — окно с таблицей лидеров.
+   */
+  private async finishGame(): Promise<void> {
+    this.hintText.setText('Ходы закончились — спецфишки срабатывают!');
+    for (let round = 0; round < FINALE_MAX_ROUNDS && hasPieces(this.board); round++) {
+      await this.animate({ type: 'finale' });
+    }
+    this.hintText.setText('');
+    new GameOverDialog(this).show(this.score, () => this.scene.restart());
   }
 
   /** Если ходов обычными фишками не осталось — перемешать поле */
@@ -320,7 +353,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateMoves(): void {
-    this.movesText.setText(`Ходы: ${this.moves}`);
+    this.movesText.setText(`Ходы: ${MOVE_LIMIT - this.moves}`);
   }
 
   private updateBonusShop(): void {

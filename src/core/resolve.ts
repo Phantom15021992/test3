@@ -1,6 +1,8 @@
 import {
+  allPositions,
   cloneBoard,
   getCell,
+  isTile,
   posKey,
   samePos,
   setCell,
@@ -15,6 +17,7 @@ import {
   LEVEL2_BIG_MATCH_POINTS,
   MATCH_REWARDS,
   LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE,
+  MANIPULATOR_FINALE_POINTS,
   MEGA_BOMB_SIZE,
 } from './config';
 import { applyGravity, refill, removeCells, type Fall, type Spawn } from './gravity';
@@ -42,7 +45,9 @@ export type Move =
   | { type: 'swap'; from: Position; to: Position; color?: ColorId }
   | { type: 'rainbow'; at: Position; color: ColorId }
   | { type: 'megaBomb'; at: Position }
-  | { type: 'manipulator'; at: Position; a: Position; b: Position };
+  | { type: 'manipulator'; at: Position; a: Position; b: Position }
+  /** Конец партии: все спецфишки на поле срабатывают на месте */
+  | { type: 'finale' };
 
 export type ChoiceOption = 'bomb' | 'rainbow' | 'merge' | 'score';
 
@@ -143,6 +148,10 @@ export function* resolveMove(
       landing = [move.b, move.a];
       break;
     }
+    case 'finale': {
+      yield* destroy(...finaleBlast(current, ctx.rng));
+      break;
+    }
   }
 
   // ---------- Каскады ----------
@@ -217,6 +226,36 @@ function spreadPoints(cells: Position[], total: number, into: Map<string, number
   cells.forEach((pos, i) => {
     into.set(posKey(pos), share + (i === 0 ? total - share * cells.length : 0));
   });
+}
+
+/**
+ * Финальный взрыв: ракеты, бомбы и мега-бомбы срабатывают как обычно, радуга убирает
+ * случайный цвет из тех, что есть на поле, манипулятор просто исчезает и даёт очки.
+ * Возвращает аргументы для destroy: стартовые клетки, уже сработавшие, очки-исключения.
+ */
+function finaleBlast(
+  board: Board,
+  rng: Rng,
+): [Position[], ReadonlySet<string>, ReadonlyMap<string, number>] {
+  const initial: Position[] = [];
+  const preActivated = new Set<string>();
+  const points = new Map<string, number>();
+  const colors = [...new Set(board.flat().flatMap((cell) => (isTile(cell) ? [cell.color] : [])))];
+
+  for (const pos of allPositions(board)) {
+    const cell = getCell(board, pos);
+    if (cell?.kind !== 'piece') continue;
+    initial.push(pos);
+    if (cell.type === 'rainbow') {
+      preActivated.add(posKey(pos));
+      const color = colors[rng.int(colors.length)];
+      if (color !== undefined) initial.push(...tilesOfColor(board, color));
+    } else if (cell.type === 'manipulator') {
+      preActivated.add(posKey(pos));
+      points.set(posKey(pos), MANIPULATOR_FINALE_POINTS);
+    }
+  }
+  return [initial, preActivated, points];
 }
 
 /**

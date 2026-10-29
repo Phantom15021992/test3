@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cloneBoard, createEmptyBoard } from '../../src/core/board';
+import { cloneBoard, createEmptyBoard, hasPieces } from '../../src/core/board';
 import { parseBoard } from '../helpers/parseBoard';
 
 describe('board', () => {
@@ -31,5 +31,12 @@ describe('board', () => {
       ],
       [null, { kind: 'hole' }],
     ]);
+  });
+});
+
+describe('hasPieces', () => {
+  it('замечает любую спецфишку, дыры и пустые клетки не считаются', () => {
+    expect(hasPieces(parseBoard('R1 # .'))).toBe(false);
+    expect(hasPieces(parseBoard('R1 M .'))).toBe(true);
   });
 });

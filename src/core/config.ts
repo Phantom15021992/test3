@@ -62,6 +62,15 @@ export const BONUS_TIERS: readonly {
   { cost: 750, type: 'rainbow' },
 ];
 
+// Партия: лимит ходов и финал
+export const MOVE_LIMIT = 35;
+/** Очки за манипулятор, оставшийся на поле в финале партии */
+export const MANIPULATOR_FINALE_POINTS = 250;
+
+// Таблица лидеров
+export const LEADERBOARD_SIZE = 10;
+export const PLAYER_NAME_MAX_LENGTH = 16;
+
 // Временное поле, пока нет уровней
 export const DEMO_BOARD_ROWS = 10;
 export const DEMO_BOARD_COLS = 10;

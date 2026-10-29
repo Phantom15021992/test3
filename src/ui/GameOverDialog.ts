@@ -1,0 +1,159 @@
+import Phaser from 'phaser';
+import { PLAYER_NAME_MAX_LENGTH } from '../core/config';
+import {
+  insertEntry,
+  loadLastName,
+  loadLeaderboard,
+  normalizeName,
+  saveLastName,
+  saveLeaderboard,
+  type LeaderboardEntry,
+} from '../storage/leaderboard';
+import {
+  HIGHLIGHT_COLOR,
+  UI_BUTTON_COLOR,
+  UI_MUTED_TEXT_COLOR,
+  UI_PANEL_COLOR,
+  UI_TEXT_COLOR,
+} from '../view/palette';
+
+const PANEL_WIDTH = 620;
+const PANEL_HEIGHT = 900;
+const ROW_HEIGHT = 50;
+const OVERLAY_ALPHA = 0.75;
+const DEPTH = 20;
+
+const textStyle = (
+  size: number,
+  color = UI_TEXT_COLOR,
+): Phaser.Types.GameObjects.Text.TextStyle => ({
+  fontFamily: 'sans-serif',
+  fontSize: `${size}px`,
+  color,
+});
+
+const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
+
+// Окно конца партии: сначала ввод имени, затем таблица лидеров и «Играть снова».
+// Поле имени — настоящий <input> (DOM-элемент Phaser), чтобы на телефоне открывалась клавиатура.
+export class GameOverDialog {
+  private readonly objects: Phaser.GameObjects.GameObject[] = [];
+  private readonly centerX: number;
+  private readonly top: number;
+
+  constructor(private readonly scene: Phaser.Scene) {
+    this.centerX = scene.scale.width / 2;
+    this.top = (scene.scale.height - PANEL_HEIGHT) / 2;
+  }
+
+  show(score: number, onRestart: () => void): void {
+    const { width, height } = this.scene.scale;
+    // Затемнение перехватывает нажатия, чтобы поле под окном не реагировало
+    this.add(
+      this.scene.add
+        .rectangle(0, 0, width, height, 0x000000, OVERLAY_ALPHA)
+        .setOrigin(0, 0)
+        .setInteractive(),
+    );
+    const panel = this.scene.add.graphics();
+    panel.fillStyle(UI_PANEL_COLOR);
+    panel.fillRoundedRect(this.centerX - PANEL_WIDTH / 2, this.top, PANEL_WIDTH, PANEL_HEIGHT, 28);
+    this.add(panel);
+
+    this.add(this.text(this.top + 70, 'Игра окончена', 48));
+    this.add(this.text(this.top + 140, `Очки: ${score}`, 40, hex(HIGHLIGHT_COLOR)));
+    this.askName(score, onRestart);
+  }
+
+  private askName(score: number, onRestart: () => void): void {
+    const label = this.add(this.text(this.top + 250, 'Ваше имя:', 30, UI_MUTED_TEXT_COLOR));
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = PLAYER_NAME_MAX_LENGTH;
+    input.value = loadLastName();
+    input.placeholder = 'Игрок';
+    Object.assign(input.style, {
+      width: '460px',
+      height: '72px',
+      fontSize: '34px',
+      textAlign: 'center',
+      borderRadius: '14px',
+      border: 'none',
+      outline: 'none',
+      padding: '0 12px',
+      boxSizing: 'border-box',
+    });
+    const field = this.add(this.scene.add.dom(this.centerX, this.top + 330, input));
+
+    const submit = () => {
+      const name = normalizeName(input.value);
+      saveLastName(name);
+      const entry: LeaderboardEntry = { name, score, playedAt: Date.now() };
+      const { entries, rank } = insertEntry(loadLeaderboard(), entry);
+      saveLeaderboard(entries);
+      [label, field, button].forEach((obj) => obj.destroy());
+      this.showTable(entries, rank, score, onRestart);
+    };
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') submit();
+    });
+    const button = this.button(this.top + 450, 'Сохранить', submit);
+  }
+
+  private showTable(
+    entries: LeaderboardEntry[],
+    rank: number | null,
+    score: number,
+    onRestart: () => void,
+  ): void {
+    this.add(this.text(this.top + 230, 'Таблица лидеров', 34, UI_MUTED_TEXT_COLOR));
+    const left = this.centerX - PANEL_WIDTH / 2 + 50;
+    const right = this.centerX + PANEL_WIDTH / 2 - 50;
+    entries.forEach((entry, i) => {
+      const y = this.top + 300 + i * ROW_HEIGHT;
+      const color = i === rank ? hex(HIGHLIGHT_COLOR) : UI_TEXT_COLOR;
+      this.add(this.scene.add.text(left, y, `${i + 1}. ${entry.name}`, textStyle(30, color)));
+      this.add(
+        this.scene.add.text(right, y, String(entry.score), textStyle(30, color)).setOrigin(1, 0),
+      );
+    });
+    if (rank === null) {
+      const y = this.top + 300 + entries.length * ROW_HEIGHT + 10;
+      this.add(this.text(y + 15, `Ваш результат ${score} — не в десятке лучших`, 26));
+    }
+    this.button(this.top + PANEL_HEIGHT - 80, 'Играть снова', () => {
+      this.destroy();
+      onRestart();
+    });
+  }
+
+  private button(y: number, label: string, onClick: () => void): Phaser.GameObjects.Container {
+    const width = 360;
+    const height = 84;
+    const bg = this.scene.add.graphics();
+    bg.fillStyle(UI_BUTTON_COLOR);
+    bg.fillRoundedRect(-width / 2, -height / 2, width, height, 20);
+    const text = this.scene.add.text(0, 0, label, textStyle(34)).setOrigin(0.5);
+    const hit = this.scene.add
+      .zone(0, 0, width, height)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerup', onClick);
+    return this.add(this.scene.add.container(this.centerX, y, [bg, text, hit]));
+  }
+
+  private text(y: number, content: string, size: number, color?: string): Phaser.GameObjects.Text {
+    return this.scene.add.text(this.centerX, y, content, textStyle(size, color)).setOrigin(0.5);
+  }
+
+  private add<T extends Phaser.GameObjects.GameObject>(obj: T): T {
+    (obj as unknown as Phaser.GameObjects.Components.Depth).setDepth?.(DEPTH);
+    this.objects.push(obj);
+    return obj;
+  }
+
+  private destroy(): void {
+    this.objects.forEach((obj) => obj.destroy());
+    this.objects.length = 0;
+  }
+}
