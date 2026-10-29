@@ -25,7 +25,8 @@
 ```bash
 npm install
 npm run dev        # dev-сервер, здесь же доступен редактор уровней
-npm run build      # сборка в dist/
+npm run build      # сборка в dist/ — статические файлы, пути относительные (кладутся в любую папку)
+npm run preview    # проверка сборки из dist/ на http://localhost:4173
 npm run test       # Vitest
 npm run lint
 npm run typecheck  # tsc --noEmit
