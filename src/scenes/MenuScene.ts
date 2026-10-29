@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { DIFFICULTIES, type Difficulty } from '../core/config';
 import { loadLeaderboard } from '../storage/leaderboard';
+import { fetchTop, remoteConfig } from '../storage/remoteLeaderboard';
 import {
   HIGHLIGHT_COLOR,
   TILE_COLORS,
@@ -79,6 +80,18 @@ export class MenuScene extends Phaser.Scene {
         align: 'right',
       })
       .setOrigin(1, 0.5);
+
+    // Общий рекорд всех игроков приходит с сервера позже и заменяет локальный
+    const config = remoteConfig();
+    if (config) {
+      fetchTop(config, difficulty.id, 1)
+        .then(([top]) => {
+          if (top && record.active) record.setText(`Рекорд\n${top.score}`);
+        })
+        .catch(() => {
+          // Нет связи — остаётся рекорд этого устройства
+        });
+    }
 
     const hit = this.add
       .zone(0, 0, BUTTON_WIDTH, BUTTON_HEIGHT)

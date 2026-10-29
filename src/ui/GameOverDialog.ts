@@ -9,6 +9,7 @@ import {
   saveLeaderboard,
   type LeaderboardEntry,
 } from '../storage/leaderboard';
+import { remoteConfig, submitAndFetch } from '../storage/remoteLeaderboard';
 import {
   HIGHLIGHT_COLOR,
   UI_BUTTON_COLOR,
@@ -95,19 +96,43 @@ export class GameOverDialog {
     });
     const field = this.add(this.scene.add.dom(this.centerX, this.top + 330, input));
 
-    const submit = () => {
+    let sent = false;
+    const submit = async () => {
+      if (sent) return;
+      sent = true;
       const name = normalizeName(input.value);
       saveLastName(name);
+      // Результат всегда сохраняется и на этом устройстве — на случай, если сервер недоступен
       const entry: LeaderboardEntry = { name, score, playedAt: Date.now() };
-      const { entries, rank } = insertEntry(loadLeaderboard(difficulty.id), entry);
-      saveLeaderboard(difficulty.id, entries);
+      const local = insertEntry(loadLeaderboard(difficulty.id), entry);
+      saveLeaderboard(difficulty.id, local.entries);
       [label, field, button].forEach((obj) => obj.destroy());
-      this.showTable(entries, rank, score, actions);
+
+      const config = remoteConfig();
+      if (!config) {
+        this.showTable(local.entries, local.rank, score, actions, 'Таблица лидеров');
+        return;
+      }
+      const loading = this.add(this.text(this.top + 400, 'Сохраняем результат…', 30));
+      try {
+        const remote = await submitAndFetch(config, difficulty.id, name, score);
+        loading.destroy();
+        this.showTable(remote.entries, remote.rank, score, actions, 'Таблица лидеров');
+      } catch {
+        loading.destroy();
+        this.showTable(
+          local.entries,
+          local.rank,
+          score,
+          actions,
+          'Нет связи — результаты этого устройства',
+        );
+      }
     };
     input.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') submit();
+      if (event.key === 'Enter') void submit();
     });
-    const button = this.button(this.centerX, this.top + 450, 360, 'Сохранить', submit);
+    const button = this.button(this.centerX, this.top + 450, 360, 'Сохранить', () => void submit());
   }
 
   private showTable(
@@ -115,8 +140,10 @@ export class GameOverDialog {
     rank: number | null,
     score: number,
     actions: GameOverActions,
+    title: string,
   ): void {
-    this.add(this.text(this.top + 260, 'Таблица лидеров', 34, UI_MUTED_TEXT_COLOR));
+    // Длинная подпись («нет связи…») мельче, чтобы влезла в окно
+    this.add(this.text(this.top + 260, title, title.length > 20 ? 26 : 34, UI_MUTED_TEXT_COLOR));
     const left = this.centerX - PANEL_WIDTH / 2 + 50;
     const right = this.centerX + PANEL_WIDTH / 2 - 50;
     entries.forEach((entry, i) => {
