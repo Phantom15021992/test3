@@ -36,10 +36,10 @@ export const BONUS_TIERS: readonly {
   cost: number;
   type: 'bomb' | 'rocket' | 'manipulator' | 'rainbow';
 }[] = [
-  { cost: 250, type: 'bomb' },
-  { cost: 500, type: 'rocket' },
-  { cost: 750, type: 'manipulator' },
-  { cost: 1000, type: 'rainbow' },
+  { cost: 150, type: 'bomb' },
+  { cost: 300, type: 'rocket' },
+  { cost: 500, type: 'manipulator' },
+  { cost: 750, type: 'rainbow' },
 ];
 
 // Временное поле, пока нет уровней

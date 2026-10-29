@@ -6,17 +6,18 @@ import { parseBoard } from '../helpers/parseBoard';
 
 describe('покупка спецфишек за очки', () => {
   it('купить можно, когда очков хватает на цену', () => {
-    expect(canBuyBonus(249, 'bomb')).toBe(false);
-    expect(canBuyBonus(250, 'bomb')).toBe(true);
-    expect(canBuyBonus(600, 'rocket')).toBe(true);
-    expect(canBuyBonus(600, 'manipulator')).toBe(false);
-    expect(canBuyBonus(1000, 'rainbow')).toBe(true);
+    // Цены: бомба 150, ракета 300, манипулятор 500, радуга 750
+    expect(canBuyBonus(149, 'bomb')).toBe(false);
+    expect(canBuyBonus(150, 'bomb')).toBe(true);
+    expect(canBuyBonus(400, 'rocket')).toBe(true);
+    expect(canBuyBonus(400, 'manipulator')).toBe(false);
+    expect(canBuyBonus(750, 'rainbow')).toBe(true);
   });
 
   it('цена списывается со счёта', () => {
-    expect(buyBonus(600, 'bomb')).toBe(350);
-    expect(buyBonus(1500, 'rainbow')).toBe(500);
-    expect(buyBonus(740, 'manipulator')).toBeNull();
+    expect(buyBonus(600, 'bomb')).toBe(450);
+    expect(buyBonus(1000, 'rainbow')).toBe(250);
+    expect(buyBonus(490, 'manipulator')).toBeNull();
   });
 });
 
