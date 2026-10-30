@@ -49,7 +49,7 @@ const SPECIALS: readonly { type: PieceType; text: string }[] = [
   { type: 'bomb', text: `Бомба: взрыв ${square(BOMB_SIZE)}` },
   { type: 'megaBomb', text: `Мега-бомба: взрыв ${square(MEGA_BOMB_SIZE)}` },
   { type: 'rainbow', text: 'Радуга: клик, затем цвет' },
-  { type: 'manipulator', text: 'Манипулятор: обмен клеток' },
+  { type: 'manipulator', text: 'Манипулятор: клик, 2 клетки' },
 ];
 
 const COMBOS: readonly { pair: readonly [PieceType, PieceType]; text: string }[] = [
@@ -72,7 +72,7 @@ const COMBOS: readonly { pair: readonly [PieceType, PieceType]; text: string }[]
 ];
 
 /** Как применять спецфишки: одиночное нажатие их только выделяет */
-const ACTIVATION_NOTE = 'Двойной клик; взрывные — и сдвиг';
+const ACTIVATION_NOTE = 'Взрывные: двойной клик или сдвиг';
 
 const NOTES = [
   'Квадрат 2×2 — как 4 фишки',

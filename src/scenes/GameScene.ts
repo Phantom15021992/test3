@@ -6,7 +6,6 @@ import {
   samePos,
   type Board,
   type Cell,
-  type Piece,
   type Position,
 } from '../core/board';
 import {
@@ -265,7 +264,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (mode.type === 'manipulator') {
-      if (samePos(mode.at, cell)) return this.setMode({ type: 'idle' });
+      if (samePos(mode.at, cell)) {
+        // Привычный двойной клик не должен сразу отменять только что включённый выбор
+        if (this.isDoubleTap(cell)) return;
+        return this.setMode({ type: 'idle' });
+      }
       if (!isOnField(content)) return;
       if (!mode.first) return this.setMode({ ...mode, first: cell });
       if (samePos(mode.first, cell)) return this.setMode({ ...mode, first: null });
@@ -284,10 +287,14 @@ export class GameScene extends Phaser.Scene {
       this.setSelected(null);
       return this.setMode({ type: 'rainbowColor', at: cell });
     }
-    // Одиночное нажатие остальные спецфишки только выделяет, чтобы их можно было сдвинуть
+    if (isPiece(content) && content.type === 'manipulator') {
+      this.setSelected(null);
+      return this.setMode({ type: 'manipulator', at: cell, first: null });
+    }
+    // Одиночное нажатие взрывные спецфишки только выделяет, чтобы их можно было сдвинуть
     if (doubleTap && isPiece(content)) {
       this.setSelected(null);
-      return this.activatePiece(cell, content);
+      return void this.play({ type: 'fire', at: cell });
     }
     if (selected && samePos(selected, cell)) return this.setSelected(null);
     if (isPiece(content) || isTile(content)) this.setSelected(cell);
@@ -298,12 +305,6 @@ export class GameScene extends Phaser.Scene {
     const last = this.lastTap;
     this.lastTap = { cell, at: now };
     return last !== null && samePos(last.cell, cell) && now - last.at <= DOUBLE_TAP_MS;
-  }
-
-  /** Двойной клик: взрывные спецфишки срабатывают на месте, остальным нужен выбор игрока */
-  private activatePiece(at: Position, piece: Piece): void {
-    if (piece.type === 'manipulator') return this.setMode({ type: 'manipulator', at, first: null });
-    void this.play({ type: 'fire', at });
   }
 
   // ---------- Ходы ----------
@@ -477,7 +478,7 @@ export class GameScene extends Phaser.Scene {
     this.selected = pos;
     this.view.select(pos);
     const cell = pos && getCell(this.session.board, pos);
-    this.hintText.setText(isPiece(cell) ? pieceHint(cell) : hintFor(this.mode));
+    this.hintText.setText(isPiece(cell) ? PIECE_HINT : hintFor(this.mode));
   }
 
   private updateScore(): void {
@@ -500,11 +501,8 @@ function isOnField(cell: Cell | undefined): boolean {
   return cell != null && cell.kind !== 'hole' && cell.kind !== 'stone';
 }
 
-/** Одиночное нажатие спецфишку только выделяет — подсказываем, что с ней делать */
-function pieceHint(piece: Piece): string {
-  if (piece.type === 'manipulator') return 'Манипулятор: двойной клик — выбрать две клетки';
-  return 'Двойной клик — сработает на месте,\nсдвиг — на соседней клетке';
-}
+/** Одиночное нажатие взрывную спецфишку только выделяет — подсказываем, что с ней делать */
+const PIECE_HINT = 'Двойной клик — сработает на месте,\nсдвиг — на соседней клетке';
 
 function hintFor(mode: Mode): string {
   switch (mode.type) {
