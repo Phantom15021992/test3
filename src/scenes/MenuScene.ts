@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { DIFFICULTIES, type Difficulty } from '../core/config';
 import { loadLeaderboard, type LeaderboardEntry } from '../storage/leaderboard';
-import { fetchTop, remoteConfig } from '../storage/remoteLeaderboard';
+import { fetchRecords, remoteConfig, wakeGameServer } from '../storage/remoteLeaderboard';
 import {
   createMenuButton,
   MENU_BUTTON_GAP,
@@ -56,12 +56,33 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const firstY = subtitleTop + SUBTITLE_HEIGHT + MENU_BUTTON_GAP / 2 + MENU_BUTTON_HEIGHT / 2;
-    DIFFICULTIES.forEach((difficulty, i) => {
-      this.addButton(centerX, firstY + i * (MENU_BUTTON_HEIGHT + MENU_BUTTON_GAP), difficulty);
-    });
+    const records = DIFFICULTIES.map((difficulty, i) => ({
+      difficulty,
+      text: this.addButton(
+        centerX,
+        firstY + i * (MENU_BUTTON_HEIGHT + MENU_BUTTON_GAP),
+        difficulty,
+      ),
+    }));
+
+    const config = remoteConfig();
+    if (!config) return;
+    wakeGameServer(config);
+    // Общий рекорд всех игроков приходит с сервера позже и заменяет локальный — даже если
+    // общая таблица пуста: иначе на разных устройствах были бы видны разные «рекорды»
+    fetchRecords(config)
+      .then((top) => {
+        for (const { difficulty, text } of records) {
+          if (text.active) text.setText(recordText(top[difficulty.id]));
+        }
+      })
+      .catch(() => {
+        // Нет связи — остаётся рекорд этого устройства
+      });
   }
 
-  private addButton(x: number, y: number, difficulty: Difficulty): void {
+  /** Возвращает подпись рекорда: её обновит ответ сервера */
+  private addButton(x: number, y: number, difficulty: Difficulty): Phaser.GameObjects.Text {
     const left = -MENU_BUTTON_WIDTH / 2 + 36;
 
     const name = this.add
@@ -79,9 +100,6 @@ export class MenuScene extends Phaser.Scene {
       dots.fillCircle(left + DOT_RADIUS + i * (DOT_RADIUS * 2 + 8), 28, DOT_RADIUS);
     });
 
-    // Рекорд: очки и чей он
-    const recordText = (entry: LeaderboardEntry | undefined) =>
-      entry ? `Рекорд ${entry.score}\n${entry.name}` : '';
     const record = this.add
       .text(MENU_BUTTON_WIDTH / 2 - 36, 0, recordText(loadLeaderboard(difficulty.id)[0]), {
         fontFamily: 'sans-serif',
@@ -91,19 +109,6 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(1, 0.5);
 
-    // Общий рекорд всех игроков приходит с сервера позже и заменяет локальный — даже если
-    // общая таблица пуста: иначе на разных устройствах были бы видны разные «рекорды»
-    const config = remoteConfig();
-    if (config) {
-      fetchTop(config, difficulty.id, 1)
-        .then(([top]) => {
-          if (record.active) record.setText(recordText(top));
-        })
-        .catch(() => {
-          // Нет связи — остаётся рекорд этого устройства
-        });
-    }
-
     createMenuButton(this, x, y, [name, dots, record], () => {
       // Пока сервер выдаёт билет на партию, повторные нажатия не должны запускать вторую
       if (this.starting) return;
@@ -111,5 +116,11 @@ export class MenuScene extends Phaser.Scene {
       this.subtitle.setText('Готовим поле…');
       void startGame(this, difficulty.id);
     });
+    return record;
   }
+}
+
+/** Подпись рекорда: очки и чей он */
+function recordText(entry: LeaderboardEntry | undefined): string {
+  return entry ? `Рекорд ${entry.score}\n${entry.name}` : '';
 }

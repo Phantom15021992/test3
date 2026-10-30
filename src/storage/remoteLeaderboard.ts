@@ -1,4 +1,4 @@
-import { LEADERBOARD_SIZE, type DifficultyId } from '../core/config';
+import { DIFFICULTIES, LEADERBOARD_SIZE, type DifficultyId } from '../core/config';
 import type { GameAction } from '../core/session';
 import type { LeaderboardEntry } from './leaderboard';
 
@@ -94,6 +94,39 @@ export async function fetchTop(
   return Array.isArray(data) ? data.filter(isRow).map(toEntry) : [];
 }
 
+/**
+ * Лучший результат каждой сложности — одним запросом. В таблице не больше десятки на сложность,
+ * поэтому все строки помещаются в ответ, а первая строка сложности и есть её рекорд.
+ */
+export async function fetchRecords(
+  config: RemoteConfig,
+  fetchFn: FetchFn = fetch,
+): Promise<Partial<Record<DifficultyId, RemoteEntry>>> {
+  const query = new URLSearchParams({
+    select: 'id,name,score,created_at,difficulty',
+    order: 'score.desc,created_at.asc',
+    limit: String(LEADERBOARD_SIZE * DIFFICULTIES.length),
+  });
+  const data = await request(config, `leaderboard?${query}`, { method: 'GET' }, fetchFn);
+  const records: Partial<Record<DifficultyId, RemoteEntry>> = {};
+  for (const row of Array.isArray(data) ? data : []) {
+    if (!isRow(row)) continue;
+    const { difficulty } = row as Row & { difficulty?: DifficultyId };
+    if (difficulty && !records[difficulty]) records[difficulty] = toEntry(row);
+  }
+  return records;
+}
+
+/**
+ * Будит серверную функцию, пока игрок выбирает сложность: после простоя её первый ответ
+ * занимает секунды, и без этого их пришлось бы ждать при запуске партии.
+ */
+export function wakeGameServer(config: RemoteConfig, fetchFn: FetchFn = fetch): void {
+  fetchFn(gameServerUrl(config), { method: 'OPTIONS' }).catch(() => {
+    // Не проснулась — партия всё равно попросит билет как обычно
+  });
+}
+
 /** Билет на партию: seed поля выдаёт сервер, чтобы результат можно было проверить */
 export interface GameTicket {
   id: string;
@@ -101,6 +134,8 @@ export interface GameTicket {
 }
 
 export type RejectReason = 'limit' | 'invalid';
+
+const gameServerUrl = (config: RemoteConfig) => `${config.url}/functions/v1/smooth-handler`;
 
 /** Запрос к серверной функции игры (supabase/functions/smooth-handler) */
 async function callGameServer(
@@ -111,7 +146,7 @@ async function callGameServer(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const response = await fetchFn(`${config.url}/functions/v1/smooth-handler`, {
+    const response = await fetchFn(gameServerUrl(config), {
       method: 'POST',
       signal: controller.signal,
       headers: { apikey: config.key, 'Content-Type': 'application/json' },

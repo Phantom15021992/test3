@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fetchTop, requestTicket, submitAndFetch } from '../../src/storage/remoteLeaderboard';
+import {
+  fetchRecords,
+  fetchTop,
+  requestTicket,
+  submitAndFetch,
+  wakeGameServer,
+} from '../../src/storage/remoteLeaderboard';
 
 const config = { url: 'https://demo.supabase.co', key: 'public-key' };
 
@@ -27,6 +33,38 @@ describe('общая таблица лидеров (Supabase)', () => {
       { id: 7, name: 'Аня', score: 900, playedAt: Date.parse('2026-10-30T10:00:00Z') },
       { id: 3, name: 'Боря', score: 500, playedAt: Date.parse('2026-10-29T10:00:00Z') },
     ]);
+  });
+
+  it('рекорды всех сложностей приходят одним запросом: первая строка сложности — лучшая', async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse([
+        { ...rows[0], difficulty: 'hard' },
+        { ...rows[1], difficulty: 'kids' },
+        { id: 1, name: 'Вася', score: 100, created_at: rows[0]!.created_at, difficulty: 'hard' },
+      ]),
+    );
+    const records = await fetchRecords(config, fetchFn);
+
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    const [url] = fetchFn.mock.calls[0] as unknown as [string];
+    const query = new URL(url).searchParams;
+    expect(query.get('order')).toBe('score.desc,created_at.asc');
+    expect(query.get('limit')).toBe('50');
+    expect(query.has('difficulty')).toBe(false);
+    expect(records.hard?.name).toBe('Аня');
+    expect(records.kids?.name).toBe('Боря');
+    expect(records.easy).toBeUndefined();
+  });
+
+  it('пробуждение функции не ломает игру, даже если сервер недоступен', async () => {
+    const fetchFn = vi.fn(async () => {
+      throw new Error('offline');
+    });
+    expect(() => wakeGameServer(config, fetchFn)).not.toThrow();
+    await Promise.resolve();
+    const [url, init] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('https://demo.supabase.co/functions/v1/smooth-handler');
+    expect(init.method).toBe('OPTIONS');
   });
 
   it('пропускает строки неожиданного вида', async () => {
