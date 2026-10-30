@@ -80,6 +80,7 @@ describe('общая таблица лидеров (Supabase)', () => {
   it('в функцию уходят билет, имя и журнал, очков в запросе нет; место — по номеру записи', async () => {
     const fetchFn = vi
       .fn()
+      .mockResolvedValueOnce(jsonResponse(rows))
       .mockResolvedValueOnce(jsonResponse({ entryId: 3, score: 500 }))
       .mockResolvedValueOnce(jsonResponse(rows));
     const { entries, rank, accepted, reason } = await submitAndFetch(
@@ -89,7 +90,7 @@ describe('общая таблица лидеров (Supabase)', () => {
       fetchFn,
     );
 
-    const [url, init] = fetchFn.mock.calls[0] as [string, RequestInit];
+    const [url, init] = fetchFn.mock.calls[1] as [string, RequestInit];
     expect(url).toBe('https://demo.supabase.co/functions/v1/smooth-handler');
     expect(init.method).toBe('POST');
     expect(init.headers).toBeUndefined();
@@ -108,6 +109,7 @@ describe('общая таблица лидеров (Supabase)', () => {
   it('результат вне десятки — места нет', async () => {
     const fetchFn = vi
       .fn()
+      .mockResolvedValueOnce(jsonResponse(rows))
       .mockResolvedValueOnce(jsonResponse({ entryId: 99, score: 10 }))
       .mockResolvedValueOnce(jsonResponse(rows));
     expect((await submitAndFetch(config, 'medium', submission, fetchFn)).rank).toBeNull();
@@ -118,6 +120,7 @@ describe('общая таблица лидеров (Supabase)', () => {
     async (reason) => {
       const fetchFn = vi
         .fn()
+        .mockResolvedValueOnce(jsonResponse(rows))
         .mockResolvedValueOnce(jsonResponse({ reason }))
         .mockResolvedValueOnce(jsonResponse(rows));
       const result = await submitAndFetch(config, 'medium', submission, fetchFn);
@@ -127,6 +130,52 @@ describe('общая таблица лидеров (Supabase)', () => {
       expect(result.entries).toHaveLength(2);
     },
   );
+
+  it('чтение: обрыв связи повторяется, и таблица приходит со следующей попытки', async () => {
+    const fetchFn = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(jsonResponse(rows));
+    expect(await fetchTop(config, 'kids', 10, fetchFn)).toHaveLength(2);
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+  });
+
+  it('чтение: ответ сервера с ошибкой не повторяется', async () => {
+    const fetchFn = vi.fn(async () => jsonResponse({ message: 'нет' }, 401));
+    await expect(fetchTop(config, 'kids', 10, fetchFn)).rejects.toThrow('401');
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('билет: обрыв связи повторяется', async () => {
+    const fetchFn = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(jsonResponse({ id: 'ticket', seed: 123 }));
+    expect(await requestTicket(config, 'hard', fetchFn)).toEqual({ id: 'ticket', seed: 123 });
+  });
+
+  it('запись не повторяется: билет гасится один раз', async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(rows))
+      .mockRejectedValue(new TypeError('Failed to fetch'));
+    await expect(submitAndFetch(config, 'medium', submission, fetchFn)).rejects.toThrow('fetch');
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+  });
+
+  it('если подготовительное чтение не удалось, запись всё равно отправляется', async () => {
+    const urls: string[] = [];
+    const fetchFn = vi.fn(async (url: string | URL | Request) => {
+      urls.push(String(url));
+      if (String(url).includes('/rest/v1/') && urls.length <= 4) throw new TypeError('offline');
+      return String(url).includes('/functions/')
+        ? jsonResponse({ entryId: 3, score: 500 })
+        : jsonResponse(rows);
+    });
+    const { accepted } = await submitAndFetch(config, 'medium', submission, fetchFn);
+    expect(accepted).toBe(true);
+  });
 
   it('билет на партию: id и seed с сервера', async () => {
     const fetchFn = vi.fn(async () => jsonResponse({ id: 'ticket', seed: 123 }));

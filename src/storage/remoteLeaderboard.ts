@@ -13,15 +13,44 @@ export interface RemoteConfig {
   key: string;
 }
 
-/** Сколько ждать ответа сервера, прежде чем показать локальную таблицу */
-const REQUEST_TIMEOUT_MS = 6000;
+// На части устройств новое соединение с Supabase зависает без ответа и ошибки, а следующая
+// попытка проходит. Поэтому зависший запрос обрываем и повторяем сами (см. AGENTS.md).
+const READ_ATTEMPTS = 4;
+const READ_TIMEOUT_MS = 4000;
+/** Билет ждём дольше: функция после простоя просыпается секундами */
+const TICKET_ATTEMPTS = 3;
+const TICKET_TIMEOUT_MS = 8000;
 /**
- * Функции отвечаем дольше, чем чтению: за партию она засыпает, а просыпается секундами и ещё
- * проигрывает партию целиком. Оборвав ожидание, игра напишет «Нет связи», хотя запись могла пройти.
+ * Запись не повторяем: билет гасится один раз, и повтор отклонился бы, даже если первая попытка
+ * прошла. Ждём долго: функция могла уснуть за партию, а потом ещё проигрывает её целиком.
  */
-const GAME_SERVER_TIMEOUT_MS = 20000;
+const SUBMIT_TIMEOUT_MS = 20000;
+const RETRY_PAUSE_MS = 300;
 
 type FetchFn = typeof fetch;
+
+/** Сервер ответил ошибкой: связь есть, повторять незачем */
+class ServerAnswerError extends Error {}
+
+/** Выполняет запрос, обрывая зависшую попытку и повторяя при обрыве связи */
+async function withRetries<T>(
+  attempts: number,
+  timeoutMs: number,
+  run: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await run(controller.signal);
+    } catch (error) {
+      if (error instanceof ServerAnswerError || attempt >= attempts) throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+    await new Promise((resolve) => setTimeout(resolve, RETRY_PAUSE_MS));
+  }
+}
 
 /** Настройки из переменных окружения сборки; null — общая таблица не подключена */
 export function remoteConfig(): RemoteConfig | null {
@@ -66,17 +95,13 @@ async function readLeaderboard(
   fetchFn: FetchFn,
 ): Promise<unknown> {
   query.set('apikey', config.key);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  try {
-    const response = await fetchFn(`${config.url}/rest/v1/leaderboard?${query}`, {
-      signal: controller.signal,
-    });
-    if (!response.ok) throw new Error(`Сервер таблицы лидеров ответил ${response.status}`);
-    return await response.json();
-  } finally {
-    clearTimeout(timer);
-  }
+  return withRetries(READ_ATTEMPTS, READ_TIMEOUT_MS, async (signal) => {
+    const response = await fetchFn(`${config.url}/rest/v1/leaderboard?${query}`, { signal });
+    if (!response.ok) {
+      throw new ServerAnswerError(`Сервер таблицы лидеров ответил ${response.status}`);
+    }
+    return response.json();
+  });
 }
 
 /** Лучшие результаты сложности: по очкам, при равенстве — кто раньше */
@@ -144,22 +169,19 @@ async function callGameServer(
   config: RemoteConfig,
   body: unknown,
   fetchFn: FetchFn,
+  limits: { attempts: number; timeoutMs: number },
 ): Promise<Record<string, unknown>> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), GAME_SERVER_TIMEOUT_MS);
-  try {
+  return withRetries(limits.attempts, limits.timeoutMs, async (signal) => {
     const response = await fetchFn(gameServerUrl(config), {
       method: 'POST',
-      signal: controller.signal,
+      signal,
       // Без своих заголовков: иначе нужен предварительный запрос CORS (см. readLeaderboard).
       // Функция разобрана как JSON и без Content-Type, а ключ ей не нужен
       body: JSON.stringify(body),
     });
-    if (!response.ok) throw new Error(`Сервер игры ответил ${response.status}`);
+    if (!response.ok) throw new ServerAnswerError(`Сервер игры ответил ${response.status}`);
     return (await response.json()) as Record<string, unknown>;
-  } finally {
-    clearTimeout(timer);
-  }
+  });
 }
 
 /** Билет на новую партию; null — сервер недоступен (партия пойдёт только на этом устройстве) */
@@ -169,7 +191,10 @@ export async function requestTicket(
   fetchFn: FetchFn = fetch,
 ): Promise<GameTicket | null> {
   try {
-    const { id, seed } = await callGameServer(config, { action: 'start', difficulty }, fetchFn);
+    const { id, seed } = await callGameServer(config, { action: 'start', difficulty }, fetchFn, {
+      attempts: TICKET_ATTEMPTS,
+      timeoutMs: TICKET_TIMEOUT_MS,
+    });
     return typeof id === 'string' && typeof seed === 'number' ? { id, seed } : null;
   } catch {
     return null;
@@ -193,10 +218,14 @@ export async function submitAndFetch(
   reason: RejectReason | null;
 }> {
   const { ticketId, name, actions } = submission;
+  // Сначала чтение с повторами: оно поднимает соединение, и запись, которую повторять нельзя,
+  // идёт уже по рабочему. Не вышло — всё равно пробуем записать
+  await fetchTop(config, difficulty, 1, fetchFn).catch(() => []);
   const answer = await callGameServer(
     config,
     { action: 'finish', id: ticketId, name, actions },
     fetchFn,
+    { attempts: 1, timeoutMs: SUBMIT_TIMEOUT_MS },
   );
   const accepted = typeof answer.entryId === 'number';
   const entries = await fetchTop(config, difficulty, LEADERBOARD_SIZE, fetchFn);
