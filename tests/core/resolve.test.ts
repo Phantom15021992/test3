@@ -412,7 +412,7 @@ describe('resolveMove: активация тапом', () => {
       { type: 'manipulator', at: p(0, 0), a: p(1, 1), b: p(2, 1) },
       ctx(),
     );
-    expect(result.steps[0]).toEqual({ kind: 'clear', cells: [p(0, 0)], points: 0 });
+    expect(result.steps[0]).toEqual({ kind: 'clear', cells: [p(0, 0)], points: 0, pieces: 1 });
     expect(result.steps[1]).toEqual({ kind: 'swap', a: p(1, 1), b: p(2, 1) });
     expect(sortCells(stepsOf(result.steps, 'clear')[1]!.cells)).toEqual([
       p(1, 0),
@@ -437,6 +437,8 @@ describe('resolveMove: финал партии', () => {
     // Ракета бьёт всю строку 3; манипулятор просто исчезает с 250 очками
     expect(sortCells(clear!.cells)).toEqual([p(0, 0), p(3, 0), p(3, 1), p(3, 2), p(3, 3), p(3, 4)]);
     expect(clear!.points).toBe(250 + 4 * 10);
+    // Сработали две спецфишки — манипулятор и ракета
+    expect(clear!.pieces).toBe(2);
   });
 
   it('радуга убирает все фишки случайного цвета, который есть на поле', () => {

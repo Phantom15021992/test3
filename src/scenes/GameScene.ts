@@ -19,7 +19,8 @@ import {
   type DifficultyId,
 } from '../core/config';
 import { generateStartBoard } from '../core/generate';
-import { buyBonus, placeBonus, type BonusType } from '../core/bonus';
+import { bonusCost, buyBonus, placeBonus, type BonusType } from '../core/bonus';
+import { createGameStats, recordPurchase, recordStep, type GameStats } from '../core/gameStats';
 import { areAdjacent, hasTileMove, isValidSwap, shuffleBoard } from '../core/moves';
 import { resolveMove, type ChoiceOption, type Move } from '../core/resolve';
 import { createRng, type Rng } from '../core/rng';
@@ -27,6 +28,8 @@ import { comboNeedsColor, isCombo } from '../core/specials';
 import { BonusShop } from '../ui/BonusShop';
 import { ChoiceDialog } from '../ui/ChoiceDialog';
 import { GameOverDialog } from '../ui/GameOverDialog';
+import { sendGameResult } from '../storage/gameResults';
+import { remoteConfig } from '../storage/remoteLeaderboard';
 import { UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
 import { BoardView } from '../view/BoardView';
 
@@ -53,6 +56,10 @@ export class GameScene extends Phaser.Scene {
   private score = 0;
   /** Сколько ходов сделано (покупка спецфишки и перемешивание не считаются); лимит — MOVE_LIMIT */
   private moves = 0;
+  // Для анонимной статистики партии (game_results)
+  private stats: GameStats = createGameStats();
+  private startedAt = 0;
+  private shuffles = 0;
   private bonusShop!: BonusShop;
   private mode: Mode = { type: 'idle' };
   private selected: Position | null = null;
@@ -72,6 +79,9 @@ export class GameScene extends Phaser.Scene {
     // При «Играть снова» сцена перезапускается, а поля класса сами не сбрасываются
     this.score = 0;
     this.moves = 0;
+    this.stats = createGameStats();
+    this.startedAt = 0;
+    this.shuffles = 0;
     this.mode = { type: 'idle' };
     this.selected = null;
     this.pressed = null;
@@ -246,6 +256,8 @@ export class GameScene extends Phaser.Scene {
   /** Проигрывает ход: логика отдаёт шаги, сцена их анимирует и отвечает на выборы */
   private async play(move: Move): Promise<void> {
     this.busy = true;
+    // Длительность партии считаем от первого хода
+    if (this.moves === 0) this.startedAt = Date.now();
     this.moves++;
     this.updateMoves();
     this.updateBonusShop();
@@ -269,6 +281,7 @@ export class GameScene extends Phaser.Scene {
     let next = steps.next();
     while (!next.done) {
       const step = next.value;
+      recordStep(this.stats, step);
       let answer: ChoiceOption | undefined;
       switch (step.kind) {
         case 'swap':
@@ -302,19 +315,41 @@ export class GameScene extends Phaser.Scene {
    */
   private async finishGame(): Promise<void> {
     this.hintText.setText('Ходы закончились — спецфишки срабатывают!');
+    const scoreBeforeFinale = this.score;
     for (let round = 0; round < FINALE_MAX_ROUNDS && hasPieces(this.board); round++) {
       await this.animate({ type: 'finale' });
     }
     this.hintText.setText('');
+    this.sendResult(this.score - scoreBeforeFinale);
     new GameOverDialog(this).show(this.score, this.difficulty, {
       onRestart: () => this.scene.restart({ difficulty: this.difficulty.id }),
       onMenu: () => this.scene.start('Menu'),
     });
   }
 
+  /** Анонимная запись доигранной партии для анализа — сразу, ещё до ввода имени */
+  private sendResult(finalePoints: number): void {
+    const config = remoteConfig();
+    if (!config) return;
+    void sendGameResult(config, {
+      difficulty: this.difficulty.id,
+      score: this.score,
+      movesMade: this.moves,
+      durationSec: Math.round((Date.now() - this.startedAt) / 1000),
+      finalePoints,
+      shuffles: this.shuffles,
+      stats: this.stats,
+      device: window.matchMedia('(pointer: coarse)').matches ? 'touch' : 'desktop',
+      screenWidth: window.innerWidth,
+      screenHeight: window.innerHeight,
+      version: (import.meta.env.VITE_GAME_VERSION ?? 'dev').slice(0, 7),
+    });
+  }
+
   /** Если ходов обычными фишками не осталось — перемешать поле */
   private async ensureMoves(): Promise<void> {
     if (hasTileMove(this.board)) return;
+    this.shuffles++;
     this.hintText.setText('Ходов нет — перемешиваем поле');
     this.board = shuffleBoard(this.board, this.difficulty.colors, this.rng);
     await this.view.shuffle(this.board);
@@ -331,6 +366,7 @@ export class GameScene extends Phaser.Scene {
     const result = placeBonus(this.board, type, this.rng);
     if (!result) return;
     this.busy = true;
+    recordPurchase(this.stats, type, bonusCost(type));
     this.score = scoreAfter;
     this.addScore(0);
     this.setSelected(null);

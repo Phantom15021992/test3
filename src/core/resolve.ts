@@ -2,6 +2,7 @@ import {
   allPositions,
   cloneBoard,
   getCell,
+  isPiece,
   isTile,
   posKey,
   samePos,
@@ -60,7 +61,8 @@ export type ResolveStep =
   | { kind: 'swap'; a: Position; b: Position }
   /** Клетки заменяются новыми: созданные спецфишки, объединённые ячейки, превращения в комбо */
   | { kind: 'transform'; placements: Placement[] }
-  | { kind: 'clear'; cells: Position[]; points: number }
+  /** pieces — сколько спецфишек среди убранных клеток (сработали) — для статистики партии */
+  | { kind: 'clear'; cells: Position[]; points: number; pieces: number }
   | { kind: 'drop'; falls: Fall[]; spawns: Spawn[] }
   | { kind: 'choice'; group: MatchGroup; options: readonly [ChoiceOption, ChoiceOption] };
 
@@ -99,9 +101,10 @@ export function* resolveMove(
       (sum, pos) => sum + (pointsOverride?.get(posKey(pos)) ?? hitPoints(getCell(current, pos))),
       0,
     );
+    const pieces = cells.filter((pos) => isPiece(getCell(current, pos))).length;
     score += points;
     current = removeCells(current, cells);
-    yield { kind: 'clear', cells, points };
+    yield { kind: 'clear', cells, points, pieces };
   }
 
   function* place(placements: Placement[]): Generator<ResolveStep, void, ChoiceOption | undefined> {
@@ -142,7 +145,7 @@ export function* resolveMove(
     }
     case 'manipulator': {
       current = removeCells(current, [move.at]);
-      yield { kind: 'clear', cells: [move.at], points: 0 };
+      yield { kind: 'clear', cells: [move.at], points: 0, pieces: 1 };
       current = swapCells(current, move.a, move.b);
       yield { kind: 'swap', a: move.a, b: move.b };
       landing = [move.b, move.a];

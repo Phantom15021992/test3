@@ -31,8 +31,10 @@ jobs:
       - run: npm ci
       - run: npm run test
       - run: npm run lint
-      # build включает проверку типов (tsc --noEmit)
+      # build включает проверку типов (tsc --noEmit); версия игры — коммит, для статистики партий
       - run: npm run build
+        env:
+          VITE_GAME_VERSION: ${{ github.sha }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
