@@ -32,13 +32,14 @@ import { LevelResultDialog } from '../ui/LevelResultDialog';
 import { sendGameResult } from '../storage/gameResults';
 import { saveLevelStars } from '../storage/progress';
 import { remoteConfig, type GameTicket } from '../storage/remoteLeaderboard';
-import { goalsText, levelMoveLimit } from '../ui/levelText';
+import { goalsText, levelBriefing, levelMoveLimit, levelTitle } from '../ui/levelText';
 import { HIGHLIGHT_COLOR, UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
 import { BoardView } from '../view/BoardView';
 import { debugSeed, startGame } from './startGame';
 
 const BOARD_MARGIN = 40;
-const LEVEL_GOALS_Y_OFFSET = 130;
+const LEVEL_GOALS_Y_OFFSET = 112;
+const LEVEL_BRIEFING_Y_OFFSET = 142;
 
 /** Режим ввода: обычный, выбор цвета (радуга / мега-бомба + радуга), выбор клеток манипулятором */
 type Mode =
@@ -119,7 +120,8 @@ export class GameScene extends Phaser.Scene {
     this.add
       .text(centerX, boxTop - 275, this.titleText(), {
         fontFamily: 'sans-serif',
-        fontSize: '44px',
+        // У уровня заголовок длиннее, а слева от него ещё кнопка карты
+        fontSize: this.level ? '36px' : '44px',
         color: UI_TEXT_COLOR,
       })
       .setOrigin(0.5);
@@ -153,6 +155,15 @@ export class GameScene extends Phaser.Scene {
     this.refreshGoals();
     if (this.level) {
       this.add
+        .text(centerX, boxBottom + LEVEL_BRIEFING_Y_OFFSET, levelBriefing(this.level), {
+          fontFamily: 'sans-serif',
+          fontSize: '24px',
+          color: UI_MUTED_TEXT_COLOR,
+          lineSpacing: 5,
+          wordWrap: { width: boxSize },
+        })
+        .setOrigin(0.5, 0);
+      this.add
         .text(30, boxTop - 275, '← Карта', {
           fontFamily: 'sans-serif',
           fontSize: '30px',
@@ -171,7 +182,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private titleText(): string {
-    return this.level ? this.level.title : `Три в ряд · ${this.difficulty.name}`;
+    return this.level ? levelTitle(this.level) : `Три в ряд · ${this.difficulty.name}`;
   }
 
   private refreshIce(): void {

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CHAPTER_ONE } from '../levels';
 import { loadLevelStars } from '../storage/progress';
+import { levelNumber } from '../ui/levelText';
 import {
   createMenuButton,
   MENU_BUTTON_GAP,
@@ -44,7 +45,7 @@ export class LevelMapScene extends Phaser.Scene {
       const earned = stars[level.id] ?? 0;
 
       const number = this.add
-        .text(0, -20, String(level.id), {
+        .text(0, -20, levelNumber(level), {
           fontFamily: 'sans-serif',
           fontSize: '42px',
           color: UI_TEXT_COLOR,

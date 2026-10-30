@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { LevelSession } from '../core/levelSession';
 import { levelAfter } from '../levels';
-import { missingGoalsText, starTaskText } from './levelText';
+import { levelTitle, missingGoalsText, starTaskText } from './levelText';
 import { createMenuButton, menuButtonLabel } from './menuButton';
 import {
   HIGHLIGHT_COLOR,
@@ -49,7 +49,7 @@ export class LevelResultDialog {
       .setDepth(DEPTH);
 
     this.text(centerX, top + 70, won ? 'Уровень пройден!' : 'Ходы закончились', 44, UI_TEXT_COLOR);
-    this.text(centerX, top + 130, session.level.title, 28, UI_MUTED_TEXT_COLOR);
+    this.text(centerX, top + 130, levelTitle(session.level), 28, UI_MUTED_TEXT_COLOR);
     const stars = Array.from({ length: STAR_COUNT }, (_, i) =>
       i < session.stars ? '★' : '☆',
     ).join(' ');
