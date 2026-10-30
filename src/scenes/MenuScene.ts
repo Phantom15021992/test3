@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { DIFFICULTIES, type Difficulty } from '../core/config';
 import { loadLeaderboard, type LeaderboardEntry } from '../storage/leaderboard';
 import { fetchTop, remoteConfig } from '../storage/remoteLeaderboard';
+import { startGame } from './startGame';
 import {
   HIGHLIGHT_COLOR,
   TILE_COLORS,
@@ -21,11 +22,15 @@ const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
 
 // Стартовое меню: выбор сложности. На кнопке — сколько цветов (кружками) и рекорд этой сложности.
 export class MenuScene extends Phaser.Scene {
+  private subtitle!: Phaser.GameObjects.Text;
+  private starting = false;
+
   constructor() {
     super('Menu');
   }
 
   create(): void {
+    this.starting = false;
     const centerX = this.scale.width / 2;
     this.add
       .text(centerX, 200, 'Три в ряд', {
@@ -34,7 +39,7 @@ export class MenuScene extends Phaser.Scene {
         color: UI_TEXT_COLOR,
       })
       .setOrigin(0.5);
-    this.add
+    this.subtitle = this.add
       .text(centerX, 290, 'Выберите сложность', {
         fontFamily: 'sans-serif',
         fontSize: '34px',
@@ -99,7 +104,13 @@ export class MenuScene extends Phaser.Scene {
     const hit = this.add
       .zone(0, 0, BUTTON_WIDTH, BUTTON_HEIGHT)
       .setInteractive({ useHandCursor: true })
-      .on('pointerup', () => this.scene.start('Game', { difficulty: difficulty.id }));
+      .on('pointerup', () => {
+        // Пока сервер выдаёт билет на партию, повторные нажатия не должны запускать вторую
+        if (this.starting) return;
+        this.starting = true;
+        this.subtitle.setText('Готовим поле…');
+        void startGame(this, difficulty.id);
+      });
 
     this.add.container(x, y, [bg, name, dots, record, hit]);
   }

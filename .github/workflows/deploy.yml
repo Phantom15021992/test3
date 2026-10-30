@@ -31,6 +31,8 @@ jobs:
       - run: npm ci
       - run: npm run test
       - run: npm run lint
+      # Сервер проигрывает партии тем же кодом: сборка функции в репозитории должна быть свежей
+      - run: npm run build:function && git diff --exit-code supabase/functions
       # build включает проверку типов (tsc --noEmit); версия игры — коммит, для статистики партий
       - run: npm run build
         env:

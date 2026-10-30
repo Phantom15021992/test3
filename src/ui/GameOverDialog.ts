@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { PLAYER_NAME_MAX_LENGTH, type Difficulty } from '../core/config';
+import type { GameAction } from '../core/session';
 import {
   insertEntry,
   loadLastName,
@@ -42,6 +43,17 @@ export interface GameOverActions {
   onMenu: () => void;
 }
 
+/** Что нужно серверу для проверки партии; без билета результат остаётся только на устройстве */
+export interface OnlineGame {
+  ticketId: string;
+  actions: readonly GameAction[];
+}
+
+const REJECT_TITLES = {
+  limit: 'Результат не принят: слишком частая отправка',
+  invalid: 'Результат не прошёл проверку',
+} as const;
+
 // Окно конца партии: сначала ввод имени, затем таблица лидеров этой сложности
 // и кнопки «Играть снова» / «Меню».
 // Поле имени — настоящий <input> (DOM-элемент Phaser), чтобы на телефоне открывалась клавиатура.
@@ -55,7 +67,12 @@ export class GameOverDialog {
     this.top = (scene.scale.height - PANEL_HEIGHT) / 2;
   }
 
-  show(score: number, difficulty: Difficulty, actions: GameOverActions): void {
+  show(
+    score: number,
+    difficulty: Difficulty,
+    actions: GameOverActions,
+    online: OnlineGame | null,
+  ): void {
     const { width, height } = this.scene.scale;
     // Затемнение перехватывает нажатия, чтобы поле под окном не реагировало
     this.add(
@@ -72,10 +89,15 @@ export class GameOverDialog {
     this.add(this.text(this.top + 70, 'Игра окончена', 48));
     this.add(this.text(this.top + 125, difficulty.name, 28, UI_MUTED_TEXT_COLOR));
     this.add(this.text(this.top + 180, `Очки: ${score}`, 40, hex(HIGHLIGHT_COLOR)));
-    this.askName(score, difficulty, actions);
+    this.askName(score, difficulty, actions, online);
   }
 
-  private askName(score: number, difficulty: Difficulty, actions: GameOverActions): void {
+  private askName(
+    score: number,
+    difficulty: Difficulty,
+    actions: GameOverActions,
+    online: OnlineGame | null,
+  ): void {
     const label = this.add(this.text(this.top + 250, 'Ваше имя:', 30, UI_MUTED_TEXT_COLOR));
 
     const input = document.createElement('input');
@@ -120,13 +142,25 @@ export class GameOverDialog {
         this.showTable(local.entries, local.rank, score, actions, 'Таблица лидеров');
         return;
       }
+      if (!online) {
+        this.showTable(
+          local.entries,
+          local.rank,
+          score,
+          actions,
+          'Нет связи — результаты этого устройства',
+        );
+        return;
+      }
       const loading = this.add(this.text(this.top + 400, 'Сохраняем результат…', 30));
       try {
-        const remote = await submitAndFetch(config, difficulty.id, name, score);
+        const remote = await submitAndFetch(config, difficulty.id, {
+          ticketId: online.ticketId,
+          name,
+          actions: online.actions,
+        });
         loading.destroy();
-        const title = remote.accepted
-          ? 'Таблица лидеров'
-          : 'Результат не принят: слишком частая отправка';
+        const title = remote.reason ? REJECT_TITLES[remote.reason] : 'Таблица лидеров';
         this.showTable(remote.entries, remote.rank, score, actions, title, remote.accepted);
       } catch {
         loading.destroy();

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fetchTop, submitAndFetch } from '../../src/storage/remoteLeaderboard';
+import { fetchTop, requestTicket, submitAndFetch } from '../../src/storage/remoteLeaderboard';
 
 const config = { url: 'https://demo.supabase.co', key: 'public-key' };
 
@@ -34,49 +34,70 @@ describe('общая таблица лидеров (Supabase)', () => {
     expect(await fetchTop(config, 'kids', 10, fetchFn)).toHaveLength(2);
   });
 
-  it('отправляет только сложность, имя и очки, место — по номеру новой записи', async () => {
+  const submission = { ticketId: 'ticket', name: 'Боря', actions: [] };
+
+  it('в функцию уходят билет, имя и журнал, очков в запросе нет; место — по номеру записи', async () => {
     const fetchFn = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse([{ id: 3 }], 201))
+      .mockResolvedValueOnce(jsonResponse({ entryId: 3, score: 500 }))
       .mockResolvedValueOnce(jsonResponse(rows));
-    const { entries, rank } = await submitAndFetch(config, 'medium', 'Боря', 500, fetchFn);
+    const { entries, rank, accepted, reason } = await submitAndFetch(
+      config,
+      'medium',
+      submission,
+      fetchFn,
+    );
 
-    const [, init] = fetchFn.mock.calls[0] as [string, RequestInit];
+    const [url, init] = fetchFn.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://demo.supabase.co/functions/v1/game');
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body as string)).toEqual({
-      difficulty: 'medium',
+      action: 'finish',
+      id: 'ticket',
       name: 'Боря',
-      score: 500,
+      actions: [],
     });
     expect(entries).toHaveLength(2);
     expect(rank).toBe(1);
+    expect(accepted).toBe(true);
+    expect(reason).toBeNull();
   });
 
   it('результат вне десятки — места нет', async () => {
     const fetchFn = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse([{ id: 99 }], 201))
+      .mockResolvedValueOnce(jsonResponse({ entryId: 99, score: 10 }))
       .mockResolvedValueOnce(jsonResponse(rows));
-    expect((await submitAndFetch(config, 'medium', 'Вася', 10, fetchFn)).rank).toBeNull();
+    expect((await submitAndFetch(config, 'medium', submission, fetchFn)).rank).toBeNull();
   });
 
-  it('база не сохранила запись (частая отправка) — результат не принят, таблица всё равно приходит', async () => {
-    const fetchFn = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse([], 201))
-      .mockResolvedValueOnce(jsonResponse(rows));
-    const result = await submitAndFetch(config, 'medium', 'Вася', 500, fetchFn);
-    expect(result.accepted).toBe(false);
-    expect(result.rank).toBeNull();
-    expect(result.entries).toHaveLength(2);
+  it.each(['limit', 'invalid'] as const)(
+    'результат не принят (%s) — таблица всё равно приходит',
+    async (reason) => {
+      const fetchFn = vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse({ reason }))
+        .mockResolvedValueOnce(jsonResponse(rows));
+      const result = await submitAndFetch(config, 'medium', submission, fetchFn);
+      expect(result.accepted).toBe(false);
+      expect(result.reason).toBe(reason);
+      expect(result.rank).toBeNull();
+      expect(result.entries).toHaveLength(2);
+    },
+  );
+
+  it('билет на партию: id и seed с сервера', async () => {
+    const fetchFn = vi.fn(async () => jsonResponse({ id: 'ticket', seed: 123 }));
+    expect(await requestTicket(config, 'hard', fetchFn)).toEqual({ id: 'ticket', seed: 123 });
   });
 
-  it('принятая запись помечается как принятая', async () => {
-    const fetchFn = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse([{ id: 3 }], 201))
-      .mockResolvedValueOnce(jsonResponse(rows));
-    expect((await submitAndFetch(config, 'medium', 'Боря', 500, fetchFn)).accepted).toBe(true);
+  it('сервер недоступен — партия идёт без билета', async () => {
+    const offline = vi.fn(async () => {
+      throw new Error('offline');
+    });
+    expect(await requestTicket(config, 'hard', offline)).toBeNull();
+    const refused = vi.fn(async () => jsonResponse({ error: 'limit' }, 429));
+    expect(await requestTicket(config, 'hard', refused)).toBeNull();
   });
 
   it('ошибка сервера — исключение (игра покажет локальную таблицу)', async () => {

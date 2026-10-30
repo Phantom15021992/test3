@@ -72,6 +72,8 @@ export const BONUS_TIERS: readonly {
 export const MOVE_LIMIT = 35;
 /** Очки за манипулятор, оставшийся на поле в финале партии */
 export const MANIPULATOR_FINALE_POINTS = 250;
+/** Защита от зацикливания финала, если каскады всё время создают новые спецфишки */
+export const FINALE_MAX_ROUNDS = 50;
 
 // Таблица лидеров
 export const LEADERBOARD_SIZE = 10;

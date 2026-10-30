@@ -1,8 +1,10 @@
 import { LEADERBOARD_SIZE, type DifficultyId } from '../core/config';
+import type { GameAction } from '../core/session';
 import type { LeaderboardEntry } from './leaderboard';
 
 // Общая таблица лидеров в Supabase (таблица public.leaderboard, см. supabase/leaderboard.sql).
-// Работаем напрямую через REST API: библиотека Supabase для двух запросов не нужна.
+// Читаем напрямую через REST API (библиотека Supabase для этого не нужна), а записывает только
+// серверная функция supabase/functions/game: она сама проигрывает партию и считает очки.
 // Ключ — публичный (anon / publishable): права ограничены правилами в базе, его можно
 // держать в коде игры. Секретный ключ (service_role / secret) сюда класть нельзя.
 
@@ -92,34 +94,75 @@ export async function fetchTop(
   return Array.isArray(data) ? data.filter(isRow).map(toEntry) : [];
 }
 
+/** Билет на партию: seed поля выдаёт сервер, чтобы результат можно было проверить */
+export interface GameTicket {
+  id: string;
+  seed: number;
+}
+
+export type RejectReason = 'limit' | 'invalid';
+
+/** Запрос к серверной функции игры (supabase/functions/game) */
+async function callGameServer(
+  config: RemoteConfig,
+  body: unknown,
+  fetchFn: FetchFn,
+): Promise<Record<string, unknown>> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetchFn(`${config.url}/functions/v1/game`, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { apikey: config.key, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new Error(`Сервер игры ответил ${response.status}`);
+    return (await response.json()) as Record<string, unknown>;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Билет на новую партию; null — сервер недоступен (партия пойдёт только на этом устройстве) */
+export async function requestTicket(
+  config: RemoteConfig,
+  difficulty: DifficultyId,
+  fetchFn: FetchFn = fetch,
+): Promise<GameTicket | null> {
+  try {
+    const { id, seed } = await callGameServer(config, { action: 'start', difficulty }, fetchFn);
+    return typeof id === 'string' && typeof seed === 'number' ? { id, seed } : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Отправляет результат и возвращает свежую десятку и место игрока в ней
- * (null — если в десятку он не попал).
- * accepted: false — база не сохранила запись (с этого IP отправляли чаще раза в минуту
- * или он заблокирован, см. supabase/rate_limit.sql): в ответе тогда нет новой строки.
+ * Отправляет журнал партии: очки считает и записывает сервер, браузер их не передаёт.
+ * Возвращает свежую десятку и место игрока (null — не в десятке).
+ * accepted: false — результат не принят, reason объясняет почему.
  */
 export async function submitAndFetch(
   config: RemoteConfig,
   difficulty: DifficultyId,
-  name: string,
-  score: number,
+  submission: { ticketId: string; name: string; actions: readonly GameAction[] },
   fetchFn: FetchFn = fetch,
-): Promise<{ entries: RemoteEntry[]; rank: number | null; accepted: boolean }> {
-  const inserted = await request(
+): Promise<{
+  entries: RemoteEntry[];
+  rank: number | null;
+  accepted: boolean;
+  reason: RejectReason | null;
+}> {
+  const { ticketId, name, actions } = submission;
+  const answer = await callGameServer(
     config,
-    'leaderboard?select=id',
-    {
-      method: 'POST',
-      headers: { Prefer: 'return=representation' },
-      body: JSON.stringify({ difficulty, name, score }),
-    },
+    { action: 'finish', id: ticketId, name, actions },
     fetchFn,
   );
-  const id = Array.isArray(inserted)
-    ? (inserted[0] as { id?: unknown } | undefined)?.id
-    : undefined;
-  const accepted = typeof id === 'number';
+  const accepted = typeof answer.entryId === 'number';
   const entries = await fetchTop(config, difficulty, LEADERBOARD_SIZE, fetchFn);
-  const rank = accepted ? entries.findIndex((entry) => entry.id === id) : -1;
-  return { entries, rank: rank >= 0 ? rank : null, accepted };
+  const rank = accepted ? entries.findIndex((entry) => entry.id === answer.entryId) : -1;
+  const reason = accepted ? null : answer.reason === 'limit' ? 'limit' : 'invalid';
+  return { entries, rank: rank >= 0 ? rank : null, accepted, reason };
 }
