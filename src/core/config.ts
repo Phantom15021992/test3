@@ -115,3 +115,6 @@ export const SHUFFLE_DURATION_MS = 300;
 export const SWIPE_THRESHOLD = 0.3;
 /** Два нажатия на одну клетку за это время — двойной клик */
 export const DOUBLE_TAP_MS = 300;
+/** Подсказка самого сильного хода появляется после такого бездействия */
+export const HINT_DELAY_MS = 15000;
+export const HINT_PULSE_MS = 450;

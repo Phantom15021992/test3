@@ -49,7 +49,7 @@ export class GameSession {
 
   constructor(
     seed: number,
-    private readonly colorCount: number,
+    readonly colorCount: number,
     template: Board = createEmptyBoard(DEMO_BOARD_ROWS, DEMO_BOARD_COLS),
     private readonly moveLimit: number = MOVE_LIMIT,
   ) {

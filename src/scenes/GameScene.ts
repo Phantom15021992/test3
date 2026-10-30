@@ -12,12 +12,14 @@ import {
   DEMO_BOARD_COLS,
   DIFFICULTIES,
   DOUBLE_TAP_MS,
+  HINT_DELAY_MS,
   MOVE_LIMIT,
   SWIPE_THRESHOLD,
   type Difficulty,
   type DifficultyId,
 } from '../core/config';
 import type { BonusType } from '../core/bonus';
+import { strongestMove, type HintKind } from '../core/hint';
 import { areAdjacent, isValidSwap } from '../core/moves';
 import type { ChoiceOption, ResolveStep } from '../core/resolve';
 import type { Level } from '../core/level';
@@ -68,6 +70,9 @@ export class GameScene extends Phaser.Scene {
   private pressed: { cell: Position; x: number; y: number } | null = null;
   private lastTap: { cell: Position; at: number } | null = null;
   private busy = false;
+  /** Когда игрок действовал в последний раз: от этого момента считается пауза до подсказки */
+  private lastActionAt = 0;
+  private hintShown = false;
 
   constructor() {
     super('Game');
@@ -88,6 +93,8 @@ export class GameScene extends Phaser.Scene {
     this.pressed = null;
     this.lastTap = null;
     this.busy = false;
+    this.lastActionAt = this.game.loop.time;
+    this.hintShown = false;
     // Seed выдаёт сервер, чтобы партию можно было проверить. ?seed=123 — одинаковое поле при
     // каждом запуске (для отладки; в общую таблицу такая партия не попадает, см. startGame)
     const seed = debugSeed() ?? this.ticket?.seed ?? Date.now() >>> 0;
@@ -180,6 +187,27 @@ export class GameScene extends Phaser.Scene {
     this.input.on('pointerup', this.onPointerUp, this);
   }
 
+  update(time: number): void {
+    // Пока идёт ход, пауза не считается: думать игрок начинает, когда поле успокоилось
+    if (this.busy) this.lastActionAt = time;
+    if (this.busy || this.hintShown || this.mode.type !== 'idle') return;
+    if (time - this.lastActionAt < HINT_DELAY_MS) return;
+    this.hintShown = true;
+    const hint = strongestMove(this.session);
+    if (!hint) return;
+    this.view.showHint(hint.cells);
+    this.hintText.setText(HINT_TEXTS[hint.kind]);
+  }
+
+  /** Любое действие игрока убирает подсказку и начинает отсчёт заново */
+  private resetHint(): void {
+    this.lastActionAt = this.game.loop.time;
+    if (!this.hintShown) return;
+    this.hintShown = false;
+    this.view.hideHint();
+    this.hintText.setText(hintFor(this.mode));
+  }
+
   private titleText(): string {
     return this.level ? levelTitle(this.level) : `Три в ряд · ${this.difficulty.name}`;
   }
@@ -203,6 +231,7 @@ export class GameScene extends Phaser.Scene {
   // ---------- Ввод ----------
 
   private onPointerDown(pointer: Phaser.Input.Pointer): void {
+    this.resetHint();
     if (this.busy) return;
     const cell = this.view.cellAt(pointer.x, pointer.y);
     this.pressed = cell ? { cell, x: pointer.x, y: pointer.y } : null;
@@ -500,6 +529,12 @@ export class GameScene extends Phaser.Scene {
 function isOnField(cell: Cell | undefined): boolean {
   return cell != null && cell.kind !== 'hole' && cell.kind !== 'stone';
 }
+
+const HINT_TEXTS: Readonly<Record<HintKind, string>> = {
+  swap: 'Подсказка: поменяйте отмеченные клетки',
+  fire: 'Подсказка: двойной клик по спецфишке',
+  rainbow: 'Подсказка: нажмите на радугу, затем на отмеченную фишку',
+};
 
 /** Одиночное нажатие взрывную спецфишку только выделяет — подсказываем, что с ней делать */
 const PIECE_HINT = 'Двойной клик — сработает на месте,\nсдвиг — на соседней клетке';

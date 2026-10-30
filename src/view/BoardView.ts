@@ -3,6 +3,7 @@ import type { Board, Cell, Position, Tile } from '../core/board';
 import {
   CLEAR_DURATION_MS,
   FALL_DURATION_PER_CELL_MS,
+  HINT_PULSE_MS,
   MATCH_PULSE_DURATION_MS,
   PLACE_DURATION_MS,
   SHUFFLE_DURATION_MS,
@@ -32,6 +33,8 @@ export class BoardView {
   private readonly iceLayer: Phaser.GameObjects.Graphics;
   private readonly selection: Phaser.GameObjects.Graphics;
   private readonly highlight: Phaser.GameObjects.Graphics;
+  private readonly hintLayer: Phaser.GameObjects.Graphics;
+  private hintPulse: Phaser.Tweens.Tween | null = null;
   // Новые фишки появляются над полем — маска скрывает их, пока не долетят до поля
   private readonly maskShape: Phaser.GameObjects.Graphics;
   private readonly mask: Phaser.Display.Masks.GeometryMask;
@@ -49,6 +52,7 @@ export class BoardView {
     this.iceLayer = scene.add.graphics();
     this.selection = scene.add.graphics().setDepth(1);
     this.highlight = scene.add.graphics().setDepth(1);
+    this.hintLayer = scene.add.graphics().setDepth(1);
     this.maskShape = scene.make.graphics({}, false);
     this.mask = this.maskShape.createGeometryMask();
   }
@@ -112,6 +116,26 @@ export class BoardView {
   setHighlight(cells: Position[]): void {
     this.highlight.clear();
     for (const pos of cells) this.outline(this.highlight, pos, HIGHLIGHT_COLOR);
+  }
+
+  /** Подсказка хода: клетки пульсируют, пока игрок не начнёт действовать */
+  showHint(cells: Position[]): void {
+    this.hideHint();
+    for (const pos of cells) this.outline(this.hintLayer, pos, HIGHLIGHT_COLOR);
+    this.hintPulse = this.scene.tweens.add({
+      targets: this.hintLayer,
+      alpha: 0.15,
+      duration: HINT_PULSE_MS,
+      yoyo: true,
+      repeat: -1,
+    });
+  }
+
+  hideHint(): void {
+    this.hintPulse?.remove();
+    this.hintPulse = null;
+    this.hintLayer.clear();
+    this.hintLayer.setAlpha(1);
   }
 
   /** Перемешивание: все фишки сжимаются и появляются уже на новых местах */
