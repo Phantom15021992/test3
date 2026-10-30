@@ -95,6 +95,8 @@ export async function fetchTop(
 /**
  * Отправляет результат и возвращает свежую десятку и место игрока в ней
  * (null — если в десятку он не попал).
+ * accepted: false — база не сохранила запись (с этого IP отправляли чаще раза в минуту
+ * или он заблокирован, см. supabase/rate_limit.sql): в ответе тогда нет новой строки.
  */
 export async function submitAndFetch(
   config: RemoteConfig,
@@ -102,7 +104,7 @@ export async function submitAndFetch(
   name: string,
   score: number,
   fetchFn: FetchFn = fetch,
-): Promise<{ entries: RemoteEntry[]; rank: number | null }> {
+): Promise<{ entries: RemoteEntry[]; rank: number | null; accepted: boolean }> {
   const inserted = await request(
     config,
     'leaderboard?select=id',
@@ -113,8 +115,11 @@ export async function submitAndFetch(
     },
     fetchFn,
   );
-  const id = Array.isArray(inserted) ? (inserted[0] as { id?: unknown } | undefined)?.id : null;
+  const id = Array.isArray(inserted)
+    ? (inserted[0] as { id?: unknown } | undefined)?.id
+    : undefined;
+  const accepted = typeof id === 'number';
   const entries = await fetchTop(config, difficulty, LEADERBOARD_SIZE, fetchFn);
-  const rank = entries.findIndex((entry) => entry.id === id);
-  return { entries, rank: rank >= 0 ? rank : null };
+  const rank = accepted ? entries.findIndex((entry) => entry.id === id) : -1;
+  return { entries, rank: rank >= 0 ? rank : null, accepted };
 }

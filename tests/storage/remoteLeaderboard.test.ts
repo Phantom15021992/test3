@@ -60,6 +60,25 @@ describe('общая таблица лидеров (Supabase)', () => {
     expect((await submitAndFetch(config, 'medium', 'Вася', 10, fetchFn)).rank).toBeNull();
   });
 
+  it('база не сохранила запись (частая отправка) — результат не принят, таблица всё равно приходит', async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse([], 201))
+      .mockResolvedValueOnce(jsonResponse(rows));
+    const result = await submitAndFetch(config, 'medium', 'Вася', 500, fetchFn);
+    expect(result.accepted).toBe(false);
+    expect(result.rank).toBeNull();
+    expect(result.entries).toHaveLength(2);
+  });
+
+  it('принятая запись помечается как принятая', async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse([{ id: 3 }], 201))
+      .mockResolvedValueOnce(jsonResponse(rows));
+    expect((await submitAndFetch(config, 'medium', 'Боря', 500, fetchFn)).accepted).toBe(true);
+  });
+
   it('ошибка сервера — исключение (игра покажет локальную таблицу)', async () => {
     const fetchFn = vi.fn(async () => jsonResponse({ message: 'нет' }, 401));
     await expect(fetchTop(config, 'easy', 10, fetchFn)).rejects.toThrow('401');

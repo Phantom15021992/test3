@@ -124,7 +124,10 @@ export class GameOverDialog {
       try {
         const remote = await submitAndFetch(config, difficulty.id, name, score);
         loading.destroy();
-        this.showTable(remote.entries, remote.rank, score, actions, 'Таблица лидеров');
+        const title = remote.accepted
+          ? 'Таблица лидеров'
+          : 'Результат не принят: слишком частая отправка';
+        this.showTable(remote.entries, remote.rank, score, actions, title, remote.accepted);
       } catch {
         loading.destroy();
         this.showTable(
@@ -148,9 +151,12 @@ export class GameOverDialog {
     score: number,
     actions: GameOverActions,
     title: string,
+    /** false — база не приняла результат: он не сохранён, а не просто «не в десятке» */
+    saved = true,
   ): void {
-    // Длинная подпись («нет связи…») мельче, чтобы влезла в окно
-    this.add(this.text(this.top + 260, title, title.length > 20 ? 26 : 34, UI_MUTED_TEXT_COLOR));
+    // Длинная подпись («нет связи…», «не принят…») мельче, чтобы влезла в окно
+    const titleSize = title.length > 40 ? 22 : title.length > 20 ? 26 : 34;
+    this.add(this.text(this.top + 260, title, titleSize, UI_MUTED_TEXT_COLOR));
     const left = this.centerX - PANEL_WIDTH / 2 + 50;
     const right = this.centerX + PANEL_WIDTH / 2 - 50;
     entries.forEach((entry, i) => {
@@ -163,7 +169,10 @@ export class GameOverDialog {
     });
     if (rank === null) {
       const y = this.top + 310 + entries.length * ROW_HEIGHT + 10;
-      this.add(this.text(y + 15, `Ваш результат ${score} — не в десятке лучших`, 26));
+      const note = saved
+        ? `Ваш результат ${score} — не в десятке лучших`
+        : `Ваш результат ${score} не сохранён`;
+      this.add(this.text(y + 15, note, 26));
     }
     const y = this.top + PANEL_HEIGHT - 70;
     const close = (action: () => void) => () => {
