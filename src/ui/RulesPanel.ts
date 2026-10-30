@@ -17,17 +17,19 @@ import { drawTileShape } from '../view/tileArt';
 
 const PADDING = 16;
 const COLUMN_GAP = 16;
-const HEADER_HEIGHT = 38;
-const SPECIAL_ROW_HEIGHT = 33;
-const MATCH_ROW_HEIGHT = 36;
-const LEVEL_TITLE_HEIGHT = 32;
-const NOTE_ROW_HEIGHT = 26;
-const TILE_ICON_SIZE = 32;
-const PIECE_ICON_RADIUS = 15;
-const COMBO_ICON_STEP = 42;
-const FONT_HEADER = '24px';
-const FONT_ROW = '20px';
-const FONT_NOTE = '18px';
+/** Левая колонка уже правой: подписи комбо длиннее строк с объединениями */
+const MATCHES_COLUMN_WIDTH = 300;
+const HEADER_HEIGHT = 44;
+const SPECIAL_ROW_HEIGHT = 46;
+const MATCH_ROW_HEIGHT = 50;
+const LEVEL_TITLE_HEIGHT = 38;
+const NOTE_ROW_HEIGHT = 32;
+const TILE_ICON_SIZE = 36;
+const PIECE_ICON_RADIUS = 17;
+const COMBO_ICON_STEP = 44;
+const FONT_HEADER = '28px';
+const FONT_ROW = '21px';
+const FONT_NOTE = '20px';
 /** Жёлтый: на тёмной панели значки читаются лучше, чем синим, первым цветом палитры */
 const ICON_COLOR = TILE_COLORS[1]!;
 
@@ -83,7 +85,7 @@ function rewardIcons(reward: MatchReward): (CellLevel | PieceType)[] {
   return icons;
 }
 
-// Правила в главном меню: слева — что дают объединения, справа — спецфишки и их комбо.
+// Панель экрана правил: слева — что дают объединения, справа — спецфишки и их комбо.
 // Числа берутся из config и подсчёта очков игры, поэтому правила не расходятся с игрой.
 export class RulesPanel {
   constructor(
@@ -96,10 +98,9 @@ export class RulesPanel {
     panel.fillStyle(UI_PANEL_COLOR);
     panel.fillRoundedRect(left, top, width, RULES_PANEL_HEIGHT, 20);
 
-    const columnWidth = (width - PADDING * 2 - COLUMN_GAP) / 2;
     const contentTop = top + PADDING;
-    this.drawMatches(left + PADDING, contentTop, columnWidth);
-    this.drawSpecials(left + PADDING + columnWidth + COLUMN_GAP, contentTop);
+    this.drawMatches(left + PADDING, contentTop, MATCHES_COLUMN_WIDTH);
+    this.drawSpecials(left + PADDING + MATCHES_COLUMN_WIDTH + COLUMN_GAP, contentTop);
   }
 
   private drawMatches(x: number, top: number, width: number): void {
@@ -135,10 +136,10 @@ export class RulesPanel {
     size: 3 | 4 | 5,
   ): void {
     this.text(x, y, `${size}${size === 5 ? '+' : ''} ×`, FONT_ROW);
-    this.icon(x + 62, y, level);
-    this.text(x + 88, y, '→', FONT_ROW, UI_MUTED_TEXT_COLOR);
+    this.icon(x + 68, y, level);
+    this.text(x + 94, y, '→', FONT_ROW, UI_MUTED_TEXT_COLOR);
     rewardIcons(MATCH_REWARDS[level][size]).forEach((icon, i) => {
-      this.icon(x + 134 + i * 36, y, icon);
+      this.icon(x + 140 + i * 40, y, icon);
     });
     this.text(x + width, y, pointsLabel(level, size), FONT_ROW).setOrigin(1, 0.5);
   }
