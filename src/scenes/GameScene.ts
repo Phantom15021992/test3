@@ -5,12 +5,12 @@ import {
   isTile,
   samePos,
   type Board,
+  type Cell,
   type Piece,
   type Position,
 } from '../core/board';
 import {
   DEMO_BOARD_COLS,
-  DEMO_BOARD_ROWS,
   DIFFICULTIES,
   DOUBLE_TAP_MS,
   MOVE_LIMIT,
@@ -21,18 +21,24 @@ import {
 import type { BonusType } from '../core/bonus';
 import { areAdjacent, isValidSwap } from '../core/moves';
 import type { ChoiceOption, ResolveStep } from '../core/resolve';
+import type { Level } from '../core/level';
+import { LevelSession } from '../core/levelSession';
 import { GameSession, type PlayerMove } from '../core/session';
 import { comboNeedsColor, isCombo } from '../core/specials';
 import { BonusShop } from '../ui/BonusShop';
 import { ChoiceDialog } from '../ui/ChoiceDialog';
 import { GameOverDialog } from '../ui/GameOverDialog';
+import { LevelResultDialog } from '../ui/LevelResultDialog';
 import { sendGameResult } from '../storage/gameResults';
+import { saveLevelStars } from '../storage/progress';
 import { remoteConfig, type GameTicket } from '../storage/remoteLeaderboard';
-import { UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
+import { goalsText, levelMoveLimit } from '../ui/levelText';
+import { HIGHLIGHT_COLOR, UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
 import { BoardView } from '../view/BoardView';
 import { debugSeed, startGame } from './startGame';
 
 const BOARD_MARGIN = 40;
+const LEVEL_GOALS_Y_OFFSET = 130;
 
 /** Режим ввода: обычный, выбор цвета (радуга / мега-бомба + радуга), выбор клеток манипулятором */
 type Mode =
@@ -46,6 +52,9 @@ export class GameScene extends Phaser.Scene {
   private difficulty!: Difficulty;
   /** Билет сервера на партию; null — без связи, результат останется только на устройстве */
   private ticket: GameTicket | null = null;
+  /** Уровень; null — свободная игра */
+  private level: Level | null = null;
+  private goalsText: Phaser.GameObjects.Text | null = null;
   private view!: BoardView;
   private dialog!: ChoiceDialog;
   private scoreText!: Phaser.GameObjects.Text;
@@ -65,9 +74,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Сложность и билет на партию приходят из startGame; при «Играть снова» сложность та же */
-  init(data: { difficulty?: DifficultyId; ticket?: GameTicket | null }): void {
+  init(data: { difficulty?: DifficultyId; ticket?: GameTicket | null; level?: Level }): void {
     this.difficulty = DIFFICULTIES.find((d) => d.id === data.difficulty) ?? DIFFICULTIES[2];
     this.ticket = data.ticket ?? null;
+    this.level = data.level ?? null;
   }
 
   create(): void {
@@ -80,52 +90,97 @@ export class GameScene extends Phaser.Scene {
     this.busy = false;
     // Seed выдаёт сервер, чтобы партию можно было проверить. ?seed=123 — одинаковое поле при
     // каждом запуске (для отладки; в общую таблицу такая партия не попадает, см. startGame)
-    this.session = new GameSession(
-      debugSeed() ?? this.ticket?.seed ?? Date.now() >>> 0,
-      this.difficulty.colors,
-    );
+    const seed = debugSeed() ?? this.ticket?.seed ?? Date.now() >>> 0;
+    this.session = this.level
+      ? new LevelSession(seed, this.level)
+      : new GameSession(seed, this.difficulty.colors);
     if (import.meta.env.DEV) {
       // Доступ к сцене из консоли браузера для ручной проверки
       (window as unknown as { gameScene: GameScene }).gameScene = this;
     }
 
-    const cellSize = Math.floor((this.scale.width - BOARD_MARGIN * 2) / DEMO_BOARD_COLS);
-    const originX = (this.scale.width - cellSize * DEMO_BOARD_COLS) / 2;
-    const originY = (this.scale.height - cellSize * DEMO_BOARD_ROWS) / 2;
-    const boardBottom = originY + cellSize * DEMO_BOARD_ROWS;
+    // Интерфейс привязан к месту поля 10×10, а поле уровня вписывается в него по центру:
+    // так экран не прыгает от уровня к уровню, а меньшие поля получают клетки крупнее
+    const boxSize = Math.floor((this.scale.width - BOARD_MARGIN * 2) / DEMO_BOARD_COLS) * 10;
+    const boxLeft = (this.scale.width - boxSize) / 2;
+    const boxTop = (this.scale.height - boxSize) / 2;
+    const boxBottom = boxTop + boxSize;
+    const rows = this.session.board.length;
+    const cols = this.session.board[0]?.length ?? DEMO_BOARD_COLS;
+    const cellSize = Math.floor(boxSize / Math.max(rows, cols, 1));
+    const originX = boxLeft + (boxSize - cellSize * cols) / 2;
+    const originY = boxTop + (boxSize - cellSize * rows) / 2;
     this.view = new BoardView(this, originX, originY, cellSize);
     this.view.render(this.session.board);
-    this.dialog = new ChoiceDialog(this, boardBottom + 30);
+    this.refreshIce();
+    this.dialog = new ChoiceDialog(this, boxBottom + 30);
 
     const centerX = this.scale.width / 2;
     this.add
-      .text(centerX, originY - 275, `Три в ряд · ${this.difficulty.name}`, {
+      .text(centerX, boxTop - 275, this.titleText(), {
         fontFamily: 'sans-serif',
         fontSize: '44px',
         color: UI_TEXT_COLOR,
       })
       .setOrigin(0.5);
     const hudStyle = { fontFamily: 'sans-serif', fontSize: '34px', color: UI_TEXT_COLOR };
-    this.scoreText = this.add.text(centerX - 100, originY - 205, '', hudStyle).setOrigin(0.5);
-    this.movesText = this.add.text(centerX + 115, originY - 205, '', hudStyle).setOrigin(0.5);
+    this.scoreText = this.add.text(centerX - 100, boxTop - 205, '', hudStyle).setOrigin(0.5);
+    this.movesText = this.add.text(centerX + 115, boxTop - 205, '', hudStyle).setOrigin(0.5);
     this.hintText = this.add
-      .text(centerX, boardBottom + 60, '', {
+      .text(centerX, boxBottom + 60, this.level?.hint ?? '', {
         fontFamily: 'sans-serif',
         fontSize: '28px',
         color: UI_MUTED_TEXT_COLOR,
         align: 'center',
       })
       .setOrigin(0.5);
-    const boardRight = originX + cellSize * DEMO_BOARD_COLS;
-    this.bonusShop = new BonusShop(this, originX, boardRight, originY - 115, (type) =>
+    this.bonusShop = new BonusShop(this, boxLeft, boxLeft + boxSize, boxTop - 115, (type) =>
       this.takeBonus(type),
     );
     this.updateScore();
     this.updateMoves();
+    this.goalsText = this.level
+      ? this.add
+          .text(centerX, boxBottom + LEVEL_GOALS_Y_OFFSET, '', {
+            fontFamily: 'sans-serif',
+            fontSize: '30px',
+            color: `#${HIGHLIGHT_COLOR.toString(16)}`,
+            align: 'center',
+          })
+          .setOrigin(0.5)
+      : null;
+    this.refreshGoals();
+    if (this.level) {
+      this.add
+        .text(30, boxTop - 275, '← Карта', {
+          fontFamily: 'sans-serif',
+          fontSize: '30px',
+          color: UI_MUTED_TEXT_COLOR,
+        })
+        .setOrigin(0, 0.5)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerup', () => {
+          if (!this.busy) this.scene.start('LevelMap');
+        });
+    }
 
     this.input.on('pointerdown', this.onPointerDown, this);
     this.input.on('pointermove', this.onPointerMove, this);
     this.input.on('pointerup', this.onPointerUp, this);
+  }
+
+  private titleText(): string {
+    return this.level ? this.level.title : `Три в ряд · ${this.difficulty.name}`;
+  }
+
+  private refreshIce(): void {
+    if (this.session instanceof LevelSession) this.view.setIce(this.session.ice);
+  }
+
+  private refreshGoals(): void {
+    if (this.goalsText && this.session instanceof LevelSession) {
+      this.goalsText.setText(goalsText(this.session));
+    }
   }
 
   /** Только для отладки: подменить поле */
@@ -199,7 +254,7 @@ export class GameScene extends Phaser.Scene {
 
     if (mode.type === 'manipulator') {
       if (samePos(mode.at, cell)) return this.setMode({ type: 'idle' });
-      if (content == null || content.kind === 'hole') return;
+      if (!isOnField(content)) return;
       if (!mode.first) return this.setMode({ ...mode, first: cell });
       if (samePos(mode.first, cell)) return this.setMode({ ...mode, first: null });
       this.setMode({ type: 'idle' });
@@ -245,7 +300,7 @@ export class GameScene extends Phaser.Scene {
     const board = this.session.board;
     const cellA = getCell(board, a);
     const cellB = getCell(board, b);
-    if (cellA == null || cellB == null || cellA.kind === 'hole' || cellB.kind === 'hole') return;
+    if (!isOnField(cellA) || !isOnField(cellB)) return;
 
     if (!isValidSwap(board, a, b)) {
       // Показываем, что так нельзя: туда и обратно
@@ -272,7 +327,9 @@ export class GameScene extends Phaser.Scene {
     await this.animate(steps);
     await this.ensureMoves();
     if (this.session.isOver) {
-      await this.finishGame();
+      await (this.session instanceof LevelSession
+        ? this.finishLevel(this.session)
+        : this.finishGame());
       return;
     }
     this.busy = false;
@@ -293,9 +350,12 @@ export class GameScene extends Phaser.Scene {
           break;
         case 'clear':
           this.updateScore();
+          this.refreshIce();
+          this.refreshGoals();
           await this.view.clear(step.cells);
           break;
         case 'transform':
+          this.refreshGoals();
           await this.view.place(step.placements);
           break;
         case 'drop':
@@ -331,6 +391,16 @@ export class GameScene extends Phaser.Scene {
       },
       this.ticket && { ticketId: this.ticket.id, actions: session.actions },
     );
+  }
+
+  /** Уровень окончен: цели выполнены или кончились ходы */
+  private async finishLevel(session: LevelSession): Promise<void> {
+    const { level, stars } = session;
+    if (stars > 0) saveLevelStars(level.id, stars);
+    new LevelResultDialog(this).show(session, {
+      onRetry: () => this.scene.restart({ level }),
+      onMap: () => this.scene.start('LevelMap'),
+    });
   }
 
   /** Анонимная запись доигранной партии для анализа — сразу, ещё до ввода имени */
@@ -404,13 +474,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateMoves(): void {
-    this.movesText.setText(`Ходы: ${MOVE_LIMIT - this.session.moves}`);
+    this.movesText.setText(`Ходы: ${levelMoveLimit(this.session, MOVE_LIMIT)}`);
   }
 
   private updateBonusShop(): void {
     // Покупка — только в спокойном состоянии: не во время хода и не в режиме выбора клеток
     this.bonusShop.update(this.session.score, !this.busy && this.mode.type === 'idle');
   }
+}
+
+/** Клетка, с которой можно что-то сделать: дыра и камень в обмене не участвуют */
+function isOnField(cell: Cell | undefined): boolean {
+  return cell != null && cell.kind !== 'hole' && cell.kind !== 'stone';
 }
 
 /** Одиночное нажатие спецфишку только выделяет — подсказываем, что с ней делать */

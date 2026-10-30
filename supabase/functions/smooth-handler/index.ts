@@ -309,7 +309,7 @@ function expandChain(board, initial, preActivated = /* @__PURE__ */ new Set()) {
     const key = posKey(pos);
     if (destroyed.has(key)) continue;
     const cell = getCell(board, pos);
-    if (cell == null || cell.kind === "hole") continue;
+    if (cell == null || cell.kind === "hole" || cell.kind === "item") continue;
     destroyed.set(key, pos);
     if (!preActivated.has(key)) queue.push(...activationArea(board, pos, cell));
   }
@@ -334,10 +334,13 @@ function activationSwapTarget(board, a, b) {
   if (isCombo(board, a, b)) return null;
   const cellA = getCell(board, a);
   const cellB = getCell(board, b);
-  if (cellA == null || cellB == null || cellA.kind === "hole" || cellB.kind === "hole") return null;
+  if (!isSwappable(cellA) || !isSwappable(cellB)) return null;
   if (firesOnSwap(cellA)) return b;
   if (firesOnSwap(cellB)) return a;
   return null;
+}
+function isSwappable(cell) {
+  return isTile(cell) || isPiece(cell);
 }
 function comboNeedsColor(board, a, b) {
   const kinds = [comboKind(getCell(board, a)), comboKind(getCell(board, b))];
@@ -412,7 +415,8 @@ function isValidSwap(board, a, b) {
   return findMatches(swapCells(board, a, b)).length > 0;
 }
 function isMovable(cell) {
-  return isTile(cell) || isPiece(cell) && (cell.type === "manipulator" || cell.type === "rainbow");
+  if (isTile(cell) || cell?.kind === "item") return true;
+  return isPiece(cell) && (cell.type === "manipulator" || cell.type === "rainbow");
 }
 function findPossibleMoves(board) {
   const moves = [];
@@ -440,7 +444,10 @@ function hasTileMove(board) {
 var SHUFFLE_ATTEMPTS = 100;
 var RECOLOR_ATTEMPTS = 500;
 function shuffleBoard(board, colorCount, rng) {
-  const positions = allPositions(board).filter((pos) => getCell(board, pos) !== null);
+  const positions = allPositions(board).filter((pos) => {
+    const cell = getCell(board, pos);
+    return cell != null && cell.kind !== "stone" && cell.kind !== "item";
+  });
   const cells = positions.map((pos) => getCell(board, pos));
   let candidate = board;
   for (let attempt = 0; attempt < SHUFFLE_ATTEMPTS; attempt++) {
@@ -509,7 +516,7 @@ function removeCells(board, cells) {
   const next = cloneBoard(board);
   for (const { row, col } of cells) {
     const kind = next[row]?.[col]?.kind;
-    if (kind === "tile" || kind === "piece") next[row][col] = null;
+    if (kind === "tile" || kind === "piece" || kind === "stone") next[row][col] = null;
   }
   return next;
 }
@@ -520,7 +527,8 @@ function applyGravity(board) {
   for (let col = 0; col < cols; col++) {
     const slots = [];
     for (let row = next.length - 1; row >= 0; row--) {
-      if (next[row]?.[col]?.kind !== "hole") slots.push(row);
+      const kind = next[row]?.[col]?.kind;
+      if (kind !== "hole" && kind !== "stone") slots.push(row);
     }
     let target = 0;
     for (const row of slots) {
@@ -535,6 +543,19 @@ function applyGravity(board) {
     }
   }
   return { board: next, falls };
+}
+function itemsOnBottom(board) {
+  const arrived = [];
+  const cols = board[0]?.length ?? 0;
+  for (let col = 0; col < cols; col++) {
+    for (let row = board.length - 1; row >= 0; row--) {
+      const kind = board[row]?.[col]?.kind;
+      if (kind === "hole" || kind === "stone") continue;
+      if (kind === "item") arrived.push({ row, col });
+      break;
+    }
+  }
+  return arrived;
 }
 function refill(board, colorCount, rng) {
   const next = cloneBoard(board);
@@ -564,9 +585,10 @@ function* resolveMove(board, move, ctx) {
       0
     );
     const pieces = cells.filter((pos) => isPiece(getCell(current, pos))).length;
+    const stones = cells.filter((pos) => getCell(current, pos)?.kind === "stone").length;
     score += points;
     current = removeCells(current, cells);
-    yield { kind: "clear", cells, points, pieces };
+    yield { kind: "clear", cells, points, pieces, ...stones > 0 && { stones } };
   }
   function* place(placements) {
     if (placements.length === 0) return;
@@ -616,14 +638,20 @@ function* resolveMove(board, move, ctx) {
   for (let wave = 0; wave < MAX_WAVES; wave++) {
     const groups = findMatches(current);
     if (groups.length === 0) {
-      if (!hasEmpty(current)) return { board: current, score };
+      if (!hasEmpty(current)) {
+        const arrived = itemsOnBottom(current);
+        if (arrived.length === 0) return { board: current, score };
+        current = cloneBoard(current);
+        for (const pos of arrived) setCell(current, pos, null);
+        yield { kind: "clear", cells: arrived, points: 0, pieces: 0, items: arrived.length };
+      }
     } else {
       const removal = [];
       const placements = [];
       const points = /* @__PURE__ */ new Map();
       for (const group of groups) {
         const outcome = groupOutcome(group, pickSpot(group, landing));
-        removal.push(...group.cells);
+        removal.push(...group.cells, ...stonesAround(current, group.cells));
         spreadPoints(group.cells, outcome.points, points);
         placements.push(...outcome.placements);
       }
@@ -637,6 +665,15 @@ function* resolveMove(board, move, ctx) {
     yield { kind: "drop", falls: fallen.falls, spawns: filled.spawns };
   }
   throw new Error(`\u041A\u0430\u0441\u043A\u0430\u0434 \u043D\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u043B\u0441\u044F \u0437\u0430 ${MAX_WAVES} \u0432\u043E\u043B\u043D`);
+}
+function stonesAround(board, cells) {
+  const offsets = [
+    [0, 1],
+    [0, -1],
+    [1, 0],
+    [-1, 0]
+  ];
+  return cells.flatMap(({ row, col }) => offsets.map(([dr, dc]) => ({ row: row + dr, col: col + dc }))).filter((pos) => getCell(board, pos)?.kind === "stone");
 }
 function hasEmpty(board) {
   return board.some((line) => line.includes(null));
@@ -741,16 +778,14 @@ function createRng(seed) {
 
 // src/core/session.ts
 var GameSession = class {
-  constructor(seed, colorCount) {
+  constructor(seed, colorCount, template = createEmptyBoard(DEMO_BOARD_ROWS, DEMO_BOARD_COLS), moveLimit = MOVE_LIMIT) {
     this.colorCount = colorCount;
+    this.moveLimit = moveLimit;
     this.rng = createRng(seed);
-    this.board = generateStartBoard(
-      createEmptyBoard(DEMO_BOARD_ROWS, DEMO_BOARD_COLS),
-      colorCount,
-      this.rng
-    );
+    this.board = generateStartBoard(template, colorCount, this.rng);
   }
   colorCount;
+  moveLimit;
   board;
   score = 0;
   /** Сколько ходов сделано (покупка спецфишки и перемешивание не считаются) */
@@ -760,7 +795,7 @@ var GameSession = class {
   actions = [];
   rng;
   get isOver() {
-    return this.moves >= MOVE_LIMIT;
+    return this.moves >= this.moveLimit;
   }
   /** Ход игрока; шаги отдаются для анимации */
   play(move) {
@@ -775,6 +810,7 @@ var GameSession = class {
       const step = next.value;
       recordStep(this.stats, step);
       if (step.kind === "clear") this.score += step.points;
+      this.onStep?.(step);
       next = steps.next(yield step);
     }
     this.board = next.value.board;
@@ -828,7 +864,7 @@ var GameSession = class {
 };
 function isFilled(board, pos) {
   const cell = getCell(board, pos);
-  return cell != null && cell.kind !== "hole";
+  return cell != null && cell.kind !== "hole" && cell.kind !== "stone";
 }
 function hasColor(board, color) {
   return allPositions(board).some((pos) => {

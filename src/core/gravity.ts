@@ -15,22 +15,23 @@ export function removeCells(board: Board, cells: Position[]): Board {
   const next = cloneBoard(board);
   for (const { row, col } of cells) {
     const kind = next[row]?.[col]?.kind;
-    if (kind === 'tile' || kind === 'piece') next[row]![col] = null;
+    if (kind === 'tile' || kind === 'piece' || kind === 'stone') next[row]![col] = null;
   }
   return next;
 }
 
-/** Фишки падают вниз по столбцам; дыры пропускаются — фишка пролетает сквозь них */
+/** Фишки падают вниз по столбцам; дыры и камни пропускаются — фишка пролетает сквозь них */
 export function applyGravity(board: Board): { board: Board; falls: Fall[] } {
   const next = cloneBoard(board);
   const falls: Fall[] = [];
   const cols = next[0]?.length ?? 0;
 
   for (let col = 0; col < cols; col++) {
-    // Клетки столбца без дыр, снизу вверх
+    // Клетки столбца без дыр и камней, снизу вверх
     const slots: number[] = [];
     for (let row = next.length - 1; row >= 0; row--) {
-      if (next[row]?.[col]?.kind !== 'hole') slots.push(row);
+      const kind = next[row]?.[col]?.kind;
+      if (kind !== 'hole' && kind !== 'stone') slots.push(row);
     }
 
     let target = 0;
@@ -47,6 +48,21 @@ export function applyGravity(board: Board): { board: Board; falls: Fall[] } {
   }
 
   return { board: next, falls };
+}
+
+/** Предметы, дошедшие до дна: ниже них в столбце нет клетки, куда можно упасть */
+export function itemsOnBottom(board: Board): Position[] {
+  const arrived: Position[] = [];
+  const cols = board[0]?.length ?? 0;
+  for (let col = 0; col < cols; col++) {
+    for (let row = board.length - 1; row >= 0; row--) {
+      const kind = board[row]?.[col]?.kind;
+      if (kind === 'hole' || kind === 'stone') continue;
+      if (kind === 'item') arrived.push({ row, col });
+      break;
+    }
+  }
+  return arrived;
 }
 
 /** Заполняет пустые клетки новыми фишками 1 уровня; совпадения допускаются — из них каскады */

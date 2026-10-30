@@ -13,9 +13,9 @@ export function createMenuButton(
   y: number,
   content: Phaser.GameObjects.GameObject[],
   onClick: () => void,
+  width = MENU_BUTTON_WIDTH,
+  height = MENU_BUTTON_HEIGHT,
 ): Phaser.GameObjects.Container {
-  const width = MENU_BUTTON_WIDTH;
-  const height = MENU_BUTTON_HEIGHT;
   const bg = scene.add.graphics();
   // Тёмная кнопка с цветной обводкой — чтобы кружки цветов (в том числе синий) были видны
   bg.fillStyle(UI_PANEL_COLOR);

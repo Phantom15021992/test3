@@ -12,8 +12,9 @@ import {
 import { startGame } from './startGame';
 import { HIGHLIGHT_COLOR, TILE_COLORS, UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
 
-const TITLE_Y = 120;
-const RULES_BUTTON_Y = 250;
+const TITLE_Y = 60;
+const LEVELS_BUTTON_Y = 170;
+const RULES_BUTTON_Y = LEVELS_BUTTON_Y + MENU_BUTTON_HEIGHT + MENU_BUTTON_GAP;
 /** Кнопка правил отделена от выбора сложности полуторным интервалом между кнопками */
 const RULES_GAP = MENU_BUTTON_GAP * 1.5;
 const SUBTITLE_HEIGHT = 40;
@@ -21,7 +22,7 @@ const DOT_RADIUS = 9;
 
 const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
 
-// Стартовое меню: кнопка правил и выбор сложности.
+// Стартовое меню: уровни, правила и свободная игра с выбором сложности.
 // На кнопке сложности — сколько цветов (кружками) и её рекорд.
 export class MenuScene extends Phaser.Scene {
   private subtitle!: Phaser.GameObjects.Text;
@@ -42,6 +43,9 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    createMenuButton(this, centerX, LEVELS_BUTTON_Y, [menuButtonLabel(this, 'Уровни')], () => {
+      if (!this.starting) this.scene.start('LevelMap');
+    });
     createMenuButton(this, centerX, RULES_BUTTON_Y, [menuButtonLabel(this, 'Правила игры')], () => {
       if (!this.starting) this.scene.start('Rules');
     });

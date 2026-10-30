@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "simulate": "vite-node scripts/simulate.ts",
+    "levels": "vite-node scripts/analyzeLevels.ts",
     "build:function": "esbuild src/server/entry.ts --bundle --format=esm --platform=neutral --target=es2022 --outfile=supabase/functions/smooth-handler/index.ts --log-level=warning",
     "deploy:function": "npm run build:function && npx supabase functions deploy smooth-handler --project-ref szieuersvybdqdzhstpx --use-api --no-verify-jwt"
   },

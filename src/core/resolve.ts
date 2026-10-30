@@ -20,7 +20,7 @@ import {
   LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE,
   MANIPULATOR_FINALE_POINTS,
 } from './config';
-import { applyGravity, refill, removeCells, type Fall, type Spawn } from './gravity';
+import { applyGravity, itemsOnBottom, refill, removeCells, type Fall, type Spawn } from './gravity';
 import { findMatches, type MatchGroup } from './match';
 import { swapCells } from './moves';
 import type { Rng } from './rng';
@@ -60,8 +60,16 @@ export type ResolveStep =
   | { kind: 'swap'; a: Position; b: Position }
   /** Клетки заменяются новыми: созданные спецфишки, объединённые ячейки, превращения в комбо */
   | { kind: 'transform'; placements: Placement[] }
-  /** pieces — сколько спецфишек среди убранных клеток (сработали) — для статистики партии */
-  | { kind: 'clear'; cells: Position[]; points: number; pieces: number }
+  /** pieces — сколько спецфишек среди убранных клеток (сработали) — для статистики партии;
+   *  stones и items — сколько камней сломано и предметов дошло до дна — для целей уровня */
+  | {
+      kind: 'clear';
+      cells: Position[];
+      points: number;
+      pieces: number;
+      stones?: number;
+      items?: number;
+    }
   | { kind: 'drop'; falls: Fall[]; spawns: Spawn[] }
   | { kind: 'choice'; group: MatchGroup; options: readonly [ChoiceOption, ChoiceOption] };
 
@@ -101,9 +109,10 @@ export function* resolveMove(
       0,
     );
     const pieces = cells.filter((pos) => isPiece(getCell(current, pos))).length;
+    const stones = cells.filter((pos) => getCell(current, pos)?.kind === 'stone').length;
     score += points;
     current = removeCells(current, cells);
-    yield { kind: 'clear', cells, points, pieces };
+    yield { kind: 'clear', cells, points, pieces, ...(stones > 0 && { stones }) };
   }
 
   function* place(placements: Placement[]): Generator<ResolveStep, void, ChoiceOption | undefined> {
@@ -161,7 +170,13 @@ export function* resolveMove(
   for (let wave = 0; wave < MAX_WAVES; wave++) {
     const groups = findMatches(current);
     if (groups.length === 0) {
-      if (!hasEmpty(current)) return { board: current, score };
+      if (!hasEmpty(current)) {
+        const arrived = itemsOnBottom(current);
+        if (arrived.length === 0) return { board: current, score };
+        current = cloneBoard(current);
+        for (const pos of arrived) setCell(current, pos, null);
+        yield { kind: 'clear', cells: arrived, points: 0, pieces: 0, items: arrived.length };
+      }
     } else {
       const removal: Position[] = [];
       const placements: Placement[] = [];
@@ -169,7 +184,7 @@ export function* resolveMove(
 
       for (const group of groups) {
         const outcome = groupOutcome(group, pickSpot(group, landing));
-        removal.push(...group.cells);
+        removal.push(...group.cells, ...stonesAround(current, group.cells));
         spreadPoints(group.cells, outcome.points, points);
         placements.push(...outcome.placements);
       }
@@ -186,6 +201,19 @@ export function* resolveMove(
   }
 
   throw new Error(`Каскад не завершился за ${MAX_WAVES} волн`);
+}
+
+/** Камни рядом с совпадением ломаются вместе с ним */
+function stonesAround(board: Board, cells: Position[]): Position[] {
+  const offsets = [
+    [0, 1],
+    [0, -1],
+    [1, 0],
+    [-1, 0],
+  ] as const;
+  return cells
+    .flatMap(({ row, col }) => offsets.map(([dr, dc]) => ({ row: row + dr, col: col + dc })))
+    .filter((pos) => getCell(board, pos)?.kind === 'stone');
 }
 
 function hasEmpty(board: Board): boolean {

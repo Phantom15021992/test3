@@ -116,7 +116,8 @@ export function expandChain(
     const key = posKey(pos);
     if (destroyed.has(key)) continue;
     const cell = getCell(board, pos);
-    if (cell == null || cell.kind === 'hole') continue;
+    // Предмет взрывы не задевают: иначе его нельзя было бы донести до дна
+    if (cell == null || cell.kind === 'hole' || cell.kind === 'item') continue;
     destroyed.set(key, pos);
     if (!preActivated.has(key)) queue.push(...activationArea(board, pos, cell));
   }
@@ -162,10 +163,15 @@ export function activationSwapTarget(board: Board, a: Position, b: Position): Po
   if (isCombo(board, a, b)) return null;
   const cellA = getCell(board, a);
   const cellB = getCell(board, b);
-  if (cellA == null || cellB == null || cellA.kind === 'hole' || cellB.kind === 'hole') return null;
+  if (!isSwappable(cellA) || !isSwappable(cellB)) return null;
   if (firesOnSwap(cellA)) return b;
   if (firesOnSwap(cellB)) return a;
   return null;
+}
+
+/** С чем спецфишку можно поменять, чтобы она сработала: дыры, камни и предметы не подходят */
+function isSwappable(cell: Cell | undefined): boolean {
+  return isTile(cell) || isPiece(cell);
 }
 
 /** Нужен ли игроку выбор цвета для комбо (мега-бомба + радуга) */

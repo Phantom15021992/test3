@@ -50,17 +50,15 @@ export class GameSession {
   constructor(
     seed: number,
     private readonly colorCount: number,
+    template: Board = createEmptyBoard(DEMO_BOARD_ROWS, DEMO_BOARD_COLS),
+    private readonly moveLimit: number = MOVE_LIMIT,
   ) {
     this.rng = createRng(seed);
-    this.board = generateStartBoard(
-      createEmptyBoard(DEMO_BOARD_ROWS, DEMO_BOARD_COLS),
-      colorCount,
-      this.rng,
-    );
+    this.board = generateStartBoard(template, colorCount, this.rng);
   }
 
   get isOver(): boolean {
-    return this.moves >= MOVE_LIMIT;
+    return this.moves >= this.moveLimit;
   }
 
   /** Ход игрока; шаги отдаются для анимации */
@@ -77,10 +75,14 @@ export class GameSession {
       const step = next.value;
       recordStep(this.stats, step);
       if (step.kind === 'clear') this.score += step.points;
+      this.onStep?.(step);
       next = steps.next(yield step);
     }
     this.board = next.value.board;
   }
+
+  /** Для партии на уровне: цели считаются по шагам разбора хода */
+  protected onStep?(step: ResolveStep): void;
 
   /** Покупка спецфишки; null — если не хватает очков или некуда поставить */
   buy(type: BonusType): { pos: Position; piece: Piece } | null {
@@ -150,7 +152,7 @@ export class GameSession {
 
 function isFilled(board: Board, pos: Position): boolean {
   const cell = getCell(board, pos);
-  return cell != null && cell.kind !== 'hole';
+  return cell != null && cell.kind !== 'hole' && cell.kind !== 'stone';
 }
 
 function hasColor(board: Board, color: ColorId | undefined): boolean {

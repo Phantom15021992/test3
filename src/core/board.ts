@@ -26,8 +26,18 @@ export interface Hole {
   kind: 'hole';
 }
 
+/** Камень: стоит на месте, фишки пролетают сквозь него; ломается взрывом и совпадением рядом */
+export interface Stone {
+  kind: 'stone';
+}
+
+/** Предмет: падает и меняется как фишка, в совпадениях не участвует, взрывы его не задевают */
+export interface Item {
+  kind: 'item';
+}
+
 /** null — пустая клетка, которую нужно заполнить */
-export type Cell = Tile | Piece | Hole | null;
+export type Cell = Tile | Piece | Hole | Stone | Item | null;
 
 export type Board = Cell[][];
 
