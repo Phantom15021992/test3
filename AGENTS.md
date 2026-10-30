@@ -31,7 +31,7 @@ npm run test       # Vitest
 npm run lint
 npm run typecheck  # tsc --noEmit
 npm run simulate   # бот играет партии и считает очки: [-- <партий> <ходов> [цены] [режимы]]
-npm run build:function   # сборка серверной функции в supabase/functions/game/index.ts
+npm run build:function   # сборка серверной функции в supabase/functions/smooth-handler/index.ts
 npm run deploy:function  # сборка и выкладка функции в Supabase (нужен npx supabase login)
 ```
 
@@ -276,7 +276,7 @@ npm run deploy:function  # сборка и выкладка функции в Su
   `VITE_SUPABASE_KEY`). `.env` лежит в репозитории: ключ публичный, права ограничены правилами
   базы. Секретный ключ (`sb_secret_…` / `service_role`) в проект не кладётся никогда.
   - **Из браузера таблицу можно только читать.** Записывает только серверная функция
-    (`src/server/gameServer.ts`, Edge Function `game`; права — `supabase/verified_results.sql`,
+    (`src/server/gameServer.ts`, Edge Function `smooth-handler`; права — `supabase/verified_results.sql`,
     выполняется шестым). Перед партией функция выдаёт билет со случайным seed (таблица
     `game_sessions`, сцена получает его через `src/scenes/startGame.ts`), в конце принимает
     журнал действий (`GameSession.actions`), сама проигрывает партию (`replayGame` из

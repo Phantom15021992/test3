@@ -49,7 +49,7 @@ describe('общая таблица лидеров (Supabase)', () => {
     );
 
     const [url, init] = fetchFn.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('https://demo.supabase.co/functions/v1/game');
+    expect(url).toBe('https://demo.supabase.co/functions/v1/smooth-handler');
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body as string)).toEqual({
       action: 'finish',

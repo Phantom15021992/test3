@@ -14,7 +14,7 @@ const dbAnswer = (body: unknown) =>
   });
 
 const post = (body: unknown) =>
-  new Request('https://demo.supabase.co/functions/v1/game', {
+  new Request('https://demo.supabase.co/functions/v1/smooth-handler', {
     method: 'POST',
     headers: { 'x-forwarded-for': '9.9.9.9, 10.0.0.1' },
     body: JSON.stringify(body),
@@ -164,7 +164,7 @@ describe('серверная проверка партии', () => {
 
   it('браузер получает разрешения CORS на предварительный запрос', async () => {
     const response = await handleGameRequest(
-      new Request('https://demo.supabase.co/functions/v1/game', { method: 'OPTIONS' }),
+      new Request('https://demo.supabase.co/functions/v1/smooth-handler', { method: 'OPTIONS' }),
       env,
       database({}),
     );

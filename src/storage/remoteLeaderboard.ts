@@ -4,7 +4,7 @@ import type { LeaderboardEntry } from './leaderboard';
 
 // Общая таблица лидеров в Supabase (таблица public.leaderboard, см. supabase/leaderboard.sql).
 // Читаем напрямую через REST API (библиотека Supabase для этого не нужна), а записывает только
-// серверная функция supabase/functions/game: она сама проигрывает партию и считает очки.
+// серверная функция supabase/functions/smooth-handler: она сама проигрывает партию и считает очки.
 // Ключ — публичный (anon / publishable): права ограничены правилами в базе, его можно
 // держать в коде игры. Секретный ключ (service_role / secret) сюда класть нельзя.
 
@@ -102,7 +102,7 @@ export interface GameTicket {
 
 export type RejectReason = 'limit' | 'invalid';
 
-/** Запрос к серверной функции игры (supabase/functions/game) */
+/** Запрос к серверной функции игры (supabase/functions/smooth-handler) */
 async function callGameServer(
   config: RemoteConfig,
   body: unknown,
@@ -111,7 +111,7 @@ async function callGameServer(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const response = await fetchFn(`${config.url}/functions/v1/game`, {
+    const response = await fetchFn(`${config.url}/functions/v1/smooth-handler`, {
       method: 'POST',
       signal: controller.signal,
       headers: { apikey: config.key, 'Content-Type': 'application/json' },
