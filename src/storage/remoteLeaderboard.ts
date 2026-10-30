@@ -205,6 +205,8 @@ export async function requestTicket(
  * Отправляет журнал партии: очки считает и записывает сервер, браузер их не передаёт.
  * Возвращает свежую десятку и место игрока (null — не в десятке).
  * accepted: false — результат не принят, reason объясняет почему.
+ * entries: null — решение сервера известно, но таблицу прочитать не удалось: это не «нет связи»,
+ * результат уже записан.
  */
 export async function submitAndFetch(
   config: RemoteConfig,
@@ -212,7 +214,7 @@ export async function submitAndFetch(
   submission: { ticketId: string; name: string; actions: readonly GameAction[] },
   fetchFn: FetchFn = fetch,
 ): Promise<{
-  entries: RemoteEntry[];
+  entries: RemoteEntry[] | null;
   rank: number | null;
   accepted: boolean;
   reason: RejectReason | null;
@@ -228,8 +230,8 @@ export async function submitAndFetch(
     { attempts: 1, timeoutMs: SUBMIT_TIMEOUT_MS },
   );
   const accepted = typeof answer.entryId === 'number';
-  const entries = await fetchTop(config, difficulty, LEADERBOARD_SIZE, fetchFn);
-  const rank = accepted ? entries.findIndex((entry) => entry.id === answer.entryId) : -1;
+  const entries = await fetchTop(config, difficulty, LEADERBOARD_SIZE, fetchFn).catch(() => null);
+  const rank = accepted && entries ? entries.findIndex((entry) => entry.id === answer.entryId) : -1;
   const reason = accepted ? null : answer.reason === 'limit' ? 'limit' : 'invalid';
   return { entries, rank: rank >= 0 ? rank : null, accepted, reason };
 }

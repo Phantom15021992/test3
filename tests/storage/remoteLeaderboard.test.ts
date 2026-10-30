@@ -155,6 +155,16 @@ describe('общая таблица лидеров (Supabase)', () => {
     expect(await requestTicket(config, 'hard', fetchFn)).toEqual({ id: 'ticket', seed: 123 });
   });
 
+  it('результат записан, а таблица не прочиталась — это не потеря связи', async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(rows))
+      .mockResolvedValueOnce(jsonResponse({ entryId: 3, score: 500 }))
+      .mockRejectedValue(new TypeError('Failed to fetch'));
+    const result = await submitAndFetch(config, 'medium', submission, fetchFn);
+    expect(result).toEqual({ entries: null, rank: null, accepted: true, reason: null });
+  });
+
   it('запись не повторяется: билет гасится один раз', async () => {
     const fetchFn = vi
       .fn()

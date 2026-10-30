@@ -161,15 +161,22 @@ export class GameOverDialog {
         });
         loading.destroy();
         const title = remote.reason ? REJECT_TITLES[remote.reason] : 'Таблица лидеров';
+        if (!remote.entries) {
+          // Сервер уже принял решение, просто не удалось прочитать таблицу: «нет связи» было бы ложью
+          const notice = remote.accepted ? 'Результат сохранён, таблица не загрузилась' : title;
+          this.showTable(local.entries, local.rank, score, actions, notice);
+          return;
+        }
         this.showTable(remote.entries, remote.rank, score, actions, title, remote.accepted);
       } catch {
         loading.destroy();
+        // Ответ мог потеряться уже после записи: повторить нельзя, а уверенно сказать «нет» тоже
         this.showTable(
           local.entries,
           local.rank,
           score,
           actions,
-          'Нет связи — результаты этого устройства',
+          'Нет ответа сервера — результат мог сохраниться',
         );
       }
     };
