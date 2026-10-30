@@ -48,7 +48,7 @@ const SPECIALS: readonly { type: PieceType; text: string }[] = [
   { type: 'rocket', text: 'Ракета: строка или столбец' },
   { type: 'bomb', text: `Бомба: взрыв ${square(BOMB_SIZE)}` },
   { type: 'megaBomb', text: `Мега-бомба: взрыв ${square(MEGA_BOMB_SIZE)}` },
-  { type: 'rainbow', text: 'Радуга: все фишки цвета' },
+  { type: 'rainbow', text: 'Радуга: клик, затем цвет' },
   { type: 'manipulator', text: 'Манипулятор: обмен клеток' },
 ];
 
