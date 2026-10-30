@@ -29,7 +29,7 @@ describe('общая таблица лидеров (Supabase)', () => {
     expect(query.get('order')).toBe('score.desc,created_at.asc');
     expect(query.get('limit')).toBe('10');
     expect(query.get('apikey')).toBe('public-key');
-    // Свои заголовки вызвали бы предварительный запрос CORS, который зависает на части телефонов
+    // Свои заголовки вызвали бы лишний предварительный запрос CORS
     expect(init.headers).toBeUndefined();
     expect(entries).toEqual([
       { id: 7, name: 'Аня', score: 900, playedAt: Date.parse('2026-10-30T10:00:00Z') },

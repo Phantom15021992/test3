@@ -65,6 +65,33 @@
         }
       }
 
+      const HOSTS = [
+        ['Supabase, проект игры', BASE],
+        ['Supabase, сайт', 'https://supabase.com'],
+        ['Cloudflare', 'https://www.cloudflare.com'],
+        ['Cloudflare Workers', 'https://workers.cloudflare.com'],
+        ['Vercel', 'https://vercel.com'],
+        ['Netlify', 'https://www.netlify.com'],
+        ['Deno Deploy', 'https://deno.com'],
+        ['GitHub', 'https://github.com'],
+        ['Yandex Cloud', 'https://storage.yandexcloud.net'],
+      ];
+
+      async function reach([title, url]) {
+        const started = performance.now();
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), LIMIT_MS);
+        try {
+          await fetch(url, { mode: 'no-cors', cache: 'no-store', signal: controller.signal });
+          show(true, `${title}: доступен, ${Math.round(performance.now() - started)} мс`);
+        } catch (error) {
+          const ms = Math.round(performance.now() - started);
+          show(false, `${title}: нет связи через ${ms} мс (${error.name})`);
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+
       (async () => {
         out.textContent = '';
         show(true, `Браузер: ${navigator.userAgent}`);
@@ -82,9 +109,8 @@
           method: 'POST',
           body: JSON.stringify({ action: 'start', difficulty: 'kids' }),
         });
-        // Для сравнения: чужой сайт и старый способ с предварительным запросом
-        await step('3. Другой сайт', 'https://api.github.com/zen', {});
-        await step('4. Рекорды старым способом', records, { headers: { apikey: KEY } });
+        // Какие службы вообще доступны из этой сети: ответ читать не нужно, важно соединение
+        await Promise.all(HOSTS.map(reach));
         show(true, 'Готово. Сделайте снимок экрана и пришлите его.');
       })();
     </script>
