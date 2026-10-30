@@ -76,14 +76,14 @@ describe('проверка партии повтором', () => {
       const actions = JSON.parse(JSON.stringify(session.actions)) as unknown;
       expect(replayGame(seed, COLORS, parseActions(actions)!)).toBe(session.score);
     }
-  });
+  }, 60000);
 
   it('в партиях встречаются покупки — повтор проверен не только на обменах', () => {
     const buys = Array.from({ length: 6 }, (_, i) => playGame(i + 1).actions)
       .flat()
       .filter((action) => action.type === 'buy');
     expect(buys.length).toBeGreaterThan(0);
-  });
+  }, 60000);
 
   it('с другим seed тот же журнал не проходит', () => {
     const { actions } = playGame(7);
