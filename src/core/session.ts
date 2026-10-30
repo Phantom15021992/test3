@@ -131,8 +131,10 @@ export class GameSession {
         );
       case 'rainbow':
         return piece(action.at, 'rainbow') && hasColor(board, action.color);
-      case 'megaBomb':
-        return piece(action.at, 'megaBomb');
+      case 'fire':
+        return (
+          piece(action.at, 'rocket') || piece(action.at, 'bomb') || piece(action.at, 'megaBomb')
+        );
       case 'manipulator':
         return (
           piece(action.at, 'manipulator') &&
@@ -219,9 +221,11 @@ function parseAction(value: unknown): GameAction | null {
       const at = parsePosition(v.at);
       return at && isInt(v.color) ? { type: 'rainbow', at, color: v.color } : null;
     }
+    // megaBomb — прежнее имя этого хода: журнал могла прислать вкладка со старой версией игры
+    case 'fire':
     case 'megaBomb': {
       const at = parsePosition(v.at);
-      return at ? { type: 'megaBomb', at } : null;
+      return at ? { type: 'fire', at } : null;
     }
     case 'manipulator': {
       const at = parsePosition(v.at);

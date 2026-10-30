@@ -395,7 +395,7 @@ describe('resolveMove: активация тапом', () => {
       Y1 P1 O1 R1 G1
       P1 O1 R1 G1 B1
     `);
-    const result = runMove(board, { type: 'megaBomb', at: p(2, 2) }, ctx());
+    const result = runMove(board, { type: 'fire', at: p(2, 2) }, ctx());
     const [clear] = stepsOf(result.steps, 'clear');
     expect(clear!.cells).toHaveLength(25);
     expect(clear!.points).toBe(240);
@@ -510,5 +510,41 @@ describe('очки за совпадение', () => {
     [3, 6, 1500],
   ] as const)('%i уровень, %i клеток — %i очков', (level, cells, points) => {
     expect(matchPoints(level, cells)).toBe(points);
+  });
+});
+
+describe('спецфишка срабатывает на месте (двойной клик)', () => {
+  it('ракета по строке убирает всю строку', () => {
+    const board = parseBoard(`
+      R1 G1 B1
+      - G1 Y1
+      B1 Y1 R1
+    `);
+    const { steps } = runMove(board, { type: 'fire', at: p(1, 0) }, ctx());
+    const clear = steps.find((step) => step.kind === 'clear');
+    expect(clear?.kind === 'clear' && clear.cells).toHaveLength(3);
+  });
+
+  it('бомба убирает квадрат 3×3 вокруг себя', () => {
+    const board = parseBoard(`
+      R1 G1 B1 Y1
+      G1 * Y1 R1
+      B1 Y1 R1 G1
+      Y1 R1 G1 B1
+    `);
+    const { steps } = runMove(board, { type: 'fire', at: p(1, 1) }, ctx());
+    const clear = steps.find((step) => step.kind === 'clear');
+    expect(clear?.kind === 'clear' && clear.cells).toHaveLength(9);
+  });
+
+  it('очки дают только фишки, сама спецфишка — нет', () => {
+    const board = parseBoard(`
+      R1 G1 B1
+      - G1 Y1
+      B1 Y1 R1
+    `);
+    const { steps } = runMove(board, { type: 'fire', at: p(1, 0) }, ctx());
+    const clear = steps.find((step) => step.kind === 'clear');
+    expect(clear?.kind === 'clear' && clear.points).toBe(20);
   });
 });

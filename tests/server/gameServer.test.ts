@@ -137,6 +137,17 @@ describe('серверная проверка партии', () => {
     expect(fetchFn).toHaveBeenCalledTimes(1);
   });
 
+  it('журнал неправильного вида до базы не доходит', async () => {
+    const fetchFn = database({});
+    const response = await handleGameRequest(
+      post({ action: 'finish', id: SESSION_ID, name: 'Аня', actions: [{ type: 'нет' }] }),
+      env,
+      fetchFn,
+    );
+    expect(await response.json()).toEqual({ reason: 'journal' });
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
   it('билет неправильного вида до базы не доходит', async () => {
     const fetchFn = database({});
     const response = await handleGameRequest(

@@ -595,8 +595,8 @@ function* resolveMove(board, move, ctx) {
       yield* destroy(initial, /* @__PURE__ */ new Set([posKey(move.at)]));
       break;
     }
-    case "megaBomb": {
-      yield* destroy(squareArea(current, move.at, MEGA_BOMB_SIZE), /* @__PURE__ */ new Set([posKey(move.at)]));
+    case "fire": {
+      yield* destroy([move.at]);
       break;
     }
     case "manipulator": {
@@ -818,8 +818,8 @@ var GameSession = class {
         return isFilled(board, action.from) && isFilled(board, action.to) && isValidSwap(board, action.from, action.to) && (comboNeedsColor(board, action.from, action.to) ? hasColor(board, action.color) : action.color === void 0);
       case "rainbow":
         return piece(action.at, "rainbow") && hasColor(board, action.color);
-      case "megaBomb":
-        return piece(action.at, "megaBomb");
+      case "fire":
+        return piece(action.at, "rocket") || piece(action.at, "bomb") || piece(action.at, "megaBomb");
       case "manipulator":
         return piece(action.at, "manipulator") && isFilled(board, action.a) && isFilled(board, action.b) && !samePos(action.a, action.b) && !samePos(action.a, action.at) && !samePos(action.b, action.at);
     }
@@ -880,9 +880,11 @@ function parseAction(value) {
       const at = parsePosition(v.at);
       return at && isInt(v.color) ? { type: "rainbow", at, color: v.color } : null;
     }
+    // megaBomb — прежнее имя этого хода: журнал могла прислать вкладка со старой версией игры
+    case "fire":
     case "megaBomb": {
       const at = parsePosition(v.at);
-      return at ? { type: "megaBomb", at } : null;
+      return at ? { type: "fire", at } : null;
     }
     case "manipulator": {
       const at = parsePosition(v.at);
@@ -946,9 +948,8 @@ async function start(request, body, env, fetchFn) {
 }
 async function finish2(request, body, env, fetchFn) {
   const actions = parseActions(body.actions);
-  if (!actions || typeof body.id !== "string" || !SESSION_ID.test(body.id)) {
-    return json({ reason: "invalid" });
-  }
+  if (!actions) return json({ reason: "journal" });
+  if (typeof body.id !== "string" || !SESSION_ID.test(body.id)) return json({ reason: "invalid" });
   const claimed = await rpc(env, "claim_game_session", { p_id: body.id }, fetchFn);
   const session = Array.isArray(claimed) ? claimed[0] : void 0;
   const difficulty = DIFFICULTIES.find((d) => d.id === session?.difficulty);

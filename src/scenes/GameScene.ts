@@ -1,9 +1,18 @@
 import Phaser from 'phaser';
-import { getCell, isPiece, isTile, samePos, type Board, type Position } from '../core/board';
+import {
+  getCell,
+  isPiece,
+  isTile,
+  samePos,
+  type Board,
+  type Piece,
+  type Position,
+} from '../core/board';
 import {
   DEMO_BOARD_COLS,
   DEMO_BOARD_ROWS,
   DIFFICULTIES,
+  DOUBLE_TAP_MS,
   MOVE_LIMIT,
   SWIPE_THRESHOLD,
   type Difficulty,
@@ -48,6 +57,7 @@ export class GameScene extends Phaser.Scene {
   private mode: Mode = { type: 'idle' };
   private selected: Position | null = null;
   private pressed: { cell: Position; x: number; y: number } | null = null;
+  private lastTap: { cell: Position; at: number } | null = null;
   private busy = false;
 
   constructor() {
@@ -66,6 +76,7 @@ export class GameScene extends Phaser.Scene {
     this.mode = { type: 'idle' };
     this.selected = null;
     this.pressed = null;
+    this.lastTap = null;
     this.busy = false;
     // Seed выдаёт сервер, чтобы партию можно было проверить. ?seed=123 — одинаковое поле при
     // каждом запуске (для отладки; в общую таблицу такая партия не попадает, см. startGame)
@@ -193,21 +204,32 @@ export class GameScene extends Phaser.Scene {
 
     // Обычный режим
     const selected = this.selected;
+    const doubleTap = this.isDoubleTap(cell);
     if (selected && areAdjacent(selected, cell)) {
       this.setSelected(null);
       return void this.trySwap(selected, cell);
     }
-    if (selected && samePos(selected, cell)) return this.setSelected(null);
-
-    if (isPiece(content)) {
-      // Ракету и бомбу выбирают как обычную фишку — срабатывают при обмене с соседней клеткой
-      if (content.type === 'rocket' || content.type === 'bomb') return this.setSelected(cell);
+    // Одиночное нажатие спецфишку только выделяет, чтобы её можно было сдвинуть на соседнюю клетку
+    if (doubleTap && isPiece(content)) {
       this.setSelected(null);
-      if (content.type === 'megaBomb') return void this.play({ type: 'megaBomb', at: cell });
-      if (content.type === 'rainbow') return this.setMode({ type: 'rainbowColor', at: cell });
-      return this.setMode({ type: 'manipulator', at: cell, first: null });
+      return this.activatePiece(cell, content);
     }
-    if (isTile(content)) this.setSelected(cell);
+    if (selected && samePos(selected, cell)) return this.setSelected(null);
+    if (isPiece(content) || isTile(content)) this.setSelected(cell);
+  }
+
+  private isDoubleTap(cell: Position): boolean {
+    const now = Date.now();
+    const last = this.lastTap;
+    this.lastTap = { cell, at: now };
+    return last !== null && samePos(last.cell, cell) && now - last.at <= DOUBLE_TAP_MS;
+  }
+
+  /** Двойной клик: взрывные спецфишки срабатывают на месте, остальным нужен выбор игрока */
+  private activatePiece(at: Position, piece: Piece): void {
+    if (piece.type === 'rainbow') return this.setMode({ type: 'rainbowColor', at });
+    if (piece.type === 'manipulator') return this.setMode({ type: 'manipulator', at, first: null });
+    void this.play({ type: 'fire', at });
   }
 
   // ---------- Ходы ----------
@@ -365,6 +387,8 @@ export class GameScene extends Phaser.Scene {
   private setSelected(pos: Position | null): void {
     this.selected = pos;
     this.view.select(pos);
+    const cell = pos && getCell(this.session.board, pos);
+    this.hintText.setText(isPiece(cell) ? pieceHint(cell) : hintFor(this.mode));
   }
 
   private updateScore(): void {
@@ -382,17 +406,24 @@ export class GameScene extends Phaser.Scene {
   }
 }
 
+/** Одиночное нажатие спецфишку только выделяет — подсказываем, что с ней делать */
+function pieceHint(piece: Piece): string {
+  if (piece.type === 'rainbow') return 'Радуга: двойной клик — выбрать цвет';
+  if (piece.type === 'manipulator') return 'Манипулятор: двойной клик — выбрать две клетки';
+  return 'Двойной клик — сработает на месте,\nсдвиг — на соседней клетке';
+}
+
 function hintFor(mode: Mode): string {
   switch (mode.type) {
     case 'idle':
       return '';
     case 'rainbowColor':
-      return 'Радуга: нажмите на фишку нужного цвета\n(повторный тап по радуге — отмена)';
+      return 'Радуга: нажмите на фишку нужного цвета\n(нажатие на радугу — отмена)';
     case 'comboColor':
       return 'Мега-бомба + радуга: нажмите на фишку,\nцвет которой станет бомбами';
     case 'manipulator':
       return mode.first
         ? 'Манипулятор: выберите вторую клетку'
-        : 'Манипулятор: выберите две клетки для обмена\n(повторный тап по нему — отмена)';
+        : 'Манипулятор: выберите две клетки для обмена\n(нажатие на него — отмена)';
   }
 }

@@ -107,3 +107,5 @@ export const SHUFFLE_DURATION_MS = 300;
 
 /** Доля размера клетки, на которую нужно провести пальцем, чтобы засчитать свайп */
 export const SWIPE_THRESHOLD = 0.3;
+/** Два нажатия на одну клетку за это время — двойной клик */
+export const DOUBLE_TAP_MS = 300;

@@ -19,7 +19,6 @@ import {
   MATCH_REWARDS,
   LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE,
   MANIPULATOR_FINALE_POINTS,
-  MEGA_BOMB_SIZE,
 } from './config';
 import { applyGravity, refill, removeCells, type Fall, type Spawn } from './gravity';
 import { findMatches, type MatchGroup } from './match';
@@ -31,7 +30,6 @@ import {
   expandChain,
   hitPoints,
   isCombo,
-  squareArea,
   tilesOfColor,
 } from './specials';
 
@@ -45,7 +43,8 @@ export type Move =
   /** Обычный ход или комбо двух спецфишек. color — только для мега-бомбы + радуги */
   | { type: 'swap'; from: Position; to: Position; color?: ColorId }
   | { type: 'rainbow'; at: Position; color: ColorId }
-  | { type: 'megaBomb'; at: Position }
+  /** Ракета, бомба или мега-бомба срабатывает на месте (двойной клик) */
+  | { type: 'fire'; at: Position }
   | { type: 'manipulator'; at: Position; a: Position; b: Position }
   /** Конец партии: все спецфишки на поле срабатывают на месте */
   | { type: 'finale' };
@@ -139,8 +138,8 @@ export function* resolveMove(
       yield* destroy(initial, new Set([posKey(move.at)]));
       break;
     }
-    case 'megaBomb': {
-      yield* destroy(squareArea(current, move.at, MEGA_BOMB_SIZE), new Set([posKey(move.at)]));
+    case 'fire': {
+      yield* destroy([move.at]);
       break;
     }
     case 'manipulator': {

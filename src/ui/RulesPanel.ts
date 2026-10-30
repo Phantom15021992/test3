@@ -71,11 +71,17 @@ const COMBOS: readonly { pair: readonly [PieceType, PieceType]; text: string }[]
   { pair: ['megaBomb', 'rainbow'], text: 'цвет на выбор → бомбы' },
 ];
 
+/** Как применять спецфишки: одиночное нажатие их только выделяет */
+const ACTIVATION_NOTE = 'Двойной клик или сдвиг на соседа';
+
 const NOTES = ['Квадрат 2×2 — как 4 фишки', '6 и больше — как 5', 'Ракета — только за линию'];
 
 /** Высота панели: определяется правой, более длинной колонкой */
 export const RULES_PANEL_HEIGHT =
-  PADDING * 2 + HEADER_HEIGHT * 2 + SPECIAL_ROW_HEIGHT * (SPECIALS.length + COMBOS.length);
+  PADDING * 2 +
+  HEADER_HEIGHT * 2 +
+  NOTE_ROW_HEIGHT +
+  SPECIAL_ROW_HEIGHT * (SPECIALS.length + COMBOS.length);
 
 /** Подпись очков: группа из 5+ приносит не меньше этого, кроме 2 уровня — там сумма постоянная */
 function pointsLabel(level: CellLevel, size: 3 | 4 | 5): string {
@@ -157,6 +163,8 @@ export class RulesPanel {
   private drawSpecials(x: number, top: number): void {
     this.text(x, top + HEADER_HEIGHT / 2 - 4, 'Спецфишки', FONT_HEADER);
     let y = top + HEADER_HEIGHT;
+    this.text(x, y + NOTE_ROW_HEIGHT / 2, ACTIVATION_NOTE, FONT_NOTE, UI_MUTED_TEXT_COLOR);
+    y += NOTE_ROW_HEIGHT;
     for (const { type, text } of SPECIALS) {
       this.icon(x + PIECE_ICON_RADIUS, y + SPECIAL_ROW_HEIGHT / 2, type);
       this.text(x + PIECE_ICON_RADIUS * 2 + 10, y + SPECIAL_ROW_HEIGHT / 2, text, FONT_ROW);

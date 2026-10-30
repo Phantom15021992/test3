@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allPositions, getCell, isTile } from '../../src/core/board';
+import { allPositions, getCell, isTile, type Piece } from '../../src/core/board';
 import { bonusCost, type BonusType } from '../../src/core/bonus';
 import { BONUS_TIERS, MOVE_LIMIT } from '../../src/core/config';
 import { findPossibleMoves } from '../../src/core/moves';
@@ -36,7 +36,7 @@ function randomMove(session: GameSession, rng: Rng): PlayerMove {
   for (const at of allPositions(board)) {
     const cell = getCell(board, at);
     if (cell?.kind !== 'piece') continue;
-    if (cell.type === 'megaBomb') moves.push({ type: 'megaBomb', at });
+    if (cell.type === 'megaBomb') moves.push({ type: 'fire', at });
     if (cell.type === 'rainbow') moves.push({ type: 'rainbow', at, color: tileColor() });
     if (cell.type === 'manipulator') {
       const others = allPositions(board).filter((pos) => pos.row !== at.row || pos.col !== at.col);
@@ -117,11 +117,27 @@ describe('проверка партии повтором', () => {
   it('спецфишку, которой нет на поле, использовать нельзя', () => {
     const session = new GameSession(7, COLORS);
     const at = { row: 0, col: 0 };
-    expect(session.canApply({ type: 'megaBomb', at })).toBe(false);
+    expect(session.canApply({ type: 'fire', at })).toBe(false);
     expect(session.canApply({ type: 'rainbow', at, color: 0 })).toBe(false);
     const a = { row: 1, col: 1 };
     const b = { row: 2, col: 2 };
     expect(session.canApply({ type: 'manipulator', at, a, b })).toBe(false);
+  });
+
+  it('на месте срабатывают ракета, бомба и мега-бомба, но не радуга и манипулятор', () => {
+    const session = new GameSession(7, COLORS);
+    const at = { row: 0, col: 0 };
+    const place = (cell: Piece) => (session.board[0]![0] = cell);
+    place({ kind: 'piece', type: 'rocket', direction: 'row' });
+    expect(session.canApply({ type: 'fire', at })).toBe(true);
+    place({ kind: 'piece', type: 'bomb' });
+    expect(session.canApply({ type: 'fire', at })).toBe(true);
+    place({ kind: 'piece', type: 'megaBomb' });
+    expect(session.canApply({ type: 'fire', at })).toBe(true);
+    place({ kind: 'piece', type: 'rainbow' });
+    expect(session.canApply({ type: 'fire', at })).toBe(false);
+    place({ kind: 'piece', type: 'manipulator' });
+    expect(session.canApply({ type: 'fire', at })).toBe(false);
   });
 
   it('цвет у обычного обмена не принимается', () => {
@@ -148,11 +164,16 @@ describe('разбор журнала из запроса', () => {
       { type: 'swap', from: at, to: at },
       { type: 'swap', from: at, to: at, color: 1 },
       { type: 'rainbow', at, color: 0 },
-      { type: 'megaBomb', at },
+      { type: 'fire', at },
       { type: 'manipulator', at, a: at, b: at },
       { type: 'buy', bonus: 'bomb' },
     ];
     expect(parseActions(actions)).toEqual(actions);
+  });
+
+  it('ход старой версии игры (мега-бомба на месте) читается как срабатывание', () => {
+    const at = { row: 1, col: 2 };
+    expect(parseActions([{ type: 'megaBomb', at }])).toEqual([{ type: 'fire', at }]);
   });
 
   it.each([

@@ -76,7 +76,7 @@ function candidateMoves(board: Board, mode: Mode, rng: Rng): Move[] {
   for (const at of positions) {
     const cell = getCell(board, at);
     if (cell?.kind !== 'piece') continue;
-    if (cell.type === 'megaBomb') moves.push({ type: 'megaBomb', at });
+    if (cell.type === 'megaBomb') moves.push({ type: 'fire', at });
     if (cell.type === 'rainbow') {
       for (const color of colorsOnBoard(board)) moves.push({ type: 'rainbow', at, color });
     }

@@ -83,9 +83,8 @@ async function finish(
   fetchFn: FetchFn,
 ): Promise<Response> {
   const actions = parseActions(body.actions);
-  if (!actions || typeof body.id !== 'string' || !SESSION_ID.test(body.id)) {
-    return json({ reason: 'invalid' });
-  }
+  if (!actions) return json({ reason: 'journal' });
+  if (typeof body.id !== 'string' || !SESSION_ID.test(body.id)) return json({ reason: 'invalid' });
   // Билет гасится до проверки: один и тот же seed нельзя отправить дважды
   const claimed = await rpc(env, 'claim_game_session', { p_id: body.id }, fetchFn);
   const session = Array.isArray(claimed)
