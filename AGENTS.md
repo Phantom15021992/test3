@@ -373,6 +373,7 @@ tests/         # зеркалят src/core; tests/helpers/ — parseBoard и п�
 scripts/       # служебные скрипты (simulate.ts — симуляция партий для баланса)
 supabase/      # SQL для общей таблицы лидеров; restore_from_browser.js — возврат записей из localStorage
 public/assets/
+public/diag.html   # проверка связи для телефонов: показывает ошибки запросов прямо на экране
 ```
 
 ## Архитектурные правила

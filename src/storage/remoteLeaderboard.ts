@@ -15,6 +15,11 @@ export interface RemoteConfig {
 
 /** Сколько ждать ответа сервера, прежде чем показать локальную таблицу */
 const REQUEST_TIMEOUT_MS = 6000;
+/**
+ * Функции отвечаем дольше, чем чтению: за партию она засыпает, а просыпается секундами и ещё
+ * проигрывает партию целиком. Оборвав ожидание, игра напишет «Нет связи», хотя запись могла пройти.
+ */
+const GAME_SERVER_TIMEOUT_MS = 20000;
 
 type FetchFn = typeof fetch;
 
@@ -144,7 +149,7 @@ async function callGameServer(
   fetchFn: FetchFn,
 ): Promise<Record<string, unknown>> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), GAME_SERVER_TIMEOUT_MS);
   try {
     const response = await fetchFn(gameServerUrl(config), {
       method: 'POST',

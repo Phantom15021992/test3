@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Проверка связи</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 16px;
+        background: #1b1f2e;
+        color: #fff;
+        font: 16px/1.4 sans-serif;
+      }
+      h1 {
+        font-size: 22px;
+      }
+      p {
+        margin: 12px 0;
+        padding: 10px;
+        border-radius: 8px;
+        background: #2c3249;
+        overflow-wrap: anywhere;
+      }
+      .ok {
+        border-left: 6px solid #00a443;
+      }
+      .fail {
+        border-left: 6px solid #e8112d;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Проверка связи игры</h1>
+    <div id="out">Проверяем…</div>
+    <script>
+      // Страница для телефонов: там нет консоли разработчика, поэтому ошибки видны прямо на экране.
+      // Запросы те же, что делает игра; ключ публичный. Создаётся только билет на партию.
+      const BASE = 'https://szieuersvybdqdzhstpx.supabase.co';
+      const KEY = 'sb_publishable_r1YUbw3TzJbw-LaZfCvHbw_PbE03Ht0';
+      const LIMIT_MS = 20000;
+      const out = document.getElementById('out');
+      const show = (ok, text) => {
+        const line = document.createElement('p');
+        line.className = ok ? 'ok' : 'fail';
+        line.textContent = text;
+        out.append(line);
+      };
+
+      async function step(title, url, init) {
+        const started = performance.now();
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), LIMIT_MS);
+        try {
+          const response = await fetch(url, { ...init, signal: controller.signal });
+          const body = await response.text();
+          const ms = Math.round(performance.now() - started);
+          show(response.ok, `${title}: ${response.status}, ${ms} мс. ${body.slice(0, 120)}`);
+        } catch (error) {
+          const ms = Math.round(performance.now() - started);
+          show(false, `${title}: ОШИБКА через ${ms} мс. ${error.name}: ${error.message}`);
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+
+      (async () => {
+        out.textContent = '';
+        show(true, `Браузер: ${navigator.userAgent}`);
+        show(true, `Адрес: ${location.href}. Время: ${new Date().toISOString()}`);
+
+        const page = await fetch('./', { cache: 'no-store' }).then((r) => r.text());
+        const fresh = page.match(/index-[\w-]+\.js/)?.[0];
+        show(Boolean(fresh), `Новейшая версия игры на сервере: ${fresh}`);
+
+        const headers = { apikey: KEY };
+        const json = { ...headers, 'Content-Type': 'application/json' };
+        const game = `${BASE}/functions/v1/smooth-handler`;
+        await step('1. Рекорды', `${BASE}/rest/v1/leaderboard?select=name&limit=1`, { headers });
+        await step('2. Пробуждение функции', game, { method: 'OPTIONS' });
+        await step('3. Билет на партию', game, {
+          method: 'POST',
+          headers: json,
+          body: JSON.stringify({ action: 'start', difficulty: 'kids' }),
+        });
+        show(true, 'Готово. Сделайте снимок экрана и пришлите его.');
+      })();
+    </script>
+  </body>
+</html>
