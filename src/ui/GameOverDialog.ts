@@ -95,6 +95,13 @@ export class GameOverDialog {
       boxSizing: 'border-box',
     });
     const field = this.add(this.scene.add.dom(this.centerX, this.top + 330, input));
+    // Поле сразу активно: на компьютере иначе набранное имя никуда не попадало, пока по полю
+    // не щёлкнуть, и результат сохранялся как «Игрок». Прошлое имя выделено — его можно
+    // просто напечатать поверх.
+    setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 0);
 
     let sent = false;
     const submit = async () => {
