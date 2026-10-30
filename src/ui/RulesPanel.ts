@@ -11,14 +11,20 @@ import {
   type MatchReward,
 } from '../core/config';
 import { matchPoints } from '../core/resolve';
-import { TILE_COLORS, UI_MUTED_TEXT_COLOR, UI_PANEL_COLOR, UI_TEXT_COLOR } from '../view/palette';
+import {
+  TILE_COLORS,
+  UI_BUTTON_COLOR,
+  UI_MUTED_TEXT_COLOR,
+  UI_PANEL_COLOR,
+  UI_TEXT_COLOR,
+} from '../view/palette';
 import { drawPiece } from '../view/pieceArt';
 import { drawTileShape } from '../view/tileArt';
 
 const PADDING = 16;
-const COLUMN_GAP = 16;
+const COLUMN_GAP = 40;
 /** Левая колонка уже правой: подписи комбо длиннее строк с объединениями */
-const MATCHES_COLUMN_WIDTH = 300;
+const MATCHES_COLUMN_WIDTH = 276;
 const HEADER_HEIGHT = 44;
 const SPECIAL_ROW_HEIGHT = 46;
 const MATCH_ROW_HEIGHT = 50;
@@ -65,7 +71,7 @@ const COMBOS: readonly { pair: readonly [PieceType, PieceType]; text: string }[]
   { pair: ['megaBomb', 'rainbow'], text: 'цвет на выбор → бомбы' },
 ];
 
-const NOTES = ['Квадрат 2×2 — как 4 фишки', '6 и больше — как 5', 'Ракета — только за линию из 4'];
+const NOTES = ['Квадрат 2×2 — как 4 фишки', '6 и больше — как 5', 'Ракета — только за линию'];
 
 /** Высота панели: определяется правой, более длинной колонкой */
 export const RULES_PANEL_HEIGHT =
@@ -99,6 +105,10 @@ export class RulesPanel {
     panel.fillRoundedRect(left, top, width, RULES_PANEL_HEIGHT, 20);
 
     const contentTop = top + PADDING;
+    // Черта между колонками: без неё очки слева сливаются со значками справа
+    const dividerX = left + PADDING + MATCHES_COLUMN_WIDTH + COLUMN_GAP / 2;
+    panel.lineStyle(2, UI_BUTTON_COLOR, 0.6);
+    panel.lineBetween(dividerX, top + PADDING, dividerX, top + RULES_PANEL_HEIGHT - PADDING);
     this.drawMatches(left + PADDING, contentTop, MATCHES_COLUMN_WIDTH);
     this.drawSpecials(left + PADDING + MATCHES_COLUMN_WIDTH + COLUMN_GAP, contentTop);
   }
