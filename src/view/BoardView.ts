@@ -18,31 +18,11 @@ import {
   TILE_COLORS,
 } from './palette';
 import { drawPiece } from './pieceArt';
+import { drawTileShape } from './tileArt';
 
 type TileSprite = Phaser.GameObjects.Container;
 
 const TILE_OUTLINE_WIDTH = 3;
-const TILE_OUTLINE_ALPHA = 0.35;
-
-/**
- * Вершины правильного многоугольника или звезды вокруг (0, 0), первая вершина — вверху.
- * Для звезды inner < outer: вершины чередуются между внешним и внутренним радиусом.
- * offsetY сдвигает фигуру вниз, чтобы треугольник выглядел отцентрованным в клетке.
- */
-function regularPolygon(
-  corners: number,
-  outer: number,
-  inner: number,
-  offsetY: number,
-): Phaser.Math.Vector2[] {
-  const isStar = inner < outer;
-  const count = isStar ? corners * 2 : corners;
-  return Array.from({ length: count }, (_, i) => {
-    const radius = isStar && i % 2 === 1 ? inner : outer;
-    const angle = -Math.PI / 2 + (i * Math.PI * 2) / count;
-    return new Phaser.Math.Vector2(Math.cos(angle) * radius, Math.sin(angle) * radius + offsetY);
-  });
-}
 
 // Отображение поля. Состояние игры здесь не хранится — только спрайты, повторяющие поле из core.
 export class BoardView {
@@ -199,40 +179,22 @@ export class BoardView {
     let children: Phaser.GameObjects.GameObject[];
     if (cell.kind === 'tile') {
       const body = this.scene.add.graphics();
-      children = [body, ...this.drawTile(body, cell)];
+      this.drawTile(body, cell);
+      children = [body];
     } else {
       children = [drawPiece(this.scene, cell, this.cellSize * 0.4)];
     }
     return this.scene.add.container(x, y, children).setMask(this.mask);
   }
 
-  /** Возвращает картинку фишки, если она есть; иначе рисует кружок в g */
-  private drawTile(g: Phaser.GameObjects.Graphics, tile: Tile): Phaser.GameObjects.GameObject[] {
-    // Уровень виден по форме: 1 — круг, 2 — треугольник, 3 — пятиконечная звезда
-    const color = TILE_COLORS[tile.color] ?? 0xffffff;
-    g.fillStyle(color);
-    g.lineStyle(TILE_OUTLINE_WIDTH, 0xffffff, TILE_OUTLINE_ALPHA);
-
-    if (tile.level === 1) {
-      const radius = this.cellSize * 0.38;
-      g.fillCircle(0, 0, radius);
-      g.strokeCircle(0, 0, radius);
-      // Блик сверху, чтобы фишка выглядела объёмной
-      g.fillStyle(0xffffff, 0.25);
-      g.fillCircle(-radius * 0.3, -radius * 0.35, radius * 0.35);
-      return [];
-    }
-
-    const points =
-      tile.level === 2
-        ? regularPolygon(3, this.cellSize * 0.47, this.cellSize * 0.47, this.cellSize * 0.08)
-        : regularPolygon(5, this.cellSize * 0.46, this.cellSize * 0.2, this.cellSize * 0.03);
-    g.fillPoints(points, true);
-    g.strokePoints(points, true);
-    // Блик у верхней вершины
-    g.fillStyle(0xffffff, 0.3);
-    g.fillCircle(0, -this.cellSize * (tile.level === 2 ? 0.14 : 0.2), this.cellSize * 0.06);
-    return [];
+  private drawTile(g: Phaser.GameObjects.Graphics, tile: Tile): void {
+    drawTileShape(
+      g,
+      tile.level,
+      TILE_COLORS[tile.color] ?? 0xffffff,
+      this.cellSize,
+      TILE_OUTLINE_WIDTH,
+    );
   }
 
   private outline(g: Phaser.GameObjects.Graphics, pos: Position, color: number): void {

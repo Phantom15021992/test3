@@ -216,13 +216,14 @@ function groupOutcome(group: MatchGroup, spot: Position): GroupOutcome {
     const pos = neighborInGroup(group, spot, cells);
     placements.push({ pos, cell: { kind: 'piece', type: 'rocket', direction } });
   }
-  return { points: groupPoints(group, size), placements };
+  return { points: matchPoints(group.level, group.cells.length), placements };
 }
 
-function groupPoints(group: MatchGroup, size: 3 | 4 | 5): number {
-  const cells = group.cells.length;
-  if (group.level === 1) return cells * BASE_POINTS_PER_TILE;
-  if (group.level === 2) {
+/** Очки за совпадение: группа ячеек этого уровня из cells клеток (6+ считаются как 5) */
+export function matchPoints(level: 1 | 2 | 3, cells: number): number {
+  const size = Math.min(cells, 5) as 3 | 4 | 5;
+  if (level === 1) return cells * BASE_POINTS_PER_TILE;
+  if (level === 2) {
     return size === 5
       ? LEVEL2_BIG_MATCH_POINTS
       : cells * BASE_POINTS_PER_TILE * LEVEL2_SCORE_MULTIPLIER;

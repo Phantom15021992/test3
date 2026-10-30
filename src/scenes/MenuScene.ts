@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { DIFFICULTIES, type Difficulty } from '../core/config';
 import { loadLeaderboard, type LeaderboardEntry } from '../storage/leaderboard';
 import { fetchTop, remoteConfig } from '../storage/remoteLeaderboard';
+import { RULES_PANEL_HEIGHT, RulesPanel } from '../ui/RulesPanel';
 import { startGame } from './startGame';
 import {
   HIGHLIGHT_COLOR,
@@ -13,14 +14,20 @@ import {
 } from '../view/palette';
 
 const BUTTON_WIDTH = 560;
-const BUTTON_HEIGHT = 120;
-const BUTTON_STEP = 150;
-const FIRST_BUTTON_Y = 420;
-const DOT_RADIUS = 9;
+const BUTTON_HEIGHT = 84;
+const BUTTON_GAP = 20;
+const TITLE_Y = 46;
+const RULES_MARGIN = 18;
+const RULES_TOP = 90;
+/** Правила отделены от выбора сложности полуторным отступом между кнопками */
+const RULES_GAP = BUTTON_GAP * 1.5;
+const SUBTITLE_HEIGHT = 34;
+const DOT_RADIUS = 8;
 
 const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
 
-// Стартовое меню: выбор сложности. На кнопке — сколько цветов (кружками) и рекорд этой сложности.
+// Стартовое меню: правила и выбор сложности.
+// На кнопке — сколько цветов (кружками) и рекорд этой сложности.
 export class MenuScene extends Phaser.Scene {
   private subtitle!: Phaser.GameObjects.Text;
   private starting = false;
@@ -32,23 +39,28 @@ export class MenuScene extends Phaser.Scene {
   create(): void {
     this.starting = false;
     const centerX = this.scale.width / 2;
+    new RulesPanel(this, RULES_MARGIN, RULES_TOP, this.scale.width - RULES_MARGIN * 2);
+    const subtitleTop = RULES_TOP + RULES_PANEL_HEIGHT + RULES_GAP;
+    const subtitleY = subtitleTop + SUBTITLE_HEIGHT / 2;
+    const buttonsTop = subtitleTop + SUBTITLE_HEIGHT + BUTTON_GAP / 2;
     this.add
-      .text(centerX, 200, 'Три в ряд', {
+      .text(centerX, TITLE_Y, 'Три в ряд', {
         fontFamily: 'sans-serif',
-        fontSize: '64px',
+        fontSize: '56px',
         color: UI_TEXT_COLOR,
       })
       .setOrigin(0.5);
     this.subtitle = this.add
-      .text(centerX, 290, 'Выберите сложность', {
+      .text(centerX, subtitleY, 'Выберите сложность', {
         fontFamily: 'sans-serif',
-        fontSize: '34px',
+        fontSize: '28px',
         color: UI_MUTED_TEXT_COLOR,
       })
       .setOrigin(0.5);
 
     DIFFICULTIES.forEach((difficulty, i) => {
-      this.addButton(centerX, FIRST_BUTTON_Y + i * BUTTON_STEP, difficulty);
+      const y = buttonsTop + BUTTON_HEIGHT / 2 + i * (BUTTON_HEIGHT + BUTTON_GAP);
+      this.addButton(centerX, y, difficulty);
     });
   }
 
@@ -62,9 +74,9 @@ export class MenuScene extends Phaser.Scene {
     bg.strokeRoundedRect(-BUTTON_WIDTH / 2, -BUTTON_HEIGHT / 2, BUTTON_WIDTH, BUTTON_HEIGHT, 24);
 
     const name = this.add
-      .text(left, -18, difficulty.name, {
+      .text(left, -14, difficulty.name, {
         fontFamily: 'sans-serif',
-        fontSize: '40px',
+        fontSize: '32px',
         color: UI_TEXT_COLOR,
       })
       .setOrigin(0, 0.5);
@@ -73,7 +85,7 @@ export class MenuScene extends Phaser.Scene {
     const dots = this.add.graphics();
     TILE_COLORS.slice(0, difficulty.colors).forEach((color, i) => {
       dots.fillStyle(color);
-      dots.fillCircle(left + DOT_RADIUS + i * (DOT_RADIUS * 2 + 8), 28, DOT_RADIUS);
+      dots.fillCircle(left + DOT_RADIUS + i * (DOT_RADIUS * 2 + 8), 22, DOT_RADIUS);
     });
 
     // Рекорд: очки и чей он
@@ -82,7 +94,7 @@ export class MenuScene extends Phaser.Scene {
     const record = this.add
       .text(BUTTON_WIDTH / 2 - 36, 0, recordText(loadLeaderboard(difficulty.id)[0]), {
         fontFamily: 'sans-serif',
-        fontSize: '26px',
+        fontSize: '22px',
         color: hex(HIGHLIGHT_COLOR),
         align: 'right',
       })

@@ -651,12 +651,12 @@ function groupOutcome(group, spot) {
     const pos = neighborInGroup(group, spot, cells);
     placements.push({ pos, cell: { kind: "piece", type: "rocket", direction } });
   }
-  return { points: groupPoints(group, size), placements };
+  return { points: matchPoints(group.level, group.cells.length), placements };
 }
-function groupPoints(group, size) {
-  const cells = group.cells.length;
-  if (group.level === 1) return cells * BASE_POINTS_PER_TILE;
-  if (group.level === 2) {
+function matchPoints(level, cells) {
+  const size = Math.min(cells, 5);
+  if (level === 1) return cells * BASE_POINTS_PER_TILE;
+  if (level === 2) {
     return size === 5 ? LEVEL2_BIG_MATCH_POINTS : cells * BASE_POINTS_PER_TILE * LEVEL2_SCORE_MULTIPLIER;
   }
   return cells * BASE_POINTS_PER_TILE * LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE[size];

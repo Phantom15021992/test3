@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Position } from '../../src/core/board';
 import { findMatches } from '../../src/core/match';
 import { isValidSwap } from '../../src/core/moves';
-import { runMove, type ResolveStep } from '../../src/core/resolve';
+import { matchPoints, runMove, type ResolveStep } from '../../src/core/resolve';
 import { createRng } from '../../src/core/rng';
 import { parseBoard } from '../helpers/parseBoard';
 
@@ -491,5 +491,24 @@ describe('resolveMove: каскады', () => {
     `);
     const move = { type: 'swap', from: p(0, 0), to: p(0, 1) } as const;
     expect(runMove(board, move, ctx())).toEqual(runMove(board, move, ctx()));
+  });
+});
+
+describe('очки за совпадение', () => {
+  it.each([
+    [1, 3, 30],
+    [1, 4, 40],
+    [1, 5, 50],
+    [1, 6, 60],
+    [2, 3, 150],
+    [2, 4, 200],
+    [2, 5, 450],
+    [2, 6, 450],
+    [3, 3, 450],
+    [3, 4, 800],
+    [3, 5, 1250],
+    [3, 6, 1500],
+  ] as const)('%i уровень, %i клеток — %i очков', (level, cells, points) => {
+    expect(matchPoints(level, cells)).toBe(points);
   });
 });
