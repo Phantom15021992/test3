@@ -14,7 +14,7 @@
     "###...###"
   ],
   "colors": 3,
-  "moves": 24,
+  "moves": 30,
   "goals": [
     {
       "kind": "megaBomb",
@@ -24,7 +24,7 @@
   "stars": [
     {
       "kind": "movesLeft",
-      "count": 6
+      "count": 3
     },
     {
       "kind": "noBuy"

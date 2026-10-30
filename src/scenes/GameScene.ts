@@ -132,6 +132,7 @@ export class GameScene extends Phaser.Scene {
         fontSize: '28px',
         color: UI_MUTED_TEXT_COLOR,
         align: 'center',
+        wordWrap: { width: boxSize },
       })
       .setOrigin(0.5);
     this.bonusShop = new BonusShop(this, boxLeft, boxLeft + boxSize, boxTop - 115, (type) =>

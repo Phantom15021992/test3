@@ -18,6 +18,11 @@ describe('первая глава', () => {
     },
   );
 
+  it('на первом этаже из препятствий только лёд и дыры', () => {
+    const symbols = CHAPTER_ONE.flatMap((level) => [...level.layout.join('')]);
+    expect(new Set(symbols)).toEqual(new Set(['.', '#', 'i']));
+  });
+
   it('следующий уровень идёт по порядку, у последнего его нет', () => {
     expect(levelAfter(1)?.id).toBe(2);
     expect(levelAfter(10)).toBeUndefined();
