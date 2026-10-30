@@ -7,7 +7,7 @@ import {
   MENU_BUTTON_HEIGHT,
   menuButtonLabel,
 } from '../ui/menuButton';
-import { HIGHLIGHT_COLOR, UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
+import { HIGHLIGHT_COLOR, UI_TEXT_COLOR } from '../view/palette';
 
 const TITLE_Y = 110;
 const FIRST_ROW_Y = 240;
@@ -16,12 +16,11 @@ const COLUMN_STEP = 290;
 const COLUMNS = 2;
 const CELL_WIDTH = 270;
 const CELL_HEIGHT = 120;
-const LOCKED_ALPHA = 0.4;
 const MAX_STARS = 3;
 
 const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
 
-// Карта уровней главы: уровень открывается, когда пройден предыдущий.
+// Карта уровней главы: все уровни открыты, начать можно с любого.
 export class LevelMapScene extends Phaser.Scene {
   constructor() {
     super('LevelMap');
@@ -39,7 +38,6 @@ export class LevelMapScene extends Phaser.Scene {
 
     const stars = loadLevelStars();
     CHAPTER_ONE.forEach((level, i) => {
-      const unlocked = i === 0 || (stars[CHAPTER_ONE[i - 1]!.id] ?? 0) > 0;
       const column = i % COLUMNS;
       const x = centerX + (column - (COLUMNS - 1) / 2) * COLUMN_STEP;
       const y = FIRST_ROW_Y + Math.floor(i / COLUMNS) * ROW_STEP;
@@ -53,24 +51,21 @@ export class LevelMapScene extends Phaser.Scene {
         })
         .setOrigin(0.5);
       const rating = this.add
-        .text(0, 28, unlocked ? '★'.repeat(earned) + '☆'.repeat(MAX_STARS - earned) : 'закрыт', {
+        .text(0, 28, '★'.repeat(earned) + '☆'.repeat(MAX_STARS - earned), {
           fontFamily: 'sans-serif',
           fontSize: '28px',
-          color: unlocked ? hex(HIGHLIGHT_COLOR) : UI_MUTED_TEXT_COLOR,
+          color: hex(HIGHLIGHT_COLOR),
         })
         .setOrigin(0.5);
-      const button = createMenuButton(
+      createMenuButton(
         this,
         x,
         y,
         [number, rating],
-        () => {
-          if (unlocked) this.scene.start('Game', { level });
-        },
+        () => this.scene.start('Game', { level }),
         CELL_WIDTH,
         CELL_HEIGHT,
       );
-      if (!unlocked) button.setAlpha(LOCKED_ALPHA);
     });
 
     const rows = Math.ceil(CHAPTER_ONE.length / COLUMNS);
