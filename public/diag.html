@@ -39,7 +39,7 @@
       // Запросы те же, что делает игра; ключ публичный. Создаётся только билет на партию.
       const BASE = 'https://szieuersvybdqdzhstpx.supabase.co';
       const KEY = 'sb_publishable_r1YUbw3TzJbw-LaZfCvHbw_PbE03Ht0';
-      const LIMIT_MS = 20000;
+      const LIMIT_MS = 12000;
       const out = document.getElementById('out');
       const show = (ok, text) => {
         const line = document.createElement('p');
@@ -74,16 +74,17 @@
         const fresh = page.match(/index-[\w-]+\.js/)?.[0];
         show(Boolean(fresh), `Новейшая версия игры на сервере: ${fresh}`);
 
-        const headers = { apikey: KEY };
-        const json = { ...headers, 'Content-Type': 'application/json' };
         const game = `${BASE}/functions/v1/smooth-handler`;
-        await step('1. Рекорды', `${BASE}/rest/v1/leaderboard?select=name&limit=1`, { headers });
-        await step('2. Пробуждение функции', game, { method: 'OPTIONS' });
-        await step('3. Билет на партию', game, {
+        const records = `${BASE}/rest/v1/leaderboard?select=name&limit=1`;
+        // Сначала — как играет сайт сейчас, без предварительного запроса CORS
+        await step('1. Рекорды', `${records}&apikey=${KEY}`, {});
+        await step('2. Билет на партию', game, {
           method: 'POST',
-          headers: json,
           body: JSON.stringify({ action: 'start', difficulty: 'kids' }),
         });
+        // Для сравнения: чужой сайт и старый способ с предварительным запросом
+        await step('3. Другой сайт', 'https://api.github.com/zen', {});
+        await step('4. Рекорды старым способом', records, { headers: { apikey: KEY } });
         show(true, 'Готово. Сделайте снимок экрана и пришлите его.');
       })();
     </script>

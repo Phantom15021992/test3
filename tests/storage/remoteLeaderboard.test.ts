@@ -28,7 +28,9 @@ describe('общая таблица лидеров (Supabase)', () => {
     expect(query.get('difficulty')).toBe('eq.hard');
     expect(query.get('order')).toBe('score.desc,created_at.asc');
     expect(query.get('limit')).toBe('10');
-    expect((init.headers as Record<string, string>).apikey).toBe('public-key');
+    expect(query.get('apikey')).toBe('public-key');
+    // Свои заголовки вызвали бы предварительный запрос CORS, который зависает на части телефонов
+    expect(init.headers).toBeUndefined();
     expect(entries).toEqual([
       { id: 7, name: 'Аня', score: 900, playedAt: Date.parse('2026-10-30T10:00:00Z') },
       { id: 3, name: 'Боря', score: 500, playedAt: Date.parse('2026-10-29T10:00:00Z') },
@@ -64,7 +66,8 @@ describe('общая таблица лидеров (Supabase)', () => {
     await Promise.resolve();
     const [url, init] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('https://demo.supabase.co/functions/v1/smooth-handler');
-    expect(init.method).toBe('OPTIONS');
+    expect(init.method).toBe('POST');
+    expect(init.headers).toBeUndefined();
   });
 
   it('пропускает строки неожиданного вида', async () => {
@@ -89,6 +92,7 @@ describe('общая таблица лидеров (Supabase)', () => {
     const [url, init] = fetchFn.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('https://demo.supabase.co/functions/v1/smooth-handler');
     expect(init.method).toBe('POST');
+    expect(init.headers).toBeUndefined();
     expect(JSON.parse(init.body as string)).toEqual({
       action: 'finish',
       id: 'ticket',

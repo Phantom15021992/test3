@@ -56,24 +56,21 @@ function toEntry(row: Row): RemoteEntry {
   return { id: row.id, name: row.name, score: row.score, playedAt: Date.parse(row.created_at) };
 }
 
-async function request(
+/**
+ * Чтение таблицы лидеров. Ключ — в адресе, а не в заголовке: заголовок заставляет браузер слать
+ * предварительный запрос CORS, а он на части телефонов зависает без ответа и ошибки.
+ */
+async function readLeaderboard(
   config: RemoteConfig,
-  path: string,
-  init: RequestInit,
+  query: URLSearchParams,
   fetchFn: FetchFn,
 ): Promise<unknown> {
+  query.set('apikey', config.key);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const response = await fetchFn(`${config.url}/rest/v1/${path}`, {
-      ...init,
+    const response = await fetchFn(`${config.url}/rest/v1/leaderboard?${query}`, {
       signal: controller.signal,
-      headers: {
-        apikey: config.key,
-        Authorization: `Bearer ${config.key}`,
-        'Content-Type': 'application/json',
-        ...init.headers,
-      },
     });
     if (!response.ok) throw new Error(`Сервер таблицы лидеров ответил ${response.status}`);
     return await response.json();
@@ -95,7 +92,7 @@ export async function fetchTop(
     order: 'score.desc,created_at.asc',
     limit: String(limit),
   });
-  const data = await request(config, `leaderboard?${query}`, { method: 'GET' }, fetchFn);
+  const data = await readLeaderboard(config, query, fetchFn);
   return Array.isArray(data) ? data.filter(isRow).map(toEntry) : [];
 }
 
@@ -112,7 +109,7 @@ export async function fetchRecords(
     order: 'score.desc,created_at.asc',
     limit: String(LEADERBOARD_SIZE * DIFFICULTIES.length),
   });
-  const data = await request(config, `leaderboard?${query}`, { method: 'GET' }, fetchFn);
+  const data = await readLeaderboard(config, query, fetchFn);
   const records: Partial<Record<DifficultyId, RemoteEntry>> = {};
   for (const row of Array.isArray(data) ? data : []) {
     if (!isRow(row)) continue;
@@ -127,7 +124,7 @@ export async function fetchRecords(
  * занимает секунды, и без этого их пришлось бы ждать при запуске партии.
  */
 export function wakeGameServer(config: RemoteConfig, fetchFn: FetchFn = fetch): void {
-  fetchFn(gameServerUrl(config), { method: 'OPTIONS' }).catch(() => {
+  fetchFn(gameServerUrl(config), { method: 'POST', body: '{"action":"ping"}' }).catch(() => {
     // Не проснулась — партия всё равно попросит билет как обычно
   });
 }
@@ -154,7 +151,8 @@ async function callGameServer(
     const response = await fetchFn(gameServerUrl(config), {
       method: 'POST',
       signal: controller.signal,
-      headers: { apikey: config.key, 'Content-Type': 'application/json' },
+      // Без своих заголовков: иначе нужен предварительный запрос CORS (см. readLeaderboard).
+      // Функция разобрана как JSON и без Content-Type, а ключ ей не нужен
       body: JSON.stringify(body),
     });
     if (!response.ok) throw new Error(`Сервер игры ответил ${response.status}`);
