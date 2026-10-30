@@ -72,7 +72,7 @@ const COMBOS: readonly { pair: readonly [PieceType, PieceType]; text: string }[]
 ];
 
 /** Как применять спецфишки: одиночное нажатие их только выделяет */
-const ACTIVATION_NOTE = 'Двойной клик или сдвиг на соседа';
+const ACTIVATION_NOTE = 'Двойной клик; взрывные — и сдвиг';
 
 const NOTES = ['Квадрат 2×2 — как 4 фишки', '6 и больше — как 5', 'Ракета — только за линию'];
 
