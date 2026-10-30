@@ -1,4 +1,4 @@
-import { DIFFICULTIES } from '../core/config';
+import { DIFFICULTIES, RULES_VERSION } from '../core/config';
 import { parseActions, replayGame } from '../core/session';
 import { normalizeName } from '../storage/leaderboard';
 
@@ -119,7 +119,7 @@ export async function handleGameRequest(
     const body = (await request.json()) as Record<string, unknown>;
     if (body.action === 'start') return await start(request, body, env, fetchFn);
     if (body.action === 'finish') return await finish(request, body, env, fetchFn);
-    return json({ error: 'action' }, 400);
+    return json({ error: 'action', rules: RULES_VERSION }, 400);
   } catch (error) {
     console.error(error);
     return json({ error: 'server' }, 500);

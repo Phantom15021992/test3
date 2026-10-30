@@ -140,6 +140,21 @@ describe('проверка партии повтором', () => {
     expect(session.canApply({ type: 'fire', at })).toBe(false);
   });
 
+  it('сервер принимает сдвиг радуги с совпадением и отклоняет без него', () => {
+    const session = new GameSession(7, COLORS);
+    const blue = { kind: 'tile', color: 0, level: 1 } as const;
+    const other = (color: number) => ({ kind: 'tile', color, level: 1 }) as const;
+    const row = session.board[0]!;
+    row[0] = blue;
+    row[1] = blue;
+    row[2] = { kind: 'piece', type: 'rainbow' };
+    session.board[1]![2] = blue;
+    const down = { type: 'swap', from: { row: 0, col: 2 }, to: { row: 1, col: 2 } } as const;
+    expect(session.canApply(down)).toBe(true);
+    session.board[1]![2] = other(1);
+    expect(session.canApply(down)).toBe(false);
+  });
+
   it('цвет у обычного обмена не принимается', () => {
     const session = new GameSession(7, COLORS);
     expect(session.canApply({ ...swapOf(session), color: 0 } as PlayerMove)).toBe(false);

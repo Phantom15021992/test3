@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { GameSession, type GameAction } from '../../src/core/session';
 import { findPossibleMoves } from '../../src/core/moves';
+import { RULES_VERSION } from '../../src/core/config';
 import { handleGameRequest } from '../../src/server/gameServer';
 
 const env = { url: 'https://demo.supabase.co', key: 'sb_secret_test' };
@@ -171,6 +172,12 @@ describe('серверная проверка партии', () => {
       fetchFn,
     );
     expect(await response.json()).toEqual({ reason: 'limit', score });
+  });
+
+  it('на неизвестное действие отвечает версией правил — по ней видно, что функция обновлена', async () => {
+    const response = await handleGameRequest(post({ action: 'ping' }), env, database({}));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'action', rules: RULES_VERSION });
   });
 
   it('браузер получает разрешения CORS на предварительный запрос', async () => {

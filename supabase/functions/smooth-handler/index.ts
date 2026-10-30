@@ -37,6 +37,7 @@ var BONUS_TIERS = [
   { cost: 500, type: "manipulator" },
   { cost: 750, type: "rainbow" }
 ];
+var RULES_VERSION = 2;
 var MOVE_LIMIT = 35;
 var MANIPULATOR_FINALE_POINTS = 250;
 var FINALE_MAX_ROUNDS = 50;
@@ -411,7 +412,7 @@ function isValidSwap(board, a, b) {
   return findMatches(swapCells(board, a, b)).length > 0;
 }
 function isMovable(cell) {
-  return isTile(cell) || isPiece(cell) && cell.type === "manipulator";
+  return isTile(cell) || isPiece(cell) && (cell.type === "manipulator" || cell.type === "rainbow");
 }
 function findPossibleMoves(board) {
   const moves = [];
@@ -975,7 +976,7 @@ async function handleGameRequest(request, env, fetchFn = fetch) {
     const body = await request.json();
     if (body.action === "start") return await start(request, body, env, fetchFn);
     if (body.action === "finish") return await finish2(request, body, env, fetchFn);
-    return json({ error: "action" }, 400);
+    return json({ error: "action", rules: RULES_VERSION }, 400);
   } catch (error) {
     console.error(error);
     return json({ error: "server" }, 500);

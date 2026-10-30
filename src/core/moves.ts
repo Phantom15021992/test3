@@ -36,7 +36,7 @@ export function swapCells(board: Board, a: Position, b: Position): Board {
 /**
  * Допустимый обмен соседних клеток: две спецфишки (комбо), ракета/бомба/мега-бомба с любой клеткой
  * (срабатывает) или обмен, после которого появляется совпадение — двух фишек или фишки
- * с манипулятором (манипулятор просто переезжает). Радугу с фишкой не меняют.
+ * с манипулятором или радугой (они просто переезжают и остаются на поле).
  */
 export function isValidSwap(board: Board, a: Position, b: Position): boolean {
   if (!areAdjacent(a, b)) return false;
@@ -46,9 +46,11 @@ export function isValidSwap(board: Board, a: Position, b: Position): boolean {
   return findMatches(swapCells(board, a, b)).length > 0;
 }
 
-/** Что можно двигать обычным обменом: фишки и манипулятор */
+/** Что можно двигать обычным обменом: фишки, манипулятор и радугу */
 function isMovable(cell: Cell | undefined): boolean {
-  return isTile(cell) || (isPiece(cell) && cell.type === 'manipulator');
+  return (
+    isTile(cell) || (isPiece(cell) && (cell.type === 'manipulator' || cell.type === 'rainbow'))
+  );
 }
 
 export function findPossibleMoves(board: Board): SwapMove[] {

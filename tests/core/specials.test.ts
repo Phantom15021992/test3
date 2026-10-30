@@ -51,8 +51,14 @@ describe('isValidSwap со спецфишками', () => {
     expect(isValidSwap(board, p(1, 1), p(0, 1))).toBe(true);
   });
 
-  it('радугу нельзя менять с обычной фишкой', () => {
+  it('радугу можно сдвинуть, только если обмен даёт совпадение', () => {
     expect(isValidSwap(board, p(0, 2), p(1, 2))).toBe(false);
+    const withMatch = parseBoard(`
+      R1 R1 @
+      G1 B1 R1
+    `);
+    expect(isValidSwap(withMatch, p(0, 2), p(1, 2))).toBe(true);
+    expect(isValidSwap(withMatch, p(1, 2), p(0, 2))).toBe(true);
   });
 
   it('мега-бомбу можно поменять с любой соседней клеткой, в том числе с манипулятором', () => {

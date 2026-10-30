@@ -291,6 +291,21 @@ describe('resolveMove: срабатывание спецфишек', () => {
     expect(result.board[1]?.[2]).toEqual({ kind: 'piece', type: 'manipulator' });
   });
 
+  it('радуга, сдвинутая в совпадение, просто переезжает и остаётся', () => {
+    const board = parseBoard(`
+      R1 R1 @
+      G1 B1 R1
+    `);
+    const result = runMove(board, { type: 'swap', from: p(0, 2), to: p(1, 2) }, ctx());
+    expect(sortCells(stepsOf(result.steps, 'clear')[0]!.cells)).toEqual([
+      p(0, 0),
+      p(0, 1),
+      p(0, 2),
+    ]);
+    expect(stepsOf(result.steps, 'clear')[0]!.pieces).toBe(0);
+    expect(result.board[1]?.[2]).toEqual({ kind: 'piece', type: 'rainbow' });
+  });
+
   it('цепная реакция: ракета задевает бомбу', () => {
     const board = parseBoard(`
       G1 B1 Y1
