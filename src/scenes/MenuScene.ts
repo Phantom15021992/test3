@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { DIFFICULTIES, type Difficulty } from '../core/config';
-import { loadLeaderboard } from '../storage/leaderboard';
+import { loadLeaderboard, type LeaderboardEntry } from '../storage/leaderboard';
 import { fetchTop, remoteConfig } from '../storage/remoteLeaderboard';
 import {
   HIGHLIGHT_COLOR,
@@ -71,9 +71,11 @@ export class MenuScene extends Phaser.Scene {
       dots.fillCircle(left + DOT_RADIUS + i * (DOT_RADIUS * 2 + 8), 28, DOT_RADIUS);
     });
 
-    const best = loadLeaderboard(difficulty.id)[0];
+    // Рекорд: очки и чей он
+    const recordText = (entry: LeaderboardEntry | undefined) =>
+      entry ? `Рекорд ${entry.score}\n${entry.name}` : '';
     const record = this.add
-      .text(BUTTON_WIDTH / 2 - 36, 0, best ? `Рекорд\n${best.score}` : '', {
+      .text(BUTTON_WIDTH / 2 - 36, 0, recordText(loadLeaderboard(difficulty.id)[0]), {
         fontFamily: 'sans-serif',
         fontSize: '26px',
         color: hex(HIGHLIGHT_COLOR),
@@ -81,12 +83,13 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(1, 0.5);
 
-    // Общий рекорд всех игроков приходит с сервера позже и заменяет локальный
+    // Общий рекорд всех игроков приходит с сервера позже и заменяет локальный — даже если
+    // общая таблица пуста: иначе на разных устройствах были бы видны разные «рекорды»
     const config = remoteConfig();
     if (config) {
       fetchTop(config, difficulty.id, 1)
         .then(([top]) => {
-          if (top && record.active) record.setText(`Рекорд\n${top.score}`);
+          if (record.active) record.setText(recordText(top));
         })
         .catch(() => {
           // Нет связи — остаётся рекорд этого устройства
