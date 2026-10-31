@@ -1,5 +1,6 @@
 import type { Piece, Position } from './board';
 import { bonusStars, type BonusType } from './bonus';
+import { recordPurchase } from './gameStats';
 import { boardTemplate, iceTemplate, type Goal, type GoalKind, type Level } from './level';
 import type { ResolveStep } from './resolve';
 import { GameSession } from './session';
@@ -63,8 +64,17 @@ export class LevelSession extends GameSession {
     const cost = bonusStars(type);
     if (this.starsLeft < cost) return null;
     const placed = this.placeBought(type);
-    if (placed) this.starsSpent += cost;
+    if (!placed) return null;
+    this.starsSpent += cost;
+    recordPurchase(this.stats, type, 0);
     return placed;
+  }
+
+  /** Насколько выполнены цели, в процентах: показывает, близко ли было поражение */
+  get goalsPercent(): number {
+    const { goals } = this.level;
+    const share = goals.reduce((sum, goal) => sum + this.goalValue(goal) / goal.count, 0);
+    return Math.round((share / goals.length) * 100);
   }
 
   /** Звёзды: 0 — цели не выполнены, иначе 1 и по одной за каждую дополнительную задачу */

@@ -46,13 +46,23 @@ export function toRow(result: GameResult): Record<string, string | number> {
   };
 }
 
-export async function sendGameResult(
+export function sendGameResult(
   config: RemoteConfig,
   result: GameResult,
   fetchFn: typeof fetch = fetch,
 ): Promise<void> {
+  return sendRow(config, 'game_results', toRow(result), fetchFn);
+}
+
+/** Добавляет строку анонимной статистики */
+export async function sendRow(
+  config: RemoteConfig,
+  table: string,
+  row: Record<string, string | number>,
+  fetchFn: typeof fetch,
+): Promise<void> {
   try {
-    await fetchFn(`${config.url}/rest/v1/game_results`, {
+    await fetchFn(`${config.url}/rest/v1/${table}`, {
       method: 'POST',
       headers: {
         apikey: config.key,
@@ -60,7 +70,7 @@ export async function sendGameResult(
         'Content-Type': 'application/json',
         Prefer: 'return=minimal',
       },
-      body: JSON.stringify(toRow(result)),
+      body: JSON.stringify(row),
       // Запрос доходит до сервера, даже если игрок сразу закрыл вкладку
       keepalive: true,
     });

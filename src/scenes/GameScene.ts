@@ -33,6 +33,7 @@ import { ChoiceDialog } from '../ui/ChoiceDialog';
 import { GameOverDialog } from '../ui/GameOverDialog';
 import { LevelResultDialog } from '../ui/LevelResultDialog';
 import { sendGameResult } from '../storage/gameResults';
+import { sendLevelResult, type LevelOutcome } from '../storage/levelResults';
 import { floorWallet, saveLevelStars, spendFloorStars } from '../storage/progress';
 import { remoteConfig, type GameTicket } from '../storage/remoteLeaderboard';
 import { goalsText, levelBriefing, levelMoveLimit, levelTitle } from '../ui/levelText';
@@ -194,7 +195,9 @@ export class GameScene extends Phaser.Scene {
         .setOrigin(0, 0.5)
         .setInteractive({ useHandCursor: true })
         .on('pointerup', () => {
-          if (!this.busy) this.scene.start('LevelMap', this.mapData());
+          if (this.busy) return;
+          if (this.session.moves > 0) this.sendLevelAttempt('left');
+          this.scene.start('LevelMap', this.mapData());
         });
     }
 
@@ -455,6 +458,7 @@ export class GameScene extends Phaser.Scene {
   /** Уровень окончен: цели выполнены или кончились ходы */
   private async finishLevel(session: LevelSession): Promise<void> {
     const { level, stars } = session;
+    this.sendLevelAttempt(stars > 0 ? 'won' : 'lost');
     if (stars > 0) {
       saveLevelStars(level.id, stars);
       spendFloorStars(floorOf(level.id), session.starsSpent);
@@ -478,15 +482,36 @@ export class GameScene extends Phaser.Scene {
       difficulty: this.difficulty.id,
       score: session.score,
       movesMade: session.moves,
-      durationSec: Math.round((Date.now() - this.startedAt) / 1000),
+      durationSec: this.playedSeconds(),
       finalePoints,
       shuffles: session.shuffles,
       stats: session.stats,
-      device: window.matchMedia('(pointer: coarse)').matches ? 'touch' : 'desktop',
-      screenWidth: window.innerWidth,
-      screenHeight: window.innerHeight,
-      version: (import.meta.env.VITE_GAME_VERSION ?? 'dev').slice(0, 7),
+      ...clientInfo(),
     });
+  }
+
+  /** Анонимная запись попытки уровня: настоящая сложность видна только по живым игрокам */
+  private sendLevelAttempt(outcome: LevelOutcome): void {
+    const config = remoteConfig();
+    const { session } = this;
+    if (!config || !(session instanceof LevelSession)) return;
+    void sendLevelResult(config, {
+      levelId: session.level.id,
+      outcome,
+      stars: session.stars,
+      movesMade: session.moves,
+      movesLeft: Math.max(0, session.movesLeft),
+      goalsPercent: session.goalsPercent,
+      shuffles: session.shuffles,
+      durationSec: this.playedSeconds(),
+      starsSpent: session.starsSpent,
+      stats: session.stats,
+      ...clientInfo(),
+    });
+  }
+
+  private playedSeconds(): number {
+    return this.startedAt === 0 ? 0 : Math.round((Date.now() - this.startedAt) / 1000);
   }
 
   /** Если ходов обычными фишками не осталось — перемешать поле */
@@ -550,6 +575,15 @@ export class GameScene extends Phaser.Scene {
     this.bonusShop.update(budget, !this.busy && this.mode.type === 'idle');
     this.walletText?.setText(`★ ${budget}`);
   }
+}
+
+function clientInfo() {
+  return {
+    device: window.matchMedia('(pointer: coarse)').matches ? 'touch' : 'desktop',
+    screenWidth: window.innerWidth,
+    screenHeight: window.innerHeight,
+    version: (import.meta.env.VITE_GAME_VERSION ?? 'dev').slice(0, 7),
+  } as const;
 }
 
 /** Клетка, которую можно сдвинуть: остальные в обмене не участвуют */

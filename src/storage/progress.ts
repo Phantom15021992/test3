@@ -6,6 +6,8 @@ import { FLOOR_SIZE } from '../core/level';
 
 const STARS_KEY = 'match3.levelStars';
 const SPENT_KEY = 'match3.floorSpent';
+const MAX_LEVEL_STARS = 3;
+const MAX_FLOOR_SPENT = FLOOR_SIZE * MAX_LEVEL_STARS;
 
 export type LevelStars = Readonly<Record<number, number>>;
 
@@ -34,6 +36,58 @@ export function floorWallet(floor: number): number {
 /** Уровни открываются строго по порядку: нужен пройденный предыдущий */
 export function isLevelOpen(levelId: number, stars: LevelStars): boolean {
   return levelId === 1 || (stars[levelId - 1] ?? 0) > 0;
+}
+
+/** Весь прогресс кампании: копия для переноса на другое устройство */
+export interface ProgressCopy {
+  stars: LevelStars;
+  spent: LevelStars;
+}
+
+export function exportProgress(): ProgressCopy {
+  return { stars: loadLevelStars(), spent: loadRecord(SPENT_KEY) };
+}
+
+function parseRecord(value: unknown, max: number): LevelStars | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+  const entries = Object.entries(value);
+  const valid = entries.every(
+    ([key, count]) =>
+      /^[1-9][0-9]*$/.test(key) &&
+      Number.isInteger(count) &&
+      (count as number) >= 0 &&
+      (count as number) <= max,
+  );
+  return valid ? (value as LevelStars) : null;
+}
+
+/** Копия приходит с сервера, а сохранить её мог кто угодно: без проверки в прогресс не попадёт */
+export function parseProgress(value: unknown): ProgressCopy | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const { stars, spent } = value as Record<string, unknown>;
+  const parsedStars = parseRecord(stars, MAX_LEVEL_STARS);
+  const parsedSpent = parseRecord(spent, MAX_FLOOR_SPENT);
+  return parsedStars && parsedSpent ? { stars: parsedStars, spent: parsedSpent } : null;
+}
+
+function bestOf(a: LevelStars, b: LevelStars): LevelStars {
+  const best: Record<number, number> = { ...a };
+  for (const [key, count] of Object.entries(b)) {
+    const id = Number(key);
+    best[id] = Math.max(best[id] ?? 0, count);
+  }
+  return best;
+}
+
+/** Прогресс устройств складывается: от каждого уровня и этажа берётся большее, ничего не теряется */
+export function mergeProgress(copy: ProgressCopy): void {
+  const local = exportProgress();
+  try {
+    localStorage.setItem(STARS_KEY, JSON.stringify(bestOf(local.stars, copy.stars)));
+    localStorage.setItem(SPENT_KEY, JSON.stringify(bestOf(local.spent, copy.spent)));
+  } catch {
+    // Без хранилища прогресс живёт только до перезагрузки
+  }
 }
 
 /** Вызывается только при победе: потраченное на проигранном уровне возвращается */

@@ -3,6 +3,7 @@ import { FLOOR_SIZE, floorOf } from '../core/level';
 import { FLOORS } from '../levels';
 import { floorWallet, isLevelOpen, loadLevelStars } from '../storage/progress';
 import { levelNumber } from '../ui/levelText';
+import { TransferDialog } from '../ui/TransferDialog';
 import {
   createMenuButton,
   MENU_BUTTON_GAP,
@@ -96,6 +97,13 @@ export class LevelMapScene extends Phaser.Scene {
     const backY = FIRST_ROW_Y + rows * ROW_STEP + MENU_BUTTON_GAP / 2 + MENU_BUTTON_HEIGHT / 2 - 60;
     createMenuButton(this, centerX, backY, [menuButtonLabel(this, 'Назад')], () =>
       this.scene.start('Menu'),
+    );
+    createMenuButton(
+      this,
+      centerX,
+      backY + MENU_BUTTON_HEIGHT + MENU_BUTTON_GAP / 2,
+      [menuButtonLabel(this, 'Перенос прогресса')],
+      () => new TransferDialog(this, () => this.scene.restart({})).show(),
     );
   }
 

@@ -33,7 +33,7 @@ type FetchFn = typeof fetch;
 class ServerAnswerError extends Error {}
 
 /** Выполняет запрос, обрывая зависшую попытку и повторяя при обрыве связи */
-async function withRetries<T>(
+export async function withRetries<T>(
   attempts: number,
   timeoutMs: number,
   run: (signal: AbortSignal) => Promise<T>,
