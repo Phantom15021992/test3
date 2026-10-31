@@ -18,6 +18,7 @@ import {
   LEVEL2_SCORE_MULTIPLIER,
   LEVEL2_BIG_MATCH_POINTS,
   MATCH_REWARDS,
+  SEVEN_CROSS_REWARDS,
   LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE,
   MANIPULATOR_FINALE_POINTS,
 } from './config';
@@ -30,7 +31,7 @@ import {
   type Fall,
   type Spawn,
 } from './gravity';
-import { findMatches, type MatchGroup } from './match';
+import { findMatches, isSevenCross, type MatchGroup } from './match';
 import { swapCells } from './moves';
 import type { Rng } from './rng';
 import {
@@ -266,12 +267,17 @@ interface GroupOutcome {
 // Фишки под цепью считаются в размере группы, но остаются на месте: награда встаёт только
 // в свободные клетки, и если их не хватает, лишняя награда пропадает.
 function groupOutcome(group: MatchGroup, board: Board, landing: Position[]): GroupOutcome {
-  const points = matchPoints(group.level, group.cells.length);
+  const crossReward =
+    group.level !== 3 && isSevenCross(group.cells) ? SEVEN_CROSS_REWARDS[group.level] : null;
+  const points =
+    crossReward && group.level === 2
+      ? matchPoints(3, 5)
+      : matchPoints(group.level, group.cells.length);
   const open = { ...group, cells: group.cells.filter((pos) => !isChained(getCell(board, pos))) };
   if (open.cells.length === 0) return { points, placements: [] };
   const spot = pickSpot(open, landing);
   const size = Math.min(group.cells.length, 5) as 3 | 4 | 5;
-  const reward = MATCH_REWARDS[group.level][size];
+  const reward = crossReward ?? MATCH_REWARDS[group.level][size];
   const cells = reward.count === 2 ? [spot, neighborInGroup(open, spot, [spot])] : [spot];
   const cell: Cell =
     reward.kind === 'tiles'

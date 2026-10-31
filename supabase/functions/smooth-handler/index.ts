@@ -24,6 +24,10 @@ var MATCH_REWARDS = {
     5: { kind: "pieces", type: "rainbow", count: 2 }
   }
 };
+var SEVEN_CROSS_REWARDS = {
+  1: { kind: "tiles", level: 3, count: 2 },
+  2: { kind: "pieces", type: "rainbow", count: 2 }
+};
 var LEVEL3_HIT_MULTIPLIER = 15;
 var BOMB_SIZE = 3;
 var MEGA_BOMB_SIZE = 5;
@@ -37,7 +41,7 @@ var BONUS_TIERS = [
   { cost: 500, stars: 5, type: "manipulator" },
   { cost: 750, stars: 15, type: "rainbow" }
 ];
-var RULES_VERSION = 2;
+var RULES_VERSION = 3;
 var MOVE_LIMIT = 35;
 var MANIPULATOR_FINALE_POINTS = 250;
 var FINALE_MAX_ROUNDS = 50;
@@ -246,6 +250,31 @@ function level1Shape(units, cellCount) {
     return "line5";
   }
   return cellCount === 5 ? "lt" : "line5";
+}
+var SEVEN_CROSS_CELLS = 7;
+var LONG_LINE = 5;
+var BRANCHES = [
+  [1, 2],
+  [-2, -1],
+  [-1, 1]
+];
+function isSevenCross(cells) {
+  if (cells.length !== SEVEN_CROSS_CELLS) return false;
+  const along = (pos, vertical) => vertical ? pos.row : pos.col;
+  const across = (pos, vertical) => vertical ? pos.col : pos.row;
+  return [true, false].some((vertical) => {
+    const lines = new Set(cells.map((pos) => across(pos, vertical)));
+    return [...lines].some((line) => {
+      const inLine = cells.filter((pos) => across(pos, vertical) === line);
+      if (inLine.length !== LONG_LINE) return false;
+      const steps = inLine.map((pos) => along(pos, vertical)).sort((a, b) => a - b);
+      if (steps[LONG_LINE - 1] - steps[0] !== LONG_LINE - 1) return false;
+      const others = cells.filter((pos) => across(pos, vertical) !== line);
+      if (others.some((pos) => along(pos, vertical) !== steps[2])) return false;
+      const [first, second] = others.map((pos) => across(pos, vertical) - line).sort((x, y) => x - y);
+      return BRANCHES.some(([x, y]) => first === x && second === y);
+    });
+  });
 }
 function uniqueCells(cells) {
   const seen = /* @__PURE__ */ new Set();
@@ -718,12 +747,13 @@ function hasEmpty(board) {
   return board.some((line) => line.includes(null));
 }
 function groupOutcome(group, board, landing) {
-  const points = matchPoints(group.level, group.cells.length);
+  const crossReward = group.level !== 3 && isSevenCross(group.cells) ? SEVEN_CROSS_REWARDS[group.level] : null;
+  const points = crossReward && group.level === 2 ? matchPoints(3, 5) : matchPoints(group.level, group.cells.length);
   const open = { ...group, cells: group.cells.filter((pos) => !isChained(getCell(board, pos))) };
   if (open.cells.length === 0) return { points, placements: [] };
   const spot = pickSpot(open, landing);
   const size = Math.min(group.cells.length, 5);
-  const reward = MATCH_REWARDS[group.level][size];
+  const reward = crossReward ?? MATCH_REWARDS[group.level][size];
   const cells = reward.count === 2 ? [spot, neighborInGroup(open, spot, [spot])] : [spot];
   const cell = reward.kind === "tiles" ? { kind: "tile", color: group.color, level: reward.level } : { kind: "piece", type: reward.type };
   const placements = cells.flatMap((pos) => pos ? [{ pos, cell }] : []);

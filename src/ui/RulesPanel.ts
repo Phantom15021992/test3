@@ -80,14 +80,19 @@ const NOTES = [
   'Ракета — только за линию',
   'Радуга при сдвиге',
   'с совпадением остаётся',
+  'Линия 5 и 2 от середины:',
+  '2 ячейки 3 ур. или 2 радуги',
 ];
+/** Левая колонка с заметками стала длиннее правой */
+const LEFT_COLUMN_EXTRA = NOTE_ROW_HEIGHT;
 
 /** Высота панели: определяется правой, более длинной колонкой */
 export const RULES_PANEL_HEIGHT =
   PADDING * 2 +
   HEADER_HEIGHT * 2 +
   NOTE_ROW_HEIGHT +
-  SPECIAL_ROW_HEIGHT * (SPECIALS.length + COMBOS.length);
+  SPECIAL_ROW_HEIGHT * (SPECIALS.length + COMBOS.length) +
+  LEFT_COLUMN_EXTRA;
 
 /** Подпись очков: группа из 5+ приносит не меньше этого, кроме 2 уровня — там сумма постоянная */
 function pointsLabel(level: CellLevel, size: 3 | 4 | 5): string {

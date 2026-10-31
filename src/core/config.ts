@@ -46,6 +46,12 @@ export const MATCH_REWARDS: Readonly<Record<1 | 2 | 3, Record<3 | 4 | 5, MatchRe
   },
 };
 
+/** Награда за фигуру из 7 клеток (линия из 5 и две клетки от её середины); 3 уровень — как 5+ */
+export const SEVEN_CROSS_REWARDS: Readonly<Record<1 | 2, MatchReward>> = {
+  1: { kind: 'tiles', level: 3, count: 2 },
+  2: { kind: 'pieces', type: 'rainbow', count: 2 },
+};
+
 /** Множитель для ячейки 3 уровня, уничтоженной спецфишкой (не в совпадении) */
 export const LEVEL3_HIT_MULTIPLIER = 15;
 
@@ -73,7 +79,7 @@ export const BONUS_TIERS: readonly {
  * Версия правил хода: повышать при каждом изменении логики. Функция на сервере отдаёт её в ответ
  * на неизвестное действие, поэтому видно, что она обновлена раньше сайта.
  */
-export const RULES_VERSION = 2;
+export const RULES_VERSION = 3;
 
 // Партия: лимит ходов и финал
 export const MOVE_LIMIT = 35;

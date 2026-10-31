@@ -142,6 +142,40 @@ function level1Shape(units: Unit[], cellCount: number): Level1Shape {
   return cellCount === 5 ? 'lt' : 'line5';
 }
 
+const SEVEN_CROSS_CELLS = 7;
+const LONG_LINE = 5;
+/** Смещения двух клеток от линии: обе в одну сторону или по одной в каждую */
+const BRANCHES = [
+  [1, 2],
+  [-2, -1],
+  [-1, 1],
+] as const;
+
+/**
+ * Линия из 5 клеток и ещё две от её середины поперёк: обе в одну сторону или по одной
+ * в каждую (крест). Направление линии и сторона не важны.
+ */
+export function isSevenCross(cells: readonly Position[]): boolean {
+  if (cells.length !== SEVEN_CROSS_CELLS) return false;
+  const along = (pos: Position, vertical: boolean) => (vertical ? pos.row : pos.col);
+  const across = (pos: Position, vertical: boolean) => (vertical ? pos.col : pos.row);
+  return [true, false].some((vertical) => {
+    const lines = new Set(cells.map((pos) => across(pos, vertical)));
+    return [...lines].some((line) => {
+      const inLine = cells.filter((pos) => across(pos, vertical) === line);
+      if (inLine.length !== LONG_LINE) return false;
+      const steps = inLine.map((pos) => along(pos, vertical)).sort((a, b) => a - b);
+      if (steps[LONG_LINE - 1]! - steps[0]! !== LONG_LINE - 1) return false;
+      const others = cells.filter((pos) => across(pos, vertical) !== line);
+      if (others.some((pos) => along(pos, vertical) !== steps[2])) return false;
+      const [first, second] = others
+        .map((pos) => across(pos, vertical) - line)
+        .sort((x, y) => x - y);
+      return BRANCHES.some(([x, y]) => first === x && second === y);
+    });
+  });
+}
+
 function uniqueCells(cells: Position[]): Position[] {
   const seen = new Set<string>();
   return cells.filter((pos) => {
