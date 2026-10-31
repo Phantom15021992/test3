@@ -22,6 +22,49 @@ describe('кампания', () => {
     },
   );
 
+  it('поле не больше 10×10', () => {
+    for (const level of LEVELS) {
+      expect(level.layout.length).toBeLessThanOrEqual(10);
+      expect(level.layout[0]!.length).toBeLessThanOrEqual(10);
+    }
+  });
+
+  it('уровни с целью на ячейки 2 уровня идут на поле от 8×8', () => {
+    const levels = LEVELS.filter((level) => level.goals.some((goal) => goal.kind === 'level2'));
+    expect(levels.length).toBeGreaterThan(0);
+    for (const level of levels) {
+      expect(level.layout.length).toBeGreaterThanOrEqual(8);
+      expect(level.layout[0]!.length).toBeGreaterThanOrEqual(8);
+    }
+  });
+
+  it('лёд не лежит в просветах тоньше 3 клеток', () => {
+    const solid = (layout: readonly string[], row: number, col: number) =>
+      [0, 1, 2].every((i) => [0, 1, 2].every((j) => (layout[row + i]?.[col + j] ?? '#') !== '#'));
+    for (const { id, layout } of LEVELS) {
+      layout.forEach((line, row) =>
+        [...line].forEach((symbol, col) => {
+          if (symbol !== 'i') return;
+          const offsets = [0, 1, 2];
+          const thick = offsets.some((i) => offsets.some((j) => solid(layout, row - i, col - j)));
+          expect(thick, `уровень ${id}, клетка ${row},${col}`).toBe(true);
+        }),
+      );
+    }
+  });
+
+  it('кольцо — поле 10×10 с дырой 2×2 ровно в центре', () => {
+    const rings = LEVELS.filter((level) => level.title === 'Кольцо');
+    expect(rings.length).toBeGreaterThan(0);
+    for (const { layout } of rings) {
+      expect(layout).toHaveLength(10);
+      const holes = layout.flatMap((line, row) =>
+        [...line].flatMap((symbol, col) => (symbol === '#' ? [`${row},${col}`] : [])),
+      );
+      expect(holes).toEqual(['4,4', '4,5', '5,4', '5,5']);
+    }
+  });
+
   it('на первом этаже из препятствий только лёд и дыры', () => {
     const symbols = FLOORS[0]!.flatMap((level) => [...level.layout.join('')]);
     expect(new Set(symbols)).toEqual(new Set(['.', '#', 'i']));

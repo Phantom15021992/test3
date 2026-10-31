@@ -5,17 +5,17 @@
   "layout": [
     "..........",
     "..........",
-    "b.b####b.b",
-    "...####...",
-    ".bib..bib.",
-    "..ibbbbi..",
-    "bb.####.bb",
-    "b.b####b.b",
+    ".bb.##.bb.",
+    "b..b..b..b",
+    ".ibb..bbi.",
+    "..bbbbbb..",
+    "....##....",
+    ".b.iiii.b.",
     "..........",
-    "...i..i..."
+    ".........."
   ],
-  "colors": 4,
-  "moves": 25,
+  "colors": 5,
+  "moves": 17,
   "goals": [
     {
       "kind": "box",
@@ -29,11 +29,11 @@
   "stars": [
     {
       "kind": "movesLeft",
-      "count": 4
+      "count": 1
     },
     {
       "kind": "movesLeft",
-      "count": 8
+      "count": 6
     }
   ]
 }

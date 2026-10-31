@@ -15,7 +15,7 @@
     "###....###"
   ],
   "colors": 4,
-  "moves": 21,
+  "moves": 24,
   "goals": [
     {
       "kind": "box",
@@ -29,11 +29,11 @@
   "stars": [
     {
       "kind": "movesLeft",
-      "count": 2
+      "count": 5
     },
     {
       "kind": "movesLeft",
-      "count": 3
+      "count": 6
     }
   ]
 }

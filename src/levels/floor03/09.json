@@ -5,21 +5,21 @@
   "layout": [
     "..........",
     "..........",
-    "bb.#######",
-    "b.b#######",
-    "bbbb..bbbb",
+    "..bb.#####",
+    "bibb..bbib",
+    "..bb..bb..",
+    "bb..ii..b.",
+    "b....#####",
     "..b....b..",
-    "bb.#######",
-    "b.b#######",
-    "..i.ii.i..",
-    "....ii...."
+    "..i....i..",
+    ".........."
   ],
-  "colors": 4,
-  "moves": 19,
+  "colors": 5,
+  "moves": 21,
   "goals": [
     {
       "kind": "box",
-      "count": 13
+      "count": 15
     },
     {
       "kind": "ice",
@@ -29,11 +29,11 @@
   "stars": [
     {
       "kind": "movesLeft",
-      "count": 2
+      "count": 4
     },
     {
       "kind": "movesLeft",
-      "count": 5
+      "count": 10
     }
   ]
 }

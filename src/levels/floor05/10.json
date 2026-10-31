@@ -5,35 +5,35 @@
   "layout": [
     "..........",
     "..........",
-    "o.o####o.o",
-    ".i.####.i.",
+    ".o.o##o.o.",
     "..........",
     "...i..i...",
-    "...####...",
-    "...####...",
-    "i.i....i.i",
+    "...i..i...",
+    "....##....",
+    "....ii....",
+    "...i..i...",
     ".........."
   ],
   "colors": 4,
-  "moves": 34,
+  "moves": 28,
   "goals": [
     {
       "kind": "item",
-      "count": 3
+      "count": 2
     },
     {
       "kind": "ice",
-      "count": 6
+      "count": 4
     }
   ],
   "stars": [
     {
       "kind": "movesLeft",
-      "count": 4
+      "count": 2
     },
     {
       "kind": "movesLeft",
-      "count": 10
+      "count": 8
     }
   ]
 }
