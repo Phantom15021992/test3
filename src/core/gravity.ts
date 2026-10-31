@@ -1,4 +1,4 @@
-import { cloneBoard, type Board, type Position, type Tile } from './board';
+import { cloneBoard, isChained, isFixed, type Board, type Position, type Tile } from './board';
 import type { Rng } from './rng';
 
 export interface Fall {
@@ -15,23 +15,37 @@ export function removeCells(board: Board, cells: Position[]): Board {
   const next = cloneBoard(board);
   for (const { row, col } of cells) {
     const kind = next[row]?.[col]?.kind;
-    if (kind === 'tile' || kind === 'piece' || kind === 'stone') next[row]![col] = null;
+    if (kind === 'tile' || kind === 'piece' || kind === 'stone' || kind === 'box') {
+      next[row]![col] = null;
+    }
   }
   return next;
 }
 
-/** Фишки падают вниз по столбцам; дыры и камни пропускаются — фишка пролетает сквозь них */
+/** Снимает по звену цепи с фишек; когда звеньев не осталось, фишка снова обычная */
+export function loosenChains(board: Board, cells: Position[]): Board {
+  const next = cloneBoard(board);
+  for (const { row, col } of cells) {
+    const cell = next[row]?.[col];
+    if (cell?.kind !== 'tile' || !isChained(cell)) continue;
+    const left = cell.chain! - 1;
+    next[row]![col] =
+      left > 0 ? { ...cell, chain: left } : { kind: 'tile', color: cell.color, level: cell.level };
+  }
+  return next;
+}
+
+/** Всё падает вниз по столбцам; неподвижные клетки пропускаются — сквозь них пролетают */
 export function applyGravity(board: Board): { board: Board; falls: Fall[] } {
   const next = cloneBoard(board);
   const falls: Fall[] = [];
   const cols = next[0]?.length ?? 0;
 
   for (let col = 0; col < cols; col++) {
-    // Клетки столбца без дыр и камней, снизу вверх
+    // Клетки столбца без неподвижных, снизу вверх
     const slots: number[] = [];
     for (let row = next.length - 1; row >= 0; row--) {
-      const kind = next[row]?.[col]?.kind;
-      if (kind !== 'hole' && kind !== 'stone') slots.push(row);
+      if (!isFixed(next[row]?.[col])) slots.push(row);
     }
 
     let target = 0;
@@ -50,14 +64,14 @@ export function applyGravity(board: Board): { board: Board; falls: Fall[] } {
   return { board: next, falls };
 }
 
-/** Предметы, дошедшие до дна: ниже них в столбце нет клетки, куда можно упасть */
+/** Короны на настоящем дне: в самой нижней клетке столбца (дыры клетками не считаются) */
 export function itemsOnBottom(board: Board): Position[] {
   const arrived: Position[] = [];
   const cols = board[0]?.length ?? 0;
   for (let col = 0; col < cols; col++) {
     for (let row = board.length - 1; row >= 0; row--) {
       const kind = board[row]?.[col]?.kind;
-      if (kind === 'hole' || kind === 'stone') continue;
+      if (kind === 'hole') continue;
       if (kind === 'item') arrived.push({ row, col });
       break;
     }

@@ -2,6 +2,7 @@ import {
   allPositions,
   cloneBoard,
   getCell,
+  isChained,
   isPiece,
   isTile,
   posKey,
@@ -20,7 +21,15 @@ import {
   LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE,
   MANIPULATOR_FINALE_POINTS,
 } from './config';
-import { applyGravity, itemsOnBottom, refill, removeCells, type Fall, type Spawn } from './gravity';
+import {
+  applyGravity,
+  itemsOnBottom,
+  loosenChains,
+  refill,
+  removeCells,
+  type Fall,
+  type Spawn,
+} from './gravity';
 import { findMatches, type MatchGroup } from './match';
 import { swapCells } from './moves';
 import type { Rng } from './rng';
@@ -51,6 +60,11 @@ export type Move =
 
 export type ChoiceOption = 'bomb' | 'rainbow' | 'merge' | 'score';
 
+export interface ChainLink {
+  pos: Position;
+  left: number;
+}
+
 export interface Placement {
   pos: Position;
   cell: Cell;
@@ -61,14 +75,17 @@ export type ResolveStep =
   /** Клетки заменяются новыми: созданные спецфишки, объединённые ячейки, превращения в комбо */
   | { kind: 'transform'; placements: Placement[] }
   /** pieces — сколько спецфишек среди убранных клеток (сработали) — для статистики партии;
-   *  stones и items — сколько камней сломано и предметов дошло до дна — для целей уровня */
+   *  stones, boxes и items — сколько камней и коробок сломано и корон дошло до дна, а links —
+   *  фишки, с которых снято звено цепи (они остаются на месте; left — сколько звеньев ещё держит) */
   | {
       kind: 'clear';
       cells: Position[];
       points: number;
       pieces: number;
       stones?: number;
+      boxes?: number;
       items?: number;
+      links?: ChainLink[];
     }
   | { kind: 'drop'; falls: Fall[]; spawns: Spawn[] }
   | { kind: 'choice'; group: MatchGroup; options: readonly [ChoiceOption, ChoiceOption] };
@@ -109,10 +126,23 @@ export function* resolveMove(
       0,
     );
     const pieces = cells.filter((pos) => isPiece(getCell(current, pos))).length;
-    const stones = cells.filter((pos) => getCell(current, pos)?.kind === 'stone').length;
+    const count = (kind: string) => cells.filter((pos) => getCell(current, pos)?.kind === kind);
+    const stones = count('stone').length;
+    const boxes = count('box').length;
+    const held = cells.filter((pos) => isChained(getCell(current, pos)));
+    const gone = held.length > 0 ? cells.filter((pos) => !isChained(getCell(current, pos))) : cells;
+    const links = held.map((pos) => ({ pos, left: chainOf(current, pos) - 1 }));
     score += points;
-    current = removeCells(current, cells);
-    yield { kind: 'clear', cells, points, pieces, ...(stones > 0 && { stones }) };
+    current = loosenChains(removeCells(current, gone), held);
+    yield {
+      kind: 'clear',
+      cells: gone,
+      points,
+      pieces,
+      ...(stones > 0 && { stones }),
+      ...(boxes > 0 && { boxes }),
+      ...(links.length > 0 && { links }),
+    };
   }
 
   function* place(placements: Placement[]): Generator<ResolveStep, void, ChoiceOption | undefined> {
@@ -183,8 +213,8 @@ export function* resolveMove(
       const points = new Map<string, number>();
 
       for (const group of groups) {
-        const outcome = groupOutcome(group, pickSpot(group, landing));
-        removal.push(...group.cells, ...stonesAround(current, group.cells));
+        const outcome = groupOutcome(group, current, landing);
+        removal.push(...group.cells, ...boxesAround(current, group.cells));
         spreadPoints(group.cells, outcome.points, points);
         placements.push(...outcome.placements);
       }
@@ -203,8 +233,13 @@ export function* resolveMove(
   throw new Error(`Каскад не завершился за ${MAX_WAVES} волн`);
 }
 
-/** Камни рядом с совпадением ломаются вместе с ним */
-function stonesAround(board: Board, cells: Position[]): Position[] {
+function chainOf(board: Board, pos: Position): number {
+  const cell = getCell(board, pos);
+  return isTile(cell) ? (cell.chain ?? 0) : 0;
+}
+
+/** Коробки рядом с совпадением ломаются вместе с ним */
+function boxesAround(board: Board, cells: Position[]): Position[] {
   const offsets = [
     [0, 1],
     [0, -1],
@@ -213,7 +248,7 @@ function stonesAround(board: Board, cells: Position[]): Position[] {
   ] as const;
   return cells
     .flatMap(({ row, col }) => offsets.map(([dr, dc]) => ({ row: row + dr, col: col + dc })))
-    .filter((pos) => getCell(board, pos)?.kind === 'stone');
+    .filter((pos) => getCell(board, pos)?.kind === 'box');
 }
 
 function hasEmpty(board: Board): boolean {
@@ -228,22 +263,32 @@ interface GroupOutcome {
 
 // Совпадение сразу превращается в награду из MATCH_REWARDS (объединённые ячейки или спецфишки),
 // и вся группа приносит очки. Вторая награда, если их две, встаёт в соседнюю клетку группы.
-function groupOutcome(group: MatchGroup, spot: Position): GroupOutcome {
+// Фишки под цепью считаются в размере группы, но остаются на месте: награда встаёт только
+// в свободные клетки, и если их не хватает, лишняя награда пропадает.
+function groupOutcome(group: MatchGroup, board: Board, landing: Position[]): GroupOutcome {
+  const points = matchPoints(group.level, group.cells.length);
+  const open = { ...group, cells: group.cells.filter((pos) => !isChained(getCell(board, pos))) };
+  if (open.cells.length === 0) return { points, placements: [] };
+  const spot = pickSpot(open, landing);
   const size = Math.min(group.cells.length, 5) as 3 | 4 | 5;
   const reward = MATCH_REWARDS[group.level][size];
-  const cells = reward.count === 2 ? [spot, neighborInGroup(group, spot, [spot])] : [spot];
+  const cells = reward.count === 2 ? [spot, neighborInGroup(open, spot, [spot])] : [spot];
   const cell: Cell =
     reward.kind === 'tiles'
       ? { kind: 'tile', color: group.color, level: reward.level }
       : { kind: 'piece', type: reward.type };
-  const placements: Placement[] = cells.map((pos) => ({ pos, cell }));
+  const placements: Placement[] = cells.flatMap((pos) => (pos ? [{ pos, cell }] : []));
 
   const direction = lineDirection(group);
   if (reward.kind === 'tiles' && reward.lineRocket && direction) {
-    const pos = neighborInGroup(group, spot, cells);
-    placements.push({ pos, cell: { kind: 'piece', type: 'rocket', direction } });
+    const pos = neighborInGroup(
+      open,
+      spot,
+      placements.map((placement) => placement.pos),
+    );
+    if (pos) placements.push({ pos, cell: { kind: 'piece', type: 'rocket', direction } });
   }
-  return { points: matchPoints(group.level, group.cells.length), placements };
+  return { points, placements };
 }
 
 /** Очки за совпадение: группа ячеек этого уровня из cells клеток (6+ считаются как 5) */
@@ -327,7 +372,11 @@ function lineDirection(group: MatchGroup): 'row' | 'col' | null {
 }
 
 /** Свободная (не из taken) клетка группы рядом со spot — для второй награды */
-function neighborInGroup(group: MatchGroup, spot: Position, taken: Position[]): Position {
+function neighborInGroup(
+  group: MatchGroup,
+  spot: Position,
+  taken: Position[],
+): Position | undefined {
   const free = (pos: Position) =>
     group.cells.some((c) => samePos(c, pos)) && !taken.some((t) => samePos(t, pos));
   const offsets = [
@@ -340,7 +389,7 @@ function neighborInGroup(group: MatchGroup, spot: Position, taken: Position[]): 
     const pos = { row: spot.row + dr, col: spot.col + dc };
     if (free(pos)) return pos;
   }
-  return group.cells.find(free)!;
+  return group.cells.find(free);
 }
 
 /** Прогоняет ход до конца, отвечая на выборы по порядку (для тестов и автоигры) */

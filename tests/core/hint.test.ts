@@ -22,7 +22,10 @@ const iceLevel: Level = {
   colors: 4,
   moves: 10,
   goals: [{ kind: 'ice', count: 3 }],
-  stars: [{ kind: 'movesLeft', count: 1 }, { kind: 'noBuy' }],
+  stars: [
+    { kind: 'movesLeft', count: 1 },
+    { kind: 'movesLeft', count: 2 },
+  ],
 };
 
 function play(seed: number, withHints: boolean): GameSession {

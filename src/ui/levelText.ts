@@ -1,4 +1,11 @@
-import type { Goal, GoalKind, Level, StarTask } from '../core/level';
+import {
+  FLOOR_SIZE,
+  floorOf,
+  type Goal,
+  type GoalKind,
+  type Level,
+  type StarTask,
+} from '../core/level';
 import { LevelSession } from '../core/levelSession';
 import type { GameSession } from '../core/session';
 
@@ -9,7 +16,9 @@ const GOAL_NAMES: Readonly<Record<GoalKind, string>> = {
   rainbow: 'Радуги',
   ice: 'Лёд',
   stone: 'Камни',
-  item: 'Кристаллы',
+  box: 'Коробки',
+  chain: 'Цепи',
+  item: 'Короны',
 };
 
 /** Прогресс целей одной строкой: «Лёд 3/12 · Камни 0/4» */
@@ -19,12 +28,10 @@ export function goalsText(session: LevelSession): string {
     .join('  ·  ');
 }
 
-/** Этаж: пока он один, поэтому номер общий для всех уровней */
-const FLOOR = 1;
-
 /** Номер уровня: этаж-уровень, например «1-10» */
 export function levelNumber(level: Level): string {
-  return `${FLOOR}-${level.id}`;
+  const floor = floorOf(level.id);
+  return `${floor}-${level.id - (floor - 1) * FLOOR_SIZE}`;
 }
 
 export function levelTitle(level: Level): string {
@@ -54,14 +61,17 @@ function goalTaskText({ kind, count }: Goal): string {
     case 'ice':
       return `сломай ${n} ${plural(count, 'льдину', 'льдины', 'льдин')}`;
     case 'stone':
-      return `сломай ${n} ${plural(count, 'камень', 'камня', 'камней')}`;
+      return `разбей взрывом ${n} ${plural(count, 'камень', 'камня', 'камней')}`;
+    case 'box':
+      return `сломай ${n} ${plural(count, 'коробку', 'коробки', 'коробок')}`;
+    case 'chain':
+      return `освободи из цепей ${n} ${plural(count, 'фишку', 'фишки', 'фишек')}`;
     case 'item':
-      return `опусти на дно ${n} ${plural(count, 'кристалл', 'кристалла', 'кристаллов')}`;
+      return `опусти на дно ${n} ${plural(count, 'корону', 'короны', 'корон')}`;
   }
 }
 
 export function starTaskText(task: StarTask): string {
-  if (task.kind === 'noBuy') return 'Не покупать спецфишки';
   const { count } = task;
   if (task.kind === 'movesLeft') {
     return `Закончить, когда осталось ${count} ${plural(count, 'ход', 'хода', 'ходов')} или больше`;

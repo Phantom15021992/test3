@@ -3,6 +3,7 @@ import {
   createEmptyBoard,
   getCell,
   hasPieces,
+  isFixed,
   isPiece,
   isTile,
   samePos,
@@ -88,10 +89,17 @@ export class GameSession {
   buy(type: BonusType): { pos: Position; piece: Piece } | null {
     const scoreAfter = buyBonus(this.score, type);
     if (scoreAfter === null) return null;
-    const placed = placeBonus(this.board, type, this.rng);
+    const placed = this.placeBought(type);
     if (!placed) return null;
     recordPurchase(this.stats, type, this.score - scoreAfter);
     this.score = scoreAfter;
+    return placed;
+  }
+
+  /** Ставит купленную спецфишку на поле; плата — забота вызывающего */
+  protected placeBought(type: BonusType): { pos: Position; piece: Piece } | null {
+    const placed = placeBonus(this.board, type, this.rng);
+    if (!placed) return null;
     this.board = placed.board;
     this.actions.push({ type: 'buy', bonus: type });
     return { pos: placed.pos, piece: placed.piece };
@@ -152,7 +160,7 @@ export class GameSession {
 
 function isFilled(board: Board, pos: Position): boolean {
   const cell = getCell(board, pos);
-  return cell != null && cell.kind !== 'hole' && cell.kind !== 'stone';
+  return cell != null && cell.kind !== 'stone' && !isFixed(cell);
 }
 
 function hasColor(board: Board, color: ColorId | undefined): boolean {

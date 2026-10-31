@@ -10,7 +10,7 @@ import {
   SWAP_DURATION_MS,
 } from '../core/config';
 import type { Fall, Spawn } from '../core/gravity';
-import type { Placement } from '../core/resolve';
+import type { ChainLink, Placement } from '../core/resolve';
 import {
   BOARD_CELL_DARK,
   BOARD_CELL_LIGHT,
@@ -18,19 +18,18 @@ import {
   SELECTION_COLOR,
   TILE_COLORS,
 } from './palette';
+import { CHAIN_NAME, chainImages, obstacleImage } from './obstacleArt';
 import { drawPiece } from './pieceArt';
-import { drawItem, drawStone, drawTileShape } from './tileArt';
+import { drawTileShape } from './tileArt';
 
 type TileSprite = Phaser.GameObjects.Container;
 
 const TILE_OUTLINE_WIDTH = 3;
-const ICE_COLOR = 0x7dd3fc;
-const ICE_ALPHA = 0.45;
 
 // Отображение поля. Состояние игры здесь не хранится — только спрайты, повторяющие поле из core.
 export class BoardView {
   private readonly background: Phaser.GameObjects.Graphics;
-  private readonly iceLayer: Phaser.GameObjects.Graphics;
+  private readonly iceLayer: Phaser.GameObjects.Container;
   private readonly selection: Phaser.GameObjects.Graphics;
   private readonly highlight: Phaser.GameObjects.Graphics;
   private readonly hintLayer: Phaser.GameObjects.Graphics;
@@ -49,7 +48,7 @@ export class BoardView {
     readonly cellSize: number,
   ) {
     this.background = scene.add.graphics();
-    this.iceLayer = scene.add.graphics();
+    this.iceLayer = scene.add.container(0, 0);
     this.selection = scene.add.graphics().setDepth(1);
     this.highlight = scene.add.graphics().setDepth(1);
     this.hintLayer = scene.add.graphics().setDepth(1);
@@ -86,18 +85,24 @@ export class BoardView {
 
   /** Лёд рисуется под фишками: он лежит на клетке и не падает вместе с ними */
   setIce(ice: readonly (readonly boolean[])[]): void {
-    this.iceLayer.clear();
-    this.iceLayer.fillStyle(ICE_COLOR, ICE_ALPHA);
-    this.iceLayer.lineStyle(2, ICE_COLOR, 0.9);
+    this.iceLayer.removeAll(true);
     ice.forEach((line, row) =>
       line.forEach((frozen, col) => {
         if (!frozen) return;
-        const x = this.originX + col * this.cellSize + 2;
-        const y = this.originY + row * this.cellSize + 2;
-        this.iceLayer.fillRect(x, y, this.cellSize - 4, this.cellSize - 4);
-        this.iceLayer.strokeRect(x, y, this.cellSize - 4, this.cellSize - 4);
+        const { x, y } = this.centerOf({ row, col });
+        this.iceLayer.add(obstacleImage(this.scene, 'ice', this.cellSize, x, y));
       }),
     );
+  }
+
+  /** С фишек снято по звену: фишка остаётся, цепь перерисовывается */
+  loosen(links: ChainLink[]): void {
+    for (const { pos, left } of links) {
+      const sprite = this.spriteAt(pos);
+      if (!sprite) continue;
+      sprite.getAll('name', CHAIN_NAME).forEach((image) => image.destroy());
+      sprite.add(chainImages(this.scene, left, this.cellSize));
+    }
   }
 
   cellAt(x: number, y: number): Position | null {
@@ -221,14 +226,13 @@ export class BoardView {
   private createSprite(cell: Exclude<Cell, null | { kind: 'hole' }>, pos: Position): TileSprite {
     const { x, y } = this.centerOf(pos);
     let children: Phaser.GameObjects.GameObject[];
-    if (cell.kind === 'stone' || cell.kind === 'item') {
-      const body = this.scene.add.graphics();
-      (cell.kind === 'stone' ? drawStone : drawItem)(body, this.cellSize);
-      children = [body];
+    if (cell.kind === 'stone' || cell.kind === 'box' || cell.kind === 'item') {
+      const name = cell.kind === 'item' ? 'crown' : cell.kind;
+      children = [obstacleImage(this.scene, name, this.cellSize)];
     } else if (cell.kind === 'tile') {
       const body = this.scene.add.graphics();
       this.drawTile(body, cell);
-      children = [body];
+      children = [body, ...chainImages(this.scene, cell.chain ?? 0, this.cellSize)];
     } else {
       children = [drawPiece(this.scene, cell, this.cellSize * 0.4)];
     }

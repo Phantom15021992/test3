@@ -43,7 +43,7 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    createMenuButton(this, centerX, LEVELS_BUTTON_Y, [menuButtonLabel(this, 'Уровни')], () => {
+    createMenuButton(this, centerX, LEVELS_BUTTON_Y, [menuButtonLabel(this, 'Кампания')], () => {
       if (!this.starting) this.scene.start('LevelMap');
     });
     createMenuButton(this, centerX, RULES_BUTTON_Y, [menuButtonLabel(this, 'Правила игры')], () => {

@@ -57,15 +57,16 @@ export const MEGA_BOMB_BOMB_SIZE = 7;
 export const ROCKET_BOMB_WIDTH = 3;
 export const MEGA_BOMB_ROCKET_WIDTH = 5;
 
-// Спецфишки, которые можно купить за очки счёта
+// Спецфишки, которые можно купить: за очки счёта в свободной игре, за звёзды этажа в кампании
 export const BONUS_TIERS: readonly {
   cost: number;
+  stars: number;
   type: 'bomb' | 'rocket' | 'manipulator' | 'rainbow';
 }[] = [
-  { cost: 150, type: 'bomb' },
-  { cost: 300, type: 'rocket' },
-  { cost: 500, type: 'manipulator' },
-  { cost: 750, type: 'rainbow' },
+  { cost: 150, stars: 1, type: 'bomb' },
+  { cost: 300, stars: 2, type: 'rocket' },
+  { cost: 500, stars: 5, type: 'manipulator' },
+  { cost: 750, stars: 15, type: 'rainbow' },
 ];
 
 /**

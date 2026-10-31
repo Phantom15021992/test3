@@ -1,33 +1,41 @@
 import { describe, expect, it } from 'vitest';
 import type { Level } from '../../src/core/level';
-import { CHAPTER_ONE } from '../../src/levels';
+import { LEVELS } from '../../src/levels';
 import { levelBriefing, levelNumber, levelTitle, starTaskText } from '../../src/ui/levelText';
 
-const level = (overrides: Partial<Level>): Level => ({ ...CHAPTER_ONE[0]!, ...overrides });
+const level = (overrides: Partial<Level>): Level => ({ ...LEVELS[0]!, ...overrides });
 
 describe('подписи уровня', () => {
   it('номер — этаж-уровень', () => {
-    expect(levelNumber(CHAPTER_ONE[9]!)).toBe('1-10');
-    expect(levelTitle(CHAPTER_ONE[9]!)).toBe('1-10 · Ледяной ромб');
+    expect(levelNumber(LEVELS[9]!)).toBe('1-10');
+    expect(levelTitle(LEVELS[9]!)).toBe('1-10 · Ледяной ромб');
   });
 
   it('задание и все три звезды расписаны подробно', () => {
     const text = levelBriefing(
       level({
         goals: [{ kind: 'ice', count: 14 }],
-        stars: [{ kind: 'movesLeft', count: 6 }, { kind: 'noBuy' }],
+        stars: [
+          { kind: 'movesLeft', count: 6 },
+          { kind: 'level3', count: 2 },
+        ],
       }),
     );
     expect(text.split('\n')).toEqual([
       'Задание: сломай 14 льдин',
       '★ Выполнить задание',
       '★ Закончить, когда осталось 6 ходов или больше',
-      '★ Не покупать спецфишки',
+      '★ Собрать 2 ячейки 3 уровня',
     ]);
   });
 
+  it('второй этаж нумеруется своими 1–10', () => {
+    expect(levelNumber(level({ id: 11 }))).toBe('2-1');
+    expect(levelNumber(level({ id: 20 }))).toBe('2-10');
+  });
+
   it('две цели идут через «и»', () => {
-    const text = levelBriefing(CHAPTER_ONE[8]!);
+    const text = levelBriefing(LEVELS[8]!);
     expect(text.split('\n')[0]).toBe('Задание: сломай 10 льдин и собери 9 ячеек 3 уровня');
   });
 

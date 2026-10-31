@@ -23,35 +23,6 @@ function regularPolygon(
   });
 }
 
-/** Камень: серая глыба, занимает клетку целиком, чтобы его не путали с фишками */
-export function drawStone(g: Phaser.GameObjects.Graphics, cellSize: number): void {
-  const half = cellSize * 0.44;
-  g.fillStyle(0x6b7280);
-  g.fillRoundedRect(-half, -half, half * 2, half * 2, cellSize * 0.14);
-  g.lineStyle(3, 0x9ca3af, 0.9);
-  g.strokeRoundedRect(-half, -half, half * 2, half * 2, cellSize * 0.14);
-  g.lineStyle(2, 0x374151, 0.9);
-  g.lineBetween(-half * 0.5, -half * 0.3, half * 0.1, half * 0.1);
-  g.lineBetween(half * 0.1, half * 0.1, -half * 0.1, half * 0.6);
-}
-
-/** Предмет: белый кристалл — такой формы и цвета нет ни у фишек, ни у спецфишек */
-export function drawItem(g: Phaser.GameObjects.Graphics, cellSize: number): void {
-  const top = cellSize * 0.42;
-  const side = cellSize * 0.3;
-  const points = [
-    new Phaser.Math.Vector2(0, -top),
-    new Phaser.Math.Vector2(side, 0),
-    new Phaser.Math.Vector2(0, top),
-    new Phaser.Math.Vector2(-side, 0),
-  ];
-  g.fillStyle(0xf8fafc);
-  g.fillPoints(points, true);
-  g.lineStyle(3, 0x38bdf8, 1);
-  g.strokePoints(points, true);
-  g.lineBetween(-side, 0, side, 0);
-}
-
 /** Рисует фишку с центром в (0, 0). Уровень виден по форме: круг, треугольник, звезда */
 export function drawTileShape(
   g: Phaser.GameObjects.Graphics,

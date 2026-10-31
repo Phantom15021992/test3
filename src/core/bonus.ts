@@ -2,6 +2,7 @@ import {
   allPositions,
   cloneBoard,
   getCell,
+  isChained,
   setCell,
   type Board,
   type Piece,
@@ -10,12 +11,16 @@ import {
 import { BONUS_TIERS } from './config';
 import type { Rng } from './rng';
 
-// Покупка спецфишек за очки: цена списывается со счёта, покупка хода не тратит.
+// Покупка спецфишек: в свободной игре за очки счёта, в кампании за звёзды. Хода не тратит.
 
 export type BonusType = (typeof BONUS_TIERS)[number]['type'];
 
 export function bonusCost(type: BonusType): number {
   return BONUS_TIERS.find((tier) => tier.type === type)!.cost;
+}
+
+export function bonusStars(type: BonusType): number {
+  return BONUS_TIERS.find((tier) => tier.type === type)!.stars;
 }
 
 export function canBuyBonus(score: number, type: BonusType): boolean {
@@ -44,7 +49,7 @@ export function placeBonus(
 ): { board: Board; pos: Position; piece: Piece } | null {
   const candidates = allPositions(board).filter((pos) => {
     const cell = getCell(board, pos);
-    return cell?.kind === 'tile' && cell.level === 1;
+    return cell?.kind === 'tile' && cell.level === 1 && !isChained(cell);
   });
   if (candidates.length === 0) return null;
   const pos = candidates[rng.int(candidates.length)]!;

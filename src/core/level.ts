@@ -1,4 +1,4 @@
-import { createEmptyBoard, type Board } from './board';
+import { UNCOLORED, createEmptyBoard, type Board } from './board';
 
 // Описание уровня и его проверка: уровни лежат в JSON, поэтому при загрузке им нельзя верить на слово.
 //
@@ -6,10 +6,13 @@ import { createEmptyBoard, type Board } from './board';
 //   .  обычная клетка (заполнится случайной фишкой)
 //   #  дыра: клетки нет, фишки пролетают сквозь неё
 //   i  клетка со льдом
-//   s  камень: не двигается, фишки пролетают сквозь него
-//   o  предмет: его нужно опустить на дно
+//   s  камень: падает, сдвинуть нельзя, разбить можно только взрывом
+//   b  коробка: стоит на месте, ломается взрывом и совпадением рядом
+//   o  корона: её нужно опустить на дно
+//   1, 2, 3  фишка под цепью из стольких звеньев
 
-export type GoalKind = 'level2' | 'level3' | 'megaBomb' | 'rainbow' | 'ice' | 'stone' | 'item';
+export type GoalKind =
+  'level2' | 'level3' | 'megaBomb' | 'rainbow' | 'ice' | 'stone' | 'box' | 'chain' | 'item';
 
 export interface Goal {
   kind: GoalKind;
@@ -17,8 +20,7 @@ export interface Goal {
 }
 
 /** Дополнительные задачи: каждая выполненная даёт ещё одну звезду */
-export type StarTask =
-  { kind: 'movesLeft'; count: number } | { kind: 'noBuy' } | { kind: 'level3'; count: number };
+export type StarTask = { kind: 'movesLeft'; count: number } | { kind: 'level3'; count: number };
 
 export interface Level {
   id: number;
@@ -39,9 +41,18 @@ const GOAL_KINDS: readonly GoalKind[] = [
   'rainbow',
   'ice',
   'stone',
+  'box',
+  'chain',
   'item',
 ];
 const STAR_TASKS = 2;
+/** Уровней на этаже: номер уровня складывается из этажа и места на нём */
+export const FLOOR_SIZE = 10;
+
+/** Этаж уровня, с единицы */
+export function floorOf(levelId: number): number {
+  return Math.ceil(levelId / FLOOR_SIZE);
+}
 
 export function boardTemplate(level: Level): Board {
   const board = createEmptyBoard(level.layout.length, level.layout[0]?.length ?? 0);
@@ -49,6 +60,10 @@ export function boardTemplate(level: Level): Board {
     [...line].forEach((symbol, col) => {
       if (symbol === '#') board[row]![col] = { kind: 'hole' };
       if (symbol === 's') board[row]![col] = { kind: 'stone' };
+      if (symbol === 'b') board[row]![col] = { kind: 'box' };
+      if (/[123]/.test(symbol)) {
+        board[row]![col] = { kind: 'tile', color: UNCOLORED, level: 1, chain: Number(symbol) };
+      }
       if (symbol === 'o') board[row]![col] = { kind: 'item' };
     }),
   );
@@ -79,14 +94,17 @@ export function parseLevel(value: unknown): Level {
   if (!Array.isArray(level.layout) || level.layout.length === 0) fail('нет поля');
   const width = level.layout[0]?.length;
   if (level.layout.some((line) => line.length !== width)) fail('строки поля разной длины');
-  if (level.layout.join('').replace(/[.#iso]/g, '') !== '') fail('неизвестный символ в поле');
+  if (level.layout.join('').replace(/[.#isob123]/g, '') !== '') fail('неизвестный символ в поле');
 
   if (!Array.isArray(level.goals) || level.goals.length === 0) fail('нет целей');
   for (const goal of level.goals) {
     if (!GOAL_KINDS.includes(goal.kind)) fail(`неизвестная цель ${goal.kind}`);
     if (!Number.isInteger(goal.count) || goal.count < 1) fail(`нет числа у цели ${goal.kind}`);
-    const available = { ice: 'i', stone: 's', item: 'o' }[goal.kind as string];
-    if (available && countSymbol(level, available) < goal.count) {
+    const symbols = { ice: 'i', stone: 's', box: 'b', chain: '123', item: 'o' }[
+      goal.kind as string
+    ];
+    const available = [...(symbols ?? '')].reduce((sum, s) => sum + countSymbol(level, s), 0);
+    if (symbols && available < goal.count) {
       fail(`цель ${goal.kind} больше, чем есть на поле`);
     }
   }

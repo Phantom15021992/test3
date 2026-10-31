@@ -29,11 +29,11 @@ interface ShopButton {
   pulse: Phaser.Tweens.Tween | null;
 }
 
-// Ряд кнопок над полем: спецфишки, которые можно купить за очки счёта.
-// Кнопка, на которую хватает очков, подсвечена и пульсирует.
+// Ряд кнопок над полем: спецфишки, которые можно купить: за очки счёта или, в кампании, за звёзды.
+// Кнопка, на которую хватает, подсвечена и пульсирует.
 export class BonusShop {
   private readonly buttons: ShopButton[];
-  private score = 0;
+  private budget = 0;
   private enabled = true;
 
   constructor(
@@ -42,9 +42,12 @@ export class BonusShop {
     right: number,
     y: number,
     onBuy: (type: BonusType) => void,
+    forStars = false,
   ) {
     const step = (right - left) / BONUS_TIERS.length;
-    this.buttons = BONUS_TIERS.map(({ cost, type }, i) => {
+    this.buttons = BONUS_TIERS.map((tier, i) => {
+      const { type } = tier;
+      const cost = forStars ? tier.stars : tier.cost;
       const x = left + step * (i + 0.5);
       const circle = scene.add.graphics();
       circle.fillStyle(UI_PANEL_COLOR);
@@ -57,11 +60,11 @@ export class BonusShop {
         .zone(0, 0, BUTTON_RADIUS * 2, BUTTON_RADIUS * 2)
         .setInteractive({ useHandCursor: true })
         .on('pointerup', () => {
-          if (this.enabled && this.score >= cost) onBuy(type);
+          if (this.enabled && this.budget >= cost) onBuy(type);
         });
       const container = scene.add.container(x, y, [circle, icon, ring, hit]);
       const costText = scene.add
-        .text(x, y + BUTTON_RADIUS + 16, String(cost), {
+        .text(x, y + BUTTON_RADIUS + 16, forStars ? `${cost} ★` : String(cost), {
           fontFamily: 'sans-serif',
           fontSize: '22px',
           color: UI_MUTED_TEXT_COLOR,
@@ -72,11 +75,11 @@ export class BonusShop {
     this.update(0, true);
   }
 
-  update(score: number, enabled: boolean): void {
-    this.score = score;
+  update(budget: number, enabled: boolean): void {
+    this.budget = budget;
     this.enabled = enabled;
     for (const button of this.buttons) {
-      const ready = score >= button.cost;
+      const ready = budget >= button.cost;
       button.container.setAlpha(ready ? 1 : LOCKED_ALPHA);
       button.ring.setVisible(ready);
       button.costText.setColor(ready ? UI_TEXT_COLOR : UI_MUTED_TEXT_COLOR);

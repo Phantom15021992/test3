@@ -12,7 +12,12 @@ export interface Tile {
   kind: 'tile';
   color: ColorId;
   level: CellLevel;
+  /** Сколько звеньев цепи на фишке: такую нельзя сдвинуть, и она не падает */
+  chain?: number;
 }
+
+/** Цвет цепной фишки в шаблоне уровня: настоящий выберет генератор стартового поля */
+export const UNCOLORED: ColorId = -1;
 
 /** Спецфишки. У всех нет цвета, в совпадениях они не участвуют */
 export type Piece =
@@ -26,18 +31,23 @@ export interface Hole {
   kind: 'hole';
 }
 
-/** Камень: стоит на месте, фишки пролетают сквозь него; ломается взрывом и совпадением рядом */
+/** Камень: падает вниз, сдвинуть его нельзя, разбить — только взрывом */
 export interface Stone {
   kind: 'stone';
 }
 
-/** Предмет: падает и меняется как фишка, в совпадениях не участвует, взрывы его не задевают */
+/** Коробка: стоит на месте, фишки пролетают сквозь неё; ломается взрывом и совпадением рядом */
+export interface Box {
+  kind: 'box';
+}
+
+/** Корона: падает и меняется как фишка, в совпадениях не участвует, взрывы её не задевают */
 export interface Item {
   kind: 'item';
 }
 
 /** null — пустая клетка, которую нужно заполнить */
-export type Cell = Tile | Piece | Hole | Stone | Item | null;
+export type Cell = Tile | Piece | Hole | Stone | Box | Item | null;
 
 export type Board = Cell[][];
 
@@ -56,6 +66,16 @@ export function isTile(cell: Cell | undefined): cell is Tile {
 
 export function isPiece(cell: Cell | undefined): cell is Piece {
   return cell != null && cell.kind === 'piece';
+}
+
+/** Фишка под цепью */
+export function isChained(cell: Cell | undefined): boolean {
+  return isTile(cell) && cell.chain !== undefined;
+}
+
+/** Клетка, которая не двигается и не падает: сквозь неё фишки пролетают */
+export function isFixed(cell: Cell | undefined): boolean {
+  return cell?.kind === 'hole' || cell?.kind === 'box' || isChained(cell);
 }
 
 /** Совпадают ли фишки: одинаковый цвет и одинаковый уровень */

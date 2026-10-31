@@ -1,4 +1,12 @@
-import { cloneBoard, getCell, type Board, type ColorId, type Position } from './board';
+import {
+  UNCOLORED,
+  cloneBoard,
+  getCell,
+  isTile,
+  type Board,
+  type ColorId,
+  type Position,
+} from './board';
 import { findMatches } from './match';
 import { hasPossibleMove } from './moves';
 import type { Rng } from './rng';
@@ -21,12 +29,14 @@ function fillOnce(template: Board, colorCount: number, rng: Rng): Board {
   const board = cloneBoard(template);
   board.forEach((row, r) =>
     row.forEach((cell, c) => {
-      if (cell !== null) return;
+      const uncolored = isTile(cell) && cell.color === UNCOLORED;
+      if (cell !== null && !uncolored) return;
       const pos = { row: r, col: c };
       const allowed = range(colorCount).filter((color) => !wouldMatch(board, pos, color));
       // Если подходящих цветов нет — ставим любой, итоговая проверка отбросит попытку
       const pool = allowed.length > 0 ? allowed : range(colorCount);
-      row[c] = { kind: 'tile', color: pool[rng.int(pool.length)]!, level: 1 };
+      const color = pool[rng.int(pool.length)]!;
+      row[c] = uncolored ? { ...cell, color } : { kind: 'tile', color, level: 1 };
     }),
   );
   return board;

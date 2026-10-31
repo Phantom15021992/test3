@@ -1,0 +1,47 @@
+{
+  "id": 100,
+  "title": "Восьмёрка",
+  "hint": "Здесь всё сразу: камни, коробки, цепи и короны",
+  "layout": [
+    "...s..s...",
+    "...s..s...",
+    "o.o####o..",
+    "ib.####.bi",
+    ".3.ssss.2.",
+    ".b.bbbb.b.",
+    "ib.####.bi",
+    ".3.####.2.",
+    "i.i.32.i.i",
+    ".........."
+  ],
+  "colors": 4,
+  "moves": 30,
+  "goals": [
+    {
+      "kind": "item",
+      "count": 2
+    },
+    {
+      "kind": "box",
+      "count": 5
+    },
+    {
+      "kind": "chain",
+      "count": 3
+    },
+    {
+      "kind": "ice",
+      "count": 4
+    }
+  ],
+  "stars": [
+    {
+      "kind": "movesLeft",
+      "count": 3
+    },
+    {
+      "kind": "movesLeft",
+      "count": 5
+    }
+  ]
+}

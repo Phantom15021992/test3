@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import {
   getCell,
+  isChained,
+  isFixed,
   isPiece,
   isTile,
   samePos,
@@ -22,7 +24,7 @@ import type { BonusType } from '../core/bonus';
 import { strongestMove, type HintKind } from '../core/hint';
 import { areAdjacent, isValidSwap } from '../core/moves';
 import type { ChoiceOption, ResolveStep } from '../core/resolve';
-import type { Level } from '../core/level';
+import { floorOf, type Level } from '../core/level';
 import { LevelSession } from '../core/levelSession';
 import { GameSession, type PlayerMove } from '../core/session';
 import { comboNeedsColor, isCombo } from '../core/specials';
@@ -31,7 +33,7 @@ import { ChoiceDialog } from '../ui/ChoiceDialog';
 import { GameOverDialog } from '../ui/GameOverDialog';
 import { LevelResultDialog } from '../ui/LevelResultDialog';
 import { sendGameResult } from '../storage/gameResults';
-import { saveLevelStars } from '../storage/progress';
+import { floorWallet, saveLevelStars, spendFloorStars } from '../storage/progress';
 import { remoteConfig, type GameTicket } from '../storage/remoteLeaderboard';
 import { goalsText, levelBriefing, levelMoveLimit, levelTitle } from '../ui/levelText';
 import { HIGHLIGHT_COLOR, UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
@@ -61,6 +63,7 @@ export class GameScene extends Phaser.Scene {
   private dialog!: ChoiceDialog;
   private scoreText!: Phaser.GameObjects.Text;
   private movesText!: Phaser.GameObjects.Text;
+  private walletText: Phaser.GameObjects.Text | null = null;
   private hintText!: Phaser.GameObjects.Text;
   // Для анонимной статистики партии (game_results): длительность считаем от первого хода
   private startedAt = 0;
@@ -99,7 +102,7 @@ export class GameScene extends Phaser.Scene {
     // каждом запуске (для отладки; в общую таблицу такая партия не попадает, см. startGame)
     const seed = debugSeed() ?? this.ticket?.seed ?? Date.now() >>> 0;
     this.session = this.level
-      ? new LevelSession(seed, this.level)
+      ? new LevelSession(seed, this.level, floorWallet(floorOf(this.level.id)))
       : new GameSession(seed, this.difficulty.colors);
     if (import.meta.env.DEV) {
       // Доступ к сцене из консоли браузера для ручной проверки
@@ -143,9 +146,22 @@ export class GameScene extends Phaser.Scene {
         wordWrap: { width: boxSize },
       })
       .setOrigin(0.5);
-    this.bonusShop = new BonusShop(this, boxLeft, boxLeft + boxSize, boxTop - 115, (type) =>
-      this.takeBonus(type),
+    this.bonusShop = new BonusShop(
+      this,
+      boxLeft,
+      boxLeft + boxSize,
+      boxTop - 115,
+      (type) => this.takeBonus(type),
+      this.level !== null,
     );
+    this.walletText = this.level
+      ? this.add
+          .text(this.scale.width - 30, boxTop - 205, '', {
+            ...hudStyle,
+            color: `#${HIGHLIGHT_COLOR.toString(16)}`,
+          })
+          .setOrigin(1, 0.5)
+      : null;
     this.updateScore();
     this.updateMoves();
     this.goalsText = this.level
@@ -178,7 +194,7 @@ export class GameScene extends Phaser.Scene {
         .setOrigin(0, 0.5)
         .setInteractive({ useHandCursor: true })
         .on('pointerup', () => {
-          if (!this.busy) this.scene.start('LevelMap');
+          if (!this.busy) this.scene.start('LevelMap', this.mapData());
         });
     }
 
@@ -326,7 +342,7 @@ export class GameScene extends Phaser.Scene {
       return void this.play({ type: 'fire', at: cell });
     }
     if (selected && samePos(selected, cell)) return this.setSelected(null);
-    if (isPiece(content) || isTile(content)) this.setSelected(cell);
+    if (isOnField(content)) this.setSelected(cell);
   }
 
   private isDoubleTap(cell: Position): boolean {
@@ -394,6 +410,7 @@ export class GameScene extends Phaser.Scene {
           this.updateScore();
           this.refreshIce();
           this.refreshGoals();
+          this.view.loosen(step.links ?? []);
           await this.view.clear(step.cells);
           break;
         case 'transform':
@@ -438,11 +455,18 @@ export class GameScene extends Phaser.Scene {
   /** Уровень окончен: цели выполнены или кончились ходы */
   private async finishLevel(session: LevelSession): Promise<void> {
     const { level, stars } = session;
-    if (stars > 0) saveLevelStars(level.id, stars);
+    if (stars > 0) {
+      saveLevelStars(level.id, stars);
+      spendFloorStars(floorOf(level.id), session.starsSpent);
+    }
     new LevelResultDialog(this).show(session, {
       onRetry: () => this.scene.restart({ level }),
-      onMap: () => this.scene.start('LevelMap'),
+      onMap: () => this.scene.start('LevelMap', this.mapData()),
     });
+  }
+
+  private mapData(): { floor?: number } {
+    return this.level ? { floor: floorOf(this.level.id) } : {};
   }
 
   /** Анонимная запись доигранной партии для анализа — сразу, ещё до ввода имени */
@@ -475,7 +499,7 @@ export class GameScene extends Phaser.Scene {
 
   // ---------- Бонусы ----------
 
-  /** Покупка спецфишки за очки: встаёт на случайную фишку 1 уровня, хода не тратит */
+  /** Покупка спецфишки: встаёт на случайную фишку 1 уровня, хода не тратит */
   private async takeBonus(type: BonusType): Promise<void> {
     if (this.busy || this.mode.type !== 'idle') return;
     const placed = this.session.buy(type);
@@ -521,13 +545,16 @@ export class GameScene extends Phaser.Scene {
 
   private updateBonusShop(): void {
     // Покупка — только в спокойном состоянии: не во время хода и не в режиме выбора клеток
-    this.bonusShop.update(this.session.score, !this.busy && this.mode.type === 'idle');
+    const { session } = this;
+    const budget = session instanceof LevelSession ? session.starsLeft : session.score;
+    this.bonusShop.update(budget, !this.busy && this.mode.type === 'idle');
+    this.walletText?.setText(`★ ${budget}`);
   }
 }
 
-/** Клетка, с которой можно что-то сделать: дыра и камень в обмене не участвуют */
+/** Клетка, которую можно сдвинуть: остальные в обмене не участвуют */
 function isOnField(cell: Cell | undefined): boolean {
-  return cell != null && cell.kind !== 'hole' && cell.kind !== 'stone';
+  return cell != null && cell.kind !== 'stone' && !isFixed(cell) && !isChained(cell);
 }
 
 const HINT_TEXTS: Readonly<Record<HintKind, string>> = {

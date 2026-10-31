@@ -1,6 +1,7 @@
 import {
   allPositions,
   getCell,
+  isChained,
   isPiece,
   isTile,
   posKey,
@@ -53,7 +54,8 @@ export function bandArea(
 export function tilesOfColor(board: Board, color: ColorId, onlyLevel1 = false): Position[] {
   return allPositions(board).filter((p) => {
     const cell = getCell(board, p);
-    return isTile(cell) && cell.color === color && (!onlyLevel1 || cell.level === 1);
+    if (!isTile(cell) || cell.color !== color) return false;
+    return !onlyLevel1 || (cell.level === 1 && !isChained(cell));
   });
 }
 
@@ -116,7 +118,7 @@ export function expandChain(
     const key = posKey(pos);
     if (destroyed.has(key)) continue;
     const cell = getCell(board, pos);
-    // Предмет взрывы не задевают: иначе его нельзя было бы донести до дна
+    // Корону взрывы не задевают: иначе её нельзя было бы донести до дна
     if (cell == null || cell.kind === 'hole' || cell.kind === 'item') continue;
     destroyed.set(key, pos);
     if (!preActivated.has(key)) queue.push(...activationArea(board, pos, cell));
@@ -128,7 +130,7 @@ export function expandChain(
 
 /** Очки за клетку, уничтоженную не в совпадении (взрывом, ракетой, радугой) */
 export function hitPoints(cell: Cell | undefined): number {
-  if (!isTile(cell)) return 0;
+  if (!isTile(cell) || isChained(cell)) return 0;
   if (cell.level === 2) return BASE_POINTS_PER_TILE * LEVEL2_SCORE_MULTIPLIER;
   if (cell.level === 3) return BASE_POINTS_PER_TILE * LEVEL3_HIT_MULTIPLIER;
   return BASE_POINTS_PER_TILE;
@@ -169,9 +171,9 @@ export function activationSwapTarget(board: Board, a: Position, b: Position): Po
   return null;
 }
 
-/** С чем спецфишку можно поменять, чтобы она сработала: дыры, камни и предметы не подходят */
+/** С чем спецфишку можно поменять, чтобы она сработала: только с тем, что само двигается */
 function isSwappable(cell: Cell | undefined): boolean {
-  return isTile(cell) || isPiece(cell);
+  return (isTile(cell) && !isChained(cell)) || isPiece(cell);
 }
 
 /** Нужен ли игроку выбор цвета для комбо (мега-бомба + радуга) */
