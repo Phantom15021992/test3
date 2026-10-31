@@ -18,6 +18,7 @@ import {
   LEVEL2_SCORE_MULTIPLIER,
   LEVEL2_BIG_MATCH_POINTS,
   MATCH_REWARDS,
+  SEVEN_CROSS_LEVEL1_POINTS,
   SEVEN_CROSS_REWARDS,
   LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE,
   MANIPULATOR_FINALE_POINTS,
@@ -269,10 +270,11 @@ interface GroupOutcome {
 function groupOutcome(group: MatchGroup, board: Board, landing: Position[]): GroupOutcome {
   const crossReward =
     group.level !== 3 && isSevenCross(group.cells) ? SEVEN_CROSS_REWARDS[group.level] : null;
-  const points =
-    crossReward && group.level === 2
-      ? matchPoints(3, 5)
-      : matchPoints(group.level, group.cells.length);
+  const points = crossReward
+    ? group.level === 1
+      ? SEVEN_CROSS_LEVEL1_POINTS
+      : matchPoints(3, 5)
+    : matchPoints(group.level, group.cells.length);
   const open = { ...group, cells: group.cells.filter((pos) => !isChained(getCell(board, pos))) };
   if (open.cells.length === 0) return { points, placements: [] };
   const spot = pickSpot(open, landing);

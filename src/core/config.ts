@@ -52,6 +52,9 @@ export const SEVEN_CROSS_REWARDS: Readonly<Record<1 | 2, MatchReward>> = {
   2: { kind: 'pieces', type: 'rainbow', count: 2 },
 };
 
+/** Очки за фигуру из 7 клеток; 2 уровень — как группа из 5 ячеек 3 уровня, см. matchPoints */
+export const SEVEN_CROSS_LEVEL1_POINTS = 350;
+
 /** Множитель для ячейки 3 уровня, уничтоженной спецфишкой (не в совпадении) */
 export const LEVEL3_HIT_MULTIPLIER = 15;
 

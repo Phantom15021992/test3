@@ -54,9 +54,9 @@ describe('фигура из 7 клеток: распознавание', () => {
 });
 
 describe('фигура из 7 клеток: награда', () => {
-  it('из фишек 1 уровня — 2 ячейки 3 уровня и обычные очки', () => {
+  it('из фишек 1 уровня — 2 ячейки 3 уровня и 350 очков', () => {
     const { steps } = runMove(tee('R1'), teeMove, ctx());
-    expect(firstClear(steps)?.points).toBe(70);
+    expect(firstClear(steps)?.points).toBe(350);
     expect(firstPlaced(steps)).toEqual([
       { pos: p(2, 1), cell: { kind: 'tile', color: expect.any(Number), level: 3 } },
       { pos: p(2, 2), cell: { kind: 'tile', color: expect.any(Number), level: 3 } },

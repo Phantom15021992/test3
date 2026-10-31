@@ -28,6 +28,7 @@ var SEVEN_CROSS_REWARDS = {
   1: { kind: "tiles", level: 3, count: 2 },
   2: { kind: "pieces", type: "rainbow", count: 2 }
 };
+var SEVEN_CROSS_LEVEL1_POINTS = 350;
 var LEVEL3_HIT_MULTIPLIER = 15;
 var BOMB_SIZE = 3;
 var MEGA_BOMB_SIZE = 5;
@@ -748,7 +749,7 @@ function hasEmpty(board) {
 }
 function groupOutcome(group, board, landing) {
   const crossReward = group.level !== 3 && isSevenCross(group.cells) ? SEVEN_CROSS_REWARDS[group.level] : null;
-  const points = crossReward && group.level === 2 ? matchPoints(3, 5) : matchPoints(group.level, group.cells.length);
+  const points = crossReward ? group.level === 1 ? SEVEN_CROSS_LEVEL1_POINTS : matchPoints(3, 5) : matchPoints(group.level, group.cells.length);
   const open = { ...group, cells: group.cells.filter((pos) => !isChained(getCell(board, pos))) };
   if (open.cells.length === 0) return { points, placements: [] };
   const spot = pickSpot(open, landing);
