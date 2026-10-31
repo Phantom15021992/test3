@@ -15,7 +15,7 @@
     "##i.##.i##"
   ],
   "colors": 4,
-  "moves": 22,
+  "moves": 36,
   "goals": [
     {
       "kind": "ice",
@@ -25,11 +25,11 @@
   "stars": [
     {
       "kind": "movesLeft",
-      "count": 1
+      "count": 4
     },
     {
       "kind": "movesLeft",
-      "count": 4
+      "count": 9
     }
   ]
 }

@@ -25,11 +25,11 @@
   "stars": [
     {
       "kind": "movesLeft",
-      "count": 4
+      "count": 3
     },
     {
       "kind": "movesLeft",
-      "count": 6
+      "count": 5
     }
   ]
 }

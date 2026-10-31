@@ -15,7 +15,7 @@
     "##..##..##"
   ],
   "colors": 4,
-  "moves": 33,
+  "moves": 32,
   "goals": [
     {
       "kind": "box",

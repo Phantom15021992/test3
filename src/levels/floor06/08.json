@@ -15,21 +15,21 @@
     "##...#####"
   ],
   "colors": 4,
-  "moves": 15,
+  "moves": 20,
   "goals": [
     {
       "kind": "box",
-      "count": 5
+      "count": 10
     }
   ],
   "stars": [
     {
       "kind": "movesLeft",
-      "count": 6
+      "count": 1
     },
     {
       "kind": "movesLeft",
-      "count": 8
+      "count": 2
     }
   ]
 }
