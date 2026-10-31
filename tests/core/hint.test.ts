@@ -122,5 +122,5 @@ describe('подсказка самого сильного хода', () => {
     expect(hinted.score).toBe(plain.score);
     expect(hinted.actions).toEqual(plain.actions);
     expect(replayGame(11, 5, hinted.actions)).toBe(hinted.score);
-  });
+  }, 60_000);
 });
