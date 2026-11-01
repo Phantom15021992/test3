@@ -19,7 +19,7 @@
   "goals": [
     {
       "kind": "chain",
-      "count": 6
+      "count": 5
     }
   ],
   "stars": [
@@ -29,7 +29,7 @@
     },
     {
       "kind": "movesLeft",
-      "count": 5
+      "count": 6
     }
   ]
 }
