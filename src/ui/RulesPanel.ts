@@ -1,47 +1,46 @@
 import Phaser from 'phaser';
-import type { CellLevel, Piece, PieceType } from '../core/board';
+import type { CellLevel, PieceType } from '../core/board';
 import {
   BOMB_BOMB_SIZE,
   BOMB_SIZE,
-  MATCH_REWARDS,
   MEGA_BOMB_BOMB_SIZE,
   MEGA_BOMB_ROCKET_WIDTH,
   MEGA_BOMB_SIZE,
   ROCKET_BOMB_WIDTH,
 } from '../core/config';
-import { matchPoints } from '../core/resolve';
 import {
-  TILE_COLORS,
   UI_BUTTON_COLOR,
   UI_MUTED_TEXT_COLOR,
   UI_PANEL_COLOR,
   UI_TEXT_COLOR,
 } from '../view/palette';
-import { drawPiece } from '../view/pieceArt';
-import { drawTileShape } from '../view/tileArt';
-import { rewardIcons, type RewardIcon } from './matchFigures';
+import { figureValue, MATCH_FIGURES, type MatchFigure } from './matchFigures';
+import { drawFigure, drawRuleIcon } from './ruleArt';
 
 const PADDING = 16;
-const COLUMN_GAP = 40;
-/** Левая колонка уже правой: подписи комбо длиннее строк с объединениями */
-const MATCHES_COLUMN_WIDTH = 276;
+const COLUMN_GAP = 30;
+/** Левая колонка уже правой: подписи комбо длиннее значков комбинаций */
+const FIGURES_COLUMN_WIDTH = 290;
 const HEADER_HEIGHT = 44;
 const SPECIAL_ROW_HEIGHT = 46;
-const MATCH_ROW_HEIGHT = 50;
-const LEVEL_TITLE_HEIGHT = 38;
+const LEVELS_HEADER_HEIGHT = 30;
+const FIGURE_ROW_HEIGHT = 54;
+const FIGURE_COLUMN_WIDTH = 68;
+const FIGURE_CELL = 11;
+const FIGURE_ICON_SIZE = 22;
+const FIGURE_ICON_STEP = 24;
+const LEVEL_COLUMN_WIDTH = 74;
+const FIGURE_ICON_Y = -11;
+const FIGURE_POINTS_Y = 15;
 const NOTE_ROW_HEIGHT = 32;
-const TILE_ICON_SIZE = 36;
+const LEFT_NOTE_ROW_HEIGHT = 28;
 const PIECE_ICON_RADIUS = 17;
 const COMBO_ICON_STEP = 44;
-export const RULE_ICON_STEP = 40;
 const FONT_HEADER = '28px';
 const FONT_ROW = '21px';
 const FONT_NOTE = '20px';
-/** Жёлтый: на тёмной панели значки читаются лучше, чем синим, первым цветом палитры */
-const ICON_COLOR = TILE_COLORS[1]!;
-
+const FONT_POINTS = '17px';
 const LEVELS: readonly CellLevel[] = [1, 2, 3];
-const SIZES = [3, 4, 5] as const;
 
 const square = (size: number) => `${size}×${size}`;
 
@@ -76,13 +75,10 @@ const COMBOS: readonly { pair: readonly [PieceType, PieceType]; text: string }[]
 const ACTIVATION_NOTE = 'Взрывные: двойной клик или сдвиг';
 
 const NOTES = [
-  'Квадрат 2×2 — как 4 фишки',
-  '6 и больше — как 5',
-  'Ракета — только за линию',
+  'Поворот фигуры не важен',
+  'Другие из 5+ — как линия 5',
   'Радуга при сдвиге',
   'с совпадением остаётся',
-  'Линия 5 и 2 от середины:',
-  '2 ячейки 3 ур. или 2 радуги',
   'Падение собрало линию:',
   'комбо x1.1, x1.2… до x2',
 ];
@@ -97,25 +93,7 @@ export const RULES_PANEL_HEIGHT =
   SPECIAL_ROW_HEIGHT * (SPECIALS.length + COMBOS.length) +
   LEFT_COLUMN_EXTRA;
 
-/** Подпись очков: группа из 5+ приносит не меньше этого, кроме 2 уровня — там сумма постоянная */
-function pointsLabel(level: CellLevel, size: 3 | 4 | 5): string {
-  const points = matchPoints(level, size);
-  return size === 5 && level !== 2 ? `${points}+` : String(points);
-}
-
-/** Значок фишки или спецфишки на экранах правил */
-export function drawRuleIcon(scene: Phaser.Scene, x: number, y: number, kind: RewardIcon): void {
-  if (typeof kind === 'number') {
-    const g = scene.add.graphics({ x, y });
-    drawTileShape(g, kind, ICON_COLOR, TILE_ICON_SIZE, 2);
-    return;
-  }
-  // Ракета в правилах стоит вертикально: направление здесь не важно
-  const piece = { kind: 'piece', type: kind, direction: 'col' } as Piece;
-  drawPiece(scene, piece, PIECE_ICON_RADIUS).setPosition(x, y);
-}
-
-// Панель экрана правил: слева — что дают объединения, справа — спецфишки и их комбо.
+// Панель экрана правил: слева — что дают фигуры, справа — спецфишки и их комбо.
 // Числа берутся из config и подсчёта очков игры, поэтому правила не расходятся с игрой.
 export class RulesPanel {
   constructor(
@@ -130,52 +108,60 @@ export class RulesPanel {
 
     const contentTop = top + PADDING;
     // Черта между колонками: без неё очки слева сливаются со значками справа
-    const dividerX = left + PADDING + MATCHES_COLUMN_WIDTH + COLUMN_GAP / 2;
+    const dividerX = left + PADDING + FIGURES_COLUMN_WIDTH + COLUMN_GAP / 2;
     panel.lineStyle(2, UI_BUTTON_COLOR, 0.6);
     panel.lineBetween(dividerX, top + PADDING, dividerX, top + RULES_PANEL_HEIGHT - PADDING);
-    this.drawMatches(left + PADDING, contentTop, MATCHES_COLUMN_WIDTH);
-    this.drawSpecials(left + PADDING + MATCHES_COLUMN_WIDTH + COLUMN_GAP, contentTop);
+    this.drawFigures(left + PADDING, contentTop);
+    this.drawSpecials(left + PADDING + FIGURES_COLUMN_WIDTH + COLUMN_GAP, contentTop);
   }
 
-  private drawMatches(x: number, top: number, width: number): void {
-    this.text(x, top + HEADER_HEIGHT / 2 - 4, 'Объединения', FONT_HEADER);
-    this.text(
-      x + width,
-      top + HEADER_HEIGHT / 2 - 4,
-      'очки',
-      FONT_NOTE,
-      UI_MUTED_TEXT_COLOR,
-    ).setOrigin(1, 0.5);
+  private drawFigures(x: number, top: number): void {
+    this.text(x, top + HEADER_HEIGHT / 2 - 4, 'Комбинации', FONT_HEADER);
     let y = top + HEADER_HEIGHT;
-    for (const level of LEVELS) {
-      this.text(x, y + LEVEL_TITLE_HEIGHT / 2, `${level} уровень`, FONT_NOTE, UI_MUTED_TEXT_COLOR);
-      y += LEVEL_TITLE_HEIGHT;
-      for (const size of SIZES) {
-        this.drawMatchRow(x, y + MATCH_ROW_HEIGHT / 2, width, level, size);
-        y += MATCH_ROW_HEIGHT;
-      }
+    const levelX = (index: number) => x + FIGURE_COLUMN_WIDTH + LEVEL_COLUMN_WIDTH * (index + 0.5);
+    LEVELS.forEach((level, i) => {
+      this.text(
+        levelX(i),
+        y + LEVELS_HEADER_HEIGHT / 2,
+        `${level} ур.`,
+        FONT_NOTE,
+        UI_MUTED_TEXT_COLOR,
+      ).setOrigin(0.5);
+    });
+    y += LEVELS_HEADER_HEIGHT;
+    for (const figure of MATCH_FIGURES) {
+      this.drawFigureRow(figure, x, y + FIGURE_ROW_HEIGHT / 2, levelX);
+      y += FIGURE_ROW_HEIGHT;
     }
     y += 6;
     for (const note of NOTES) {
-      this.text(x, y + NOTE_ROW_HEIGHT / 2, note, FONT_NOTE, UI_MUTED_TEXT_COLOR);
-      y += NOTE_ROW_HEIGHT;
+      this.text(x, y + LEFT_NOTE_ROW_HEIGHT / 2, note, FONT_NOTE, UI_MUTED_TEXT_COLOR);
+      y += LEFT_NOTE_ROW_HEIGHT;
     }
   }
 
-  private drawMatchRow(
+  private drawFigureRow(
+    figure: MatchFigure,
     x: number,
     y: number,
-    width: number,
-    level: CellLevel,
-    size: 3 | 4 | 5,
+    levelX: (index: number) => number,
   ): void {
-    this.text(x, y, `${size}${size === 5 ? '+' : ''} ×`, FONT_ROW);
-    this.icon(x + 68, y, level);
-    this.text(x + 94, y, '→', FONT_ROW, UI_MUTED_TEXT_COLOR);
-    rewardIcons(MATCH_REWARDS[level][size]).forEach((icon, i) => {
-      this.icon(x + 140 + i * RULE_ICON_STEP, y, icon);
+    drawFigure(this.scene, figure.rows, x + FIGURE_COLUMN_WIDTH / 2 - 2, y, FIGURE_CELL);
+    LEVELS.forEach((level: CellLevel, i) => {
+      const { icons, points } = figureValue(figure, level);
+      const first = levelX(i) - ((icons.length - 1) * FIGURE_ICON_STEP) / 2;
+      icons.forEach((icon, n) => {
+        const iconX = first + n * FIGURE_ICON_STEP;
+        drawRuleIcon(this.scene, iconX, y + FIGURE_ICON_Y, icon, FIGURE_ICON_SIZE);
+      });
+      this.text(
+        levelX(i),
+        y + FIGURE_POINTS_Y,
+        String(points),
+        FONT_POINTS,
+        UI_MUTED_TEXT_COLOR,
+      ).setOrigin(0.5);
     });
-    this.text(x + width, y, pointsLabel(level, size), FONT_ROW).setOrigin(1, 0.5);
   }
 
   private drawSpecials(x: number, top: number): void {
@@ -205,7 +191,7 @@ export class RulesPanel {
     }
   }
 
-  private icon(x: number, y: number, kind: RewardIcon): void {
+  private icon(x: number, y: number, kind: PieceType): void {
     drawRuleIcon(this.scene, x, y, kind);
   }
 

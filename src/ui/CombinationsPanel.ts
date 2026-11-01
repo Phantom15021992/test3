@@ -1,22 +1,15 @@
 import Phaser from 'phaser';
 import type { CellLevel } from '../core/board';
-import {
-  BOARD_CELL_DARK,
-  TILE_COLORS,
-  UI_MUTED_TEXT_COLOR,
-  UI_PANEL_COLOR,
-  UI_TEXT_COLOR,
-} from '../view/palette';
-import { drawTileShape } from '../view/tileArt';
-import { figureCells, figureValue, MATCH_FIGURES, type MatchFigure } from './matchFigures';
-import { drawRuleIcon, RULE_ICON_STEP } from './RulesPanel';
+import { UI_MUTED_TEXT_COLOR, UI_PANEL_COLOR, UI_TEXT_COLOR } from '../view/palette';
+import { figureValue, MATCH_FIGURES, type MatchFigure } from './matchFigures';
+import { drawFigure, drawRuleIcon } from './ruleArt';
 
 const PADDING = 16;
 const HEADER_HEIGHT = 60;
 const ROW_HEIGHT = 74;
 const NOTE_ROW_HEIGHT = 30;
 const FIGURE_CELL = 19;
-const FIGURE_TILE = 16;
+const RULE_ICON_STEP = 40;
 const FIGURE_COLUMN_WIDTH = 124;
 const TITLE_COLUMN_WIDTH = 122;
 const LEVEL_COLUMN_WIDTH = 134;
@@ -25,7 +18,6 @@ const POINTS_Y = 21;
 const FONT_ROW = '20px';
 const FONT_POINTS = '19px';
 const FONT_NOTE = '20px';
-const ICON_COLOR = TILE_COLORS[1]!;
 
 const LEVELS: readonly CellLevel[] = [1, 2, 3];
 
@@ -87,7 +79,13 @@ export class CombinationsPanel {
   }
 
   private drawRow(figure: MatchFigure, y: number): void {
-    this.drawFigure(figure, this.left + PADDING + FIGURE_COLUMN_WIDTH / 2, y);
+    drawFigure(
+      this.scene,
+      figure.rows,
+      this.left + PADDING + FIGURE_COLUMN_WIDTH / 2,
+      y,
+      FIGURE_CELL,
+    );
     this.text(
       this.left + PADDING + FIGURE_COLUMN_WIDTH,
       y,
@@ -103,24 +101,6 @@ export class CombinationsPanel {
       });
       this.text(x, y + POINTS_Y, String(points), FONT_POINTS, UI_MUTED_TEXT_COLOR).setOrigin(0.5);
     });
-  }
-
-  private drawFigure(figure: MatchFigure, x: number, y: number): void {
-    const { rows } = figure;
-    const width = rows[0]!.length * FIGURE_CELL;
-    const height = rows.length * FIGURE_CELL;
-    const originX = x - width / 2;
-    const originY = y - height / 2;
-    const cells = this.scene.add.graphics();
-    cells.fillStyle(BOARD_CELL_DARK);
-    cells.fillRect(originX, originY, width, height);
-    for (const { row, col } of figureCells(rows)) {
-      const tile = this.scene.add.graphics({
-        x: originX + (col + 0.5) * FIGURE_CELL,
-        y: originY + (row + 0.5) * FIGURE_CELL,
-      });
-      drawTileShape(tile, 1, ICON_COLOR, FIGURE_TILE, 1);
-    }
   }
 
   private text(
