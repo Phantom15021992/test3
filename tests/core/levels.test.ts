@@ -53,6 +53,23 @@ describe('кампания', () => {
     }
   });
 
+  it('фишки под цепями стоят не ближе 3 клеток друг от друга', () => {
+    for (const { id, layout } of LEVELS) {
+      const chains = layout.flatMap((line, row) =>
+        [...line].flatMap((symbol, col) => ('123'.includes(symbol) ? [{ row, col }] : [])),
+      );
+      chains.forEach((a, i) => {
+        for (const b of chains.slice(i + 1)) {
+          const distance = Math.max(Math.abs(a.row - b.row), Math.abs(a.col - b.col));
+          expect(
+            distance,
+            `уровень ${id}, клетки ${a.row},${a.col} и ${b.row},${b.col}`,
+          ).toBeGreaterThanOrEqual(3);
+        }
+      });
+    }
+  });
+
   it('кольцо — поле 10×10 с дырой 2×2 ровно в центре', () => {
     const rings = LEVELS.filter((level) => level.title === 'Кольцо');
     expect(rings.length).toBeGreaterThan(0);
