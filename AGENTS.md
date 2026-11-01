@@ -31,7 +31,8 @@ npm run test       # Vitest
 npm run lint
 npm run typecheck  # tsc --noEmit
 npm run simulate   # бот играет партии и считает очки: [-- <партий> <ходов> [цены] [режимы]]
-npm run levels     # боты играют уровни кампании: [-- <партий> [этаж]]
+npm run levels     # боты играют уровни кампании: [-- <партий> [этаж] [--fresh]]
+npm run levels:history  # версии уровня и замеры: -- 4-10; откат к версии: -- 4-10 <хеш>
 npm run levels:tune  # подгонка ходов и звёзд этажа под кривую сложности: -- <партий> <этаж>
 npm run build:function   # сборка серверной функции в supabase/functions/smooth-handler/index.ts
 npm run deploy:function  # сборка и выкладка функции в Supabase (нужен npx supabase login)
@@ -356,6 +357,13 @@ npm run deploy:function  # сборка и выкладка функции в Su
 - `npm run levels:tune -- <партий> <этаж>` проигрывает уровни без лимита ходов и по этому
   распределению выставляет ходы и условия звёзд; `--keep-moves` оставляет ходы.
   Посмотреть итог — `npm run levels -- <партий> [этаж]`. Поменял правила или поле — подгони снова.
+- **Журнал бота** — `stats/bot-runs.jsonl` (замеры) и `stats/level-versions.jsonl` (поля и цели каждой
+  версии уровня), ведёт их `scripts/botStats.ts`. Только бот: живые игроки — в `level_results`.
+  Сначала смотри сюда, а не считай заново: `npm run levels` берёт готовый замер, если не менялись
+  ни уровень, ни логика (`src/core`, боты). Новые строки коммить вместе с уровнями.
+  Файлы — в репозитории, потому что данные не секретны и их читает агент без помощи владельца;
+  репозиторий публичный, поэтому **ключей в него не класть**. В сборку игры `stats/` не попадает.
+  Откат уровня: `npm run levels:history -- 4-10 <хеш>`, затем проверки и коммит.
 
 ## Первая версия включает
 
@@ -489,7 +497,9 @@ src/
   main.ts
 tests/         # зеркалят src/core; tests/helpers/ — parseBoard и прочие утилиты
 scripts/       # служебные скрипты: simulate.ts — баланс партий, levelBots.ts — боты уровней,
-               # analyzeLevels.ts — отчёт о сложности, tuneLevels.ts — подгонка уровней
+               # analyzeLevels.ts — отчёт о сложности, tuneLevels.ts — подгонка уровней,
+               # botStats.ts — журнал замеров, levelHistory.ts — история и откат уровня
+stats/         # журнал замеров бота и версии уровней (в игру не попадает)
 supabase/      # SQL для общей таблицы лидеров; restore_from_browser.js — возврат записей из localStorage
 public/assets/
 public/diag.html   # проверка связи для телефонов: показывает ошибки запросов прямо на экране
