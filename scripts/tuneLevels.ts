@@ -1,10 +1,12 @@
 // Подгонка уровней под кривую сложности: npm run levels:tune -- <партий> <этаж> [--keep-moves]
+// [--only=9,10]
 //
 // Опытный бот играет уровень почти без лимита ходов и запоминает, на каком ходу продвинулась
 // каждая цель. Эта одна серия партий сразу показывает, сколько партий он прошёл бы при любом лимите
 // и любом размере целей. Поэтому скрипт берёт самые большие цели, которые укладываются в разумное
 // число ходов (лишние препятствия остаются на поле помехой), и выставляет ходы и условия звёзд.
 // С --keep-moves цели и ходы не трогаются: только условия звёзд (их на первом этаже задал владелец).
+// С --only подгоняются только эти места этажа: остальные уровни могли быть поправлены вручную.
 
 import { FLOOR_SIZE, floorOf, type Goal, type Level, type StarTask } from '../src/core/level';
 import { LEVELS } from '../src/levels';
@@ -31,6 +33,11 @@ const GOAL_SHARES = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2];
 const games = Number(process.argv[2]) || 200;
 const floor = Number(process.argv[3]) || 1;
 const keepMoves = process.argv.includes('--keep-moves');
+const only = process.argv
+  .find((arg) => arg.startsWith('--only='))
+  ?.slice('--only='.length)
+  .split(',')
+  .map(Number);
 
 /** Значение, не больше которого share партий */
 const quantile = (sorted: readonly number[], share: number) =>
@@ -84,6 +91,7 @@ const fs = require('node:fs');
 for (const level of LEVELS) {
   if (floorOf(level.id) !== floor) continue;
   const place = (level.id - 1) % FLOOR_SIZE;
+  if (only && !only.includes(place + 1)) continue;
   const { goals, moves, stars, win } = tune(level, place);
   const name = String(place + 1).padStart(2, '0');
   const path = `src/levels/floor${String(floor).padStart(2, '0')}/${name}.json`;

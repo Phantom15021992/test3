@@ -15,7 +15,7 @@
     "#...##...#"
   ],
   "colors": 4,
-  "moves": 26,
+  "moves": 28,
   "goals": [
     {
       "kind": "box",
@@ -33,7 +33,7 @@
     },
     {
       "kind": "movesLeft",
-      "count": 5
+      "count": 2
     }
   ]
 }
