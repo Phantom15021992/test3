@@ -30,6 +30,9 @@ const FIGURE_COLUMN_WIDTH = 68;
 const FIGURE_CELL = 11;
 const FIGURE_ICON_STEP = 26;
 const LEVEL_COLUMN_WIDTH = 81;
+/** Значок и подпись уровня в заголовке, от середины колонки */
+const LEVEL_ICON_X = -24;
+const LEVEL_TEXT_X = -8;
 const FIGURE_ICON_Y = -13;
 const FIGURE_POINTS_Y = 13;
 const COMBO_ICON_STEP = 28;
@@ -110,13 +113,9 @@ export class RulesPanel {
     let y = top + HEADER_HEIGHT;
     const levelX = (index: number) => x + FIGURE_COLUMN_WIDTH + LEVEL_COLUMN_WIDTH * (index + 0.5);
     LEVELS.forEach((level, i) => {
-      this.text(
-        levelX(i),
-        y + SUBHEADER_HEIGHT / 2,
-        `${level} ур.`,
-        FONT_ROW,
-        UI_MUTED_TEXT_COLOR,
-      ).setOrigin(0.5);
+      const rowY = y + SUBHEADER_HEIGHT / 2;
+      drawRuleIcon(this.scene, levelX(i) + LEVEL_ICON_X, rowY, level, ICON_SIZE);
+      this.text(levelX(i) + LEVEL_TEXT_X, rowY, `${level} ур.`, FONT_ROW, UI_MUTED_TEXT_COLOR);
     });
     y += SUBHEADER_HEIGHT;
     for (const figure of MATCH_FIGURES) {
