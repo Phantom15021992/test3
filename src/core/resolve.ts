@@ -15,6 +15,7 @@ import {
 } from './board';
 import {
   BASE_POINTS_PER_TILE,
+  COMBO_MAX_STEPS,
   LEVEL2_SCORE_MULTIPLIER,
   LEVEL2_BIG_MATCH_POINTS,
   MATCH_REWARDS,
@@ -67,6 +68,12 @@ export interface ChainLink {
   left: number;
 }
 
+/** Совпадение в комбо: где оно и какое по счёту (от 1 до COMBO_MAX_STEPS) */
+export interface ComboHit {
+  at: Position;
+  step: number;
+}
+
 export interface Placement {
   pos: Position;
   cell: Cell;
@@ -88,6 +95,7 @@ export type ResolveStep =
       boxes?: number;
       items?: number;
       links?: ChainLink[];
+      combos?: ComboHit[];
     }
   | { kind: 'drop'; falls: Fall[]; spawns: Spawn[] }
   | { kind: 'choice'; group: MatchGroup; options: readonly [ChoiceOption, ChoiceOption] };
@@ -114,12 +122,16 @@ export function* resolveMove(
   let score = 0;
   // Клетки, куда переместились фишки — там появляются созданные спецфишки (только в первой волне)
   let landing: Position[] = [];
+  // Комбо считает только совпадения, собравшиеся сами: то, что собрал игрок, идёт без множителя
+  let dropped = false;
+  let comboSteps = 0;
 
   /** Уничтожает клетки с цепной реакцией; pointsOverride — очки клеток из совпадений */
   function* destroy(
     initial: Position[],
     preActivated?: ReadonlySet<string>,
     pointsOverride?: ReadonlyMap<string, number>,
+    combos: ComboHit[] = [],
   ): Generator<ResolveStep, void, ChoiceOption | undefined> {
     const cells = expandChain(current, initial, preActivated);
     if (cells.length === 0) return;
@@ -144,6 +156,7 @@ export function* resolveMove(
       ...(stones > 0 && { stones }),
       ...(boxes > 0 && { boxes }),
       ...(links.length > 0 && { links }),
+      ...(combos.length > 0 && { combos }),
     };
   }
 
@@ -213,19 +226,23 @@ export function* resolveMove(
       const removal: Position[] = [];
       const placements: Placement[] = [];
       const points = new Map<string, number>();
+      const combos: ComboHit[] = [];
 
       for (const group of groups) {
         const outcome = groupOutcome(group, current, landing);
         removal.push(...group.cells, ...boxesAround(current, group.cells));
-        spreadPoints(group.cells, outcome.points, points);
+        const step = dropped ? Math.min(++comboSteps, COMBO_MAX_STEPS) : 0;
+        if (step > 0) combos.push({ at: pickSpot(group, []), step });
+        spreadPoints(group.cells, Math.round(outcome.points * comboMultiplier(step)), points);
         placements.push(...outcome.placements);
       }
 
-      yield* destroy(removal, undefined, points);
+      yield* destroy(removal, undefined, points, combos);
       yield* place(placements);
     }
 
     landing = [];
+    dropped = true;
     const fallen = applyGravity(current);
     const filled = refill(fallen.board, ctx.colorCount, ctx.rng);
     current = filled.board;
@@ -309,6 +326,11 @@ export function matchPoints(level: 1 | 2 | 3, cells: number): number {
       : cells * BASE_POINTS_PER_TILE * LEVEL2_SCORE_MULTIPLIER;
   }
   return cells * BASE_POINTS_PER_TILE * LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE[size];
+}
+
+/** Множитель очков совпадения: step — его номер в комбо, 0 — вне комбо */
+export function comboMultiplier(step: number): number {
+  return (10 + Math.min(step, COMBO_MAX_STEPS)) / 10;
 }
 
 /** Делит очки группы по клеткам (остаток — первой клетке), чтобы сумма совпала точно */

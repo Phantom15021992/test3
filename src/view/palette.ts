@@ -19,6 +19,21 @@ export const HIGHLIGHT_COLOR = 0xffd54a;
 
 export const BONUS_READY_COLOR = 0xffd54a;
 
+/** Цвета надписи комбо от x1.1 до x2: по цветовому кругу, от жёлтого к красному через синий */
+export const COMBO_COLORS: readonly string[] = [
+  '#ffe11a', // жёлтый
+  '#b8e62e', // салатовый
+  '#2fbf4a', // зелёный
+  '#1fc4a8', // морская волна
+  '#3bd4ff', // голубой
+  '#3b6cff', // синий
+  '#6a5cff', // фиолетово-синий
+  '#a040e8', // фиолетовый
+  '#ec2fb5', // маджента
+  '#f02a2a', // красный
+];
+export const COMBO_OUTLINE_COLOR = '#12162a';
+
 export const UI_PANEL_COLOR = 0x2c3249;
 export const UI_BUTTON_COLOR = 0x4a6cf7;
 export const UI_BUTTON_ALT_COLOR = 0x8e5cf7;

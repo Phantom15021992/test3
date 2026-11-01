@@ -82,10 +82,13 @@ export const BONUS_TIERS: readonly {
  * Версия правил хода: повышать при каждом изменении логики. Функция на сервере отдаёт её в ответ
  * на неизвестное действие, поэтому видно, что она обновлена раньше сайта.
  */
-export const RULES_VERSION = 3;
+export const RULES_VERSION = 4;
 
 // Партия: лимит ходов и финал
 export const MOVE_LIMIT = 35;
+/** Совпадения, собравшиеся сами после падения: каждое следующее даёт на 0,1 больше, предел — x2 */
+export const COMBO_MAX_STEPS = 10;
+
 /** Очки за манипулятор, оставшийся на поле в финале партии */
 export const MANIPULATOR_FINALE_POINTS = 250;
 /** Защита от зацикливания финала, если каскады всё время создают новые спецфишки */
@@ -120,6 +123,7 @@ export const CLEAR_DURATION_MS = 150;
 export const FALL_DURATION_PER_CELL_MS = 70;
 export const PLACE_DURATION_MS = 200;
 export const SHUFFLE_DURATION_MS = 300;
+export const COMBO_LABEL_DURATION_MS = 1000;
 
 /** Доля размера клетки, на которую нужно провести пальцем, чтобы засчитать свайп */
 export const SWIPE_THRESHOLD = 0.3;

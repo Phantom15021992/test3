@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { createComboTextures, loadComboFont } from '../view/comboLabel';
 import { OBSTACLE_IMAGE_FILES } from '../view/obstacleArt';
 import { PIECE_IMAGE_FILES } from '../view/pieceArt';
 
@@ -15,6 +16,9 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.scene.start('Menu');
+    void loadComboFont().then(() => {
+      createComboTextures(this);
+      this.scene.start('Menu');
+    });
   }
 }

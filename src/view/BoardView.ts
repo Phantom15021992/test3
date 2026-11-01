@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { Board, Cell, Position, Tile } from '../core/board';
 import {
   CLEAR_DURATION_MS,
+  COMBO_LABEL_DURATION_MS,
   FALL_DURATION_PER_CELL_MS,
   HINT_PULSE_MS,
   MATCH_PULSE_DURATION_MS,
@@ -10,7 +11,8 @@ import {
   SWAP_DURATION_MS,
 } from '../core/config';
 import type { Fall, Spawn } from '../core/gravity';
-import type { ChainLink, Placement } from '../core/resolve';
+import type { ChainLink, ComboHit, Placement } from '../core/resolve';
+import { comboTextureKey } from './comboLabel';
 import {
   BOARD_CELL_DARK,
   BOARD_CELL_LIGHT,
@@ -25,6 +27,7 @@ import { drawTileShape } from './tileArt';
 type TileSprite = Phaser.GameObjects.Container;
 
 const TILE_OUTLINE_WIDTH = 3;
+const COMBO_LABEL_DEPTH = 5;
 
 // Отображение поля. Состояние игры здесь не хранится — только спрайты, повторяющие поле из core.
 export class BoardView {
@@ -102,6 +105,25 @@ export class BoardView {
       if (!sprite) continue;
       sprite.getAll('name', CHAIN_NAME).forEach((image) => image.destroy());
       sprite.add(chainImages(this.scene, left, this.cellSize));
+    }
+  }
+
+  /** Надписи комбо всплывают над совпадениями и не задерживают ход */
+  showCombos(combos: ComboHit[]): void {
+    const { width } = this.scene.scale;
+    for (const { at, step } of combos) {
+      const { x, y } = this.centerOf(at);
+      const label = this.scene.add.image(x, y, comboTextureKey(step));
+      label.setDepth(COMBO_LABEL_DEPTH);
+      const half = label.width / 2;
+      label.x = Phaser.Math.Clamp(x, half, width - half);
+      this.scene.tweens.add({
+        targets: label,
+        y: y - this.cellSize,
+        alpha: { from: 1, to: 0, ease: 'Quad.easeIn' },
+        duration: COMBO_LABEL_DURATION_MS,
+        onComplete: () => label.destroy(),
+      });
     }
   }
 

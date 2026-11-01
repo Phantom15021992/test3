@@ -42,8 +42,9 @@ var BONUS_TIERS = [
   { cost: 500, stars: 5, type: "manipulator" },
   { cost: 750, stars: 15, type: "rainbow" }
 ];
-var RULES_VERSION = 3;
+var RULES_VERSION = 4;
 var MOVE_LIMIT = 35;
+var COMBO_MAX_STEPS = 10;
 var MANIPULATOR_FINALE_POINTS = 250;
 var FINALE_MAX_ROUNDS = 50;
 var PLAYER_NAME_MAX_LENGTH = 16;
@@ -629,7 +630,9 @@ function* resolveMove(board, move, ctx) {
   let current = board;
   let score = 0;
   let landing = [];
-  function* destroy(initial, preActivated, pointsOverride) {
+  let dropped = false;
+  let comboSteps = 0;
+  function* destroy(initial, preActivated, pointsOverride, combos = []) {
     const cells = expandChain(current, initial, preActivated);
     if (cells.length === 0) return;
     const points = cells.reduce(
@@ -652,7 +655,8 @@ function* resolveMove(board, move, ctx) {
       pieces,
       ...stones > 0 && { stones },
       ...boxes > 0 && { boxes },
-      ...links.length > 0 && { links }
+      ...links.length > 0 && { links },
+      ...combos.length > 0 && { combos }
     };
   }
   function* place(placements) {
@@ -714,16 +718,20 @@ function* resolveMove(board, move, ctx) {
       const removal = [];
       const placements = [];
       const points = /* @__PURE__ */ new Map();
+      const combos = [];
       for (const group of groups) {
         const outcome = groupOutcome(group, current, landing);
         removal.push(...group.cells, ...boxesAround(current, group.cells));
-        spreadPoints(group.cells, outcome.points, points);
+        const step = dropped ? Math.min(++comboSteps, COMBO_MAX_STEPS) : 0;
+        if (step > 0) combos.push({ at: pickSpot(group, []), step });
+        spreadPoints(group.cells, Math.round(outcome.points * comboMultiplier(step)), points);
         placements.push(...outcome.placements);
       }
-      yield* destroy(removal, void 0, points);
+      yield* destroy(removal, void 0, points, combos);
       yield* place(placements);
     }
     landing = [];
+    dropped = true;
     const fallen = applyGravity(current);
     const filled = refill(fallen.board, ctx.colorCount, ctx.rng);
     current = filled.board;
@@ -776,6 +784,9 @@ function matchPoints(level, cells) {
     return size === 5 ? LEVEL2_BIG_MATCH_POINTS : cells * BASE_POINTS_PER_TILE * LEVEL2_SCORE_MULTIPLIER;
   }
   return cells * BASE_POINTS_PER_TILE * LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE[size];
+}
+function comboMultiplier(step) {
+  return (10 + Math.min(step, COMBO_MAX_STEPS)) / 10;
 }
 function spreadPoints(cells, total, into) {
   const share = Math.floor(total / cells.length);
