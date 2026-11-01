@@ -22,26 +22,20 @@ const COLUMN_GAP = 30;
 /** Колонки одной ширины и высоты: вся панель делится пополам */
 const COLUMN_WIDTH = 311;
 const HEADER_HEIGHT = 44;
-const SPECIAL_ROW_HEIGHT = 46;
-const LEVELS_HEADER_HEIGHT = 30;
-const FIGURE_ROW_HEIGHT = 51;
+const SUBHEADER_HEIGHT = 32;
+/** Обе колонки стоят на одной сетке: строки идут вровень, значки и подписи одного размера */
+const ROW_HEIGHT = 52;
+const ICON_SIZE = 24;
 const FIGURE_COLUMN_WIDTH = 68;
 const FIGURE_CELL = 11;
-const FIGURE_ICON_SIZE = 22;
-const FIGURE_ICON_STEP = 24;
+const FIGURE_ICON_STEP = 26;
 const LEVEL_COLUMN_WIDTH = 81;
-const FIGURE_ICON_Y = -11;
-const FIGURE_POINTS_Y = 15;
-const NOTE_ROW_HEIGHT = 32;
-const LEFT_NOTE_ROW_HEIGHT = 28;
-/** Отступ над заметками: левая колонка заканчивается вровень с правой */
-const NOTES_GAP = 12;
-const SPECIAL_ICON_SIZE = 32;
-const COMBO_ICON_STEP = 38;
+const FIGURE_ICON_Y = -13;
+const FIGURE_POINTS_Y = 13;
+const COMBO_ICON_STEP = 28;
+const TEXT_GAP = 8;
 const FONT_HEADER = '28px';
 const FONT_ROW = '19px';
-const FONT_NOTE = '20px';
-const FONT_POINTS = '17px';
 const LEVELS: readonly CellLevel[] = [1, 2, 3];
 
 const square = (size: number) => `${size}×${size}`;
@@ -85,9 +79,9 @@ const NOTES = [
 
 export const RULES_PANEL_HEIGHT =
   PADDING * 2 +
-  HEADER_HEIGHT * 2 +
-  NOTE_ROW_HEIGHT +
-  SPECIAL_ROW_HEIGHT * (SPECIALS.length + COMBOS.length);
+  HEADER_HEIGHT +
+  SUBHEADER_HEIGHT +
+  ROW_HEIGHT * (SPECIALS.length + 1 + COMBOS.length);
 
 // Панель экрана правил: слева — что дают фигуры, справа — спецфишки и их комбо.
 // Числа берутся из config и подсчёта очков игры, поэтому правила не расходятся с игрой.
@@ -118,21 +112,20 @@ export class RulesPanel {
     LEVELS.forEach((level, i) => {
       this.text(
         levelX(i),
-        y + LEVELS_HEADER_HEIGHT / 2,
+        y + SUBHEADER_HEIGHT / 2,
         `${level} ур.`,
-        FONT_NOTE,
+        FONT_ROW,
         UI_MUTED_TEXT_COLOR,
       ).setOrigin(0.5);
     });
-    y += LEVELS_HEADER_HEIGHT;
+    y += SUBHEADER_HEIGHT;
     for (const figure of MATCH_FIGURES) {
-      this.drawFigureRow(figure, x, y + FIGURE_ROW_HEIGHT / 2, levelX);
-      y += FIGURE_ROW_HEIGHT;
+      this.drawFigureRow(figure, x, y + ROW_HEIGHT / 2, levelX);
+      y += ROW_HEIGHT;
     }
-    y += NOTES_GAP;
     for (const note of NOTES) {
-      this.text(x, y + LEFT_NOTE_ROW_HEIGHT / 2, note, FONT_NOTE, UI_MUTED_TEXT_COLOR);
-      y += LEFT_NOTE_ROW_HEIGHT;
+      this.text(x, y + ROW_HEIGHT / 2, note, FONT_ROW, UI_MUTED_TEXT_COLOR);
+      y += ROW_HEIGHT;
     }
   }
 
@@ -148,47 +141,35 @@ export class RulesPanel {
       const first = levelX(i) - ((icons.length - 1) * FIGURE_ICON_STEP) / 2;
       icons.forEach((icon, n) => {
         const iconX = first + n * FIGURE_ICON_STEP;
-        drawRuleIcon(this.scene, iconX, y + FIGURE_ICON_Y, icon, FIGURE_ICON_SIZE);
+        drawRuleIcon(this.scene, iconX, y + FIGURE_ICON_Y, icon, ICON_SIZE);
       });
-      this.text(
-        levelX(i),
-        y + FIGURE_POINTS_Y,
-        String(points),
-        FONT_POINTS,
-        UI_MUTED_TEXT_COLOR,
-      ).setOrigin(0.5);
+      this.text(levelX(i), y + FIGURE_POINTS_Y, String(points), FONT_ROW).setOrigin(0.5);
     });
   }
 
   private drawSpecials(x: number, top: number): void {
     this.text(x, top + HEADER_HEIGHT / 2 - 4, 'Спецфишки', FONT_HEADER);
     let y = top + HEADER_HEIGHT;
-    this.text(x, y + NOTE_ROW_HEIGHT / 2, ACTIVATION_NOTE, FONT_NOTE, UI_MUTED_TEXT_COLOR);
-    y += NOTE_ROW_HEIGHT;
+    this.text(x, y + SUBHEADER_HEIGHT / 2, ACTIVATION_NOTE, FONT_ROW, UI_MUTED_TEXT_COLOR);
+    y += SUBHEADER_HEIGHT;
     for (const { type, text } of SPECIALS) {
-      this.icon(x + SPECIAL_ICON_SIZE / 2, y + SPECIAL_ROW_HEIGHT / 2, type);
-      this.text(x + SPECIAL_ICON_SIZE + 8, y + SPECIAL_ROW_HEIGHT / 2, text, FONT_ROW);
-      y += SPECIAL_ROW_HEIGHT;
+      this.icon(x + ICON_SIZE / 2, y + ROW_HEIGHT / 2, type);
+      this.text(x + ICON_SIZE + TEXT_GAP, y + ROW_HEIGHT / 2, text, FONT_ROW);
+      y += ROW_HEIGHT;
     }
-    this.text(
-      x,
-      y + HEADER_HEIGHT / 2,
-      'Комбо: обмен двух спецфишек',
-      FONT_NOTE,
-      UI_MUTED_TEXT_COLOR,
-    );
-    y += HEADER_HEIGHT;
+    this.text(x, y + ROW_HEIGHT / 2, 'Комбо: обмен двух спецфишек', FONT_ROW, UI_MUTED_TEXT_COLOR);
+    y += ROW_HEIGHT;
     for (const { pair, text } of COMBOS) {
-      const rowY = y + SPECIAL_ROW_HEIGHT / 2;
-      this.icon(x + SPECIAL_ICON_SIZE / 2, rowY, pair[0]);
-      this.icon(x + SPECIAL_ICON_SIZE / 2 + COMBO_ICON_STEP, rowY, pair[1]);
-      this.text(x + SPECIAL_ICON_SIZE + COMBO_ICON_STEP + 8, rowY, text, FONT_ROW);
-      y += SPECIAL_ROW_HEIGHT;
+      const rowY = y + ROW_HEIGHT / 2;
+      this.icon(x + ICON_SIZE / 2, rowY, pair[0]);
+      this.icon(x + ICON_SIZE / 2 + COMBO_ICON_STEP, rowY, pair[1]);
+      this.text(x + ICON_SIZE + COMBO_ICON_STEP + TEXT_GAP, rowY, text, FONT_ROW);
+      y += ROW_HEIGHT;
     }
   }
 
   private icon(x: number, y: number, kind: PieceType): void {
-    drawRuleIcon(this.scene, x, y, kind, SPECIAL_ICON_SIZE);
+    drawRuleIcon(this.scene, x, y, kind, ICON_SIZE);
   }
 
   private text(
