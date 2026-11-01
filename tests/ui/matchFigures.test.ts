@@ -37,7 +37,7 @@ function actualIcons(steps: ResolveStep[]): RewardIcon[] {
   });
 }
 
-describe('экран «Комбинации»', () => {
+describe('колонка «Комбинации» в правилах', () => {
   const cases = MATCH_FIGURES.flatMap((figure) =>
     ([1, 2, 3] as const).map((level) => [figure.title, level, figure] as const),
   );

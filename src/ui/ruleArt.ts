@@ -5,8 +5,6 @@ import { drawPiece } from '../view/pieceArt';
 import { drawTileShape } from '../view/tileArt';
 import { figureCells, type RewardIcon } from './matchFigures';
 
-// Рисунки для экранов правил и «Комбинации».
-
 /** Жёлтый: на тёмной панели значки читаются лучше, чем синим, первым цветом палитры */
 const ICON_COLOR = TILE_COLORS[1]!;
 /** Спецфишка рядом с фишкой того же размера выглядит крупнее: радиус чуть меньше половины */

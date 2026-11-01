@@ -8,7 +8,7 @@ import {
 import { isSevenCross } from '../core/match';
 import { matchPoints } from '../core/resolve';
 
-// Фигуры для экрана «Комбинации». Что они дают, считается из тех же данных, что и в игре,
+// Фигуры для колонки «Комбинации» на экране правил. Что они дают, считается из тех же данных, что и в игре,
 // а tests/ui/matchFigures.test.ts сверяет каждую фигуру с настоящим разбором хода.
 
 export type RewardIcon = CellLevel | PieceType;

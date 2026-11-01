@@ -3,7 +3,6 @@ import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
 import { LevelMapScene } from './scenes/LevelMapScene';
 import { MenuScene } from './scenes/MenuScene';
-import { CombinationsScene } from './scenes/CombinationsScene';
 import { RulesScene } from './scenes/RulesScene';
 
 // Портретная ориентация под телефон; на ПК масштабируется с сохранением пропорций.
@@ -19,7 +18,7 @@ const game = new Phaser.Game({
   },
   // DOM-элементы поверх холста — для поля ввода имени в таблице лидеров
   dom: { createContainer: true },
-  scene: [BootScene, MenuScene, RulesScene, CombinationsScene, LevelMapScene, GameScene],
+  scene: [BootScene, MenuScene, RulesScene, LevelMapScene, GameScene],
 });
 
 // Phaser не всегда замечает изменение размера окна (смена размера окна, поворот телефона)
