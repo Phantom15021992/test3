@@ -8,7 +8,6 @@ import {
   MEGA_BOMB_ROCKET_WIDTH,
   MEGA_BOMB_SIZE,
   ROCKET_BOMB_WIDTH,
-  type MatchReward,
 } from '../core/config';
 import { matchPoints } from '../core/resolve';
 import {
@@ -20,6 +19,7 @@ import {
 } from '../view/palette';
 import { drawPiece } from '../view/pieceArt';
 import { drawTileShape } from '../view/tileArt';
+import { rewardIcons, type RewardIcon } from './matchFigures';
 
 const PADDING = 16;
 const COLUMN_GAP = 40;
@@ -33,6 +33,7 @@ const NOTE_ROW_HEIGHT = 32;
 const TILE_ICON_SIZE = 36;
 const PIECE_ICON_RADIUS = 17;
 const COMBO_ICON_STEP = 44;
+export const RULE_ICON_STEP = 40;
 const FONT_HEADER = '28px';
 const FONT_ROW = '21px';
 const FONT_NOTE = '20px';
@@ -102,12 +103,16 @@ function pointsLabel(level: CellLevel, size: 3 | 4 | 5): string {
   return size === 5 && level !== 2 ? `${points}+` : String(points);
 }
 
-/** Значки награды по порядку: фишки или спецфишки, затем ракета за линию */
-function rewardIcons(reward: MatchReward): (CellLevel | PieceType)[] {
-  const main = reward.kind === 'tiles' ? reward.level : reward.type;
-  const icons: (CellLevel | PieceType)[] = Array.from({ length: reward.count }, () => main);
-  if (reward.kind === 'tiles' && reward.lineRocket) icons.push('rocket');
-  return icons;
+/** Значок фишки или спецфишки на экранах правил */
+export function drawRuleIcon(scene: Phaser.Scene, x: number, y: number, kind: RewardIcon): void {
+  if (typeof kind === 'number') {
+    const g = scene.add.graphics({ x, y });
+    drawTileShape(g, kind, ICON_COLOR, TILE_ICON_SIZE, 2);
+    return;
+  }
+  // Ракета в правилах стоит вертикально: направление здесь не важно
+  const piece = { kind: 'piece', type: kind, direction: 'col' } as Piece;
+  drawPiece(scene, piece, PIECE_ICON_RADIUS).setPosition(x, y);
 }
 
 // Панель экрана правил: слева — что дают объединения, справа — спецфишки и их комбо.
@@ -168,7 +173,7 @@ export class RulesPanel {
     this.icon(x + 68, y, level);
     this.text(x + 94, y, '→', FONT_ROW, UI_MUTED_TEXT_COLOR);
     rewardIcons(MATCH_REWARDS[level][size]).forEach((icon, i) => {
-      this.icon(x + 140 + i * 40, y, icon);
+      this.icon(x + 140 + i * RULE_ICON_STEP, y, icon);
     });
     this.text(x + width, y, pointsLabel(level, size), FONT_ROW).setOrigin(1, 0.5);
   }
@@ -200,15 +205,8 @@ export class RulesPanel {
     }
   }
 
-  private icon(x: number, y: number, kind: CellLevel | PieceType): void {
-    if (typeof kind === 'number') {
-      const g = this.scene.add.graphics({ x, y });
-      drawTileShape(g, kind, ICON_COLOR, TILE_ICON_SIZE, 2);
-      return;
-    }
-    // Ракета в правилах стоит вертикально: направление здесь не важно
-    const piece = { kind: 'piece', type: kind, direction: 'col' } as Piece;
-    drawPiece(this.scene, piece, PIECE_ICON_RADIUS).setPosition(x, y);
+  private icon(x: number, y: number, kind: RewardIcon): void {
+    drawRuleIcon(this.scene, x, y, kind);
   }
 
   private text(
