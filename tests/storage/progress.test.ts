@@ -4,7 +4,7 @@ import {
   isLevelOpen,
   loadLevelStars,
   saveLevelStars,
-  spendFloorStars,
+  saveLevelSpending,
 } from '../../src/storage/progress';
 
 beforeEach(() => {
@@ -26,7 +26,7 @@ describe('кошелёк этажа', () => {
 
   it('потраченное вычитается, а звёзды уровня остаются на месте', () => {
     saveLevelStars(1, 3);
-    spendFloorStars(1, 2);
+    saveLevelSpending(1, 2);
     expect(floorWallet(1)).toBe(1);
     expect(floorWallet(2)).toBe(0);
     expect(loadLevelStars()[1]).toBe(3);
@@ -38,6 +38,44 @@ describe('кошелёк этажа', () => {
     expect(floorWallet(1)).toBe(2);
     saveLevelStars(1, 3);
     expect(floorWallet(1)).toBe(3);
+  });
+});
+
+describe('возврат при повторной победе', () => {
+  it('победа с меньшими тратами возвращает разницу', () => {
+    saveLevelStars(1, 3);
+    saveLevelSpending(1, 2);
+    expect(floorWallet(1)).toBe(1);
+    saveLevelSpending(1, 1);
+    expect(floorWallet(1)).toBe(2);
+    saveLevelSpending(1, 0);
+    expect(floorWallet(1)).toBe(3);
+  });
+
+  it('победа с большими тратами списывает только разницу', () => {
+    saveLevelStars(1, 3);
+    saveLevelSpending(1, 1);
+    saveLevelSpending(1, 3);
+    expect(floorWallet(1)).toBe(0);
+  });
+
+  it('траты одного уровня не трогают другой и другой этаж', () => {
+    saveLevelStars(1, 3);
+    saveLevelStars(2, 3);
+    saveLevelStars(11, 3);
+    saveLevelSpending(1, 2);
+    saveLevelSpending(2, 1);
+    saveLevelSpending(11, 1);
+    saveLevelSpending(1, 0);
+    expect(floorWallet(1)).toBe(5);
+    expect(floorWallet(2)).toBe(2);
+  });
+
+  it('траты до появления учёта по уровням остаются списанными', () => {
+    saveLevelStars(1, 3);
+    localStorage.setItem('match3.floorSpent', '{"1":2}');
+    saveLevelSpending(1, 0);
+    expect(floorWallet(1)).toBe(1);
   });
 });
 

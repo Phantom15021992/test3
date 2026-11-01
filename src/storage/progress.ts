@@ -1,11 +1,13 @@
 import { FLOOR_SIZE } from '../core/level';
 
 // Прогресс по уровням в localStorage этого браузера: лучшее число звёзд на каждый уровень
-// и сколько звёзд потрачено на каждом этаже.
+// и сколько звёзд потрачено на каждом уровне.
 // Хранилище может быть недоступно — тогда игра работает дальше, просто без сохранения.
 
 const STARS_KEY = 'match3.levelStars';
+/** Траты по этажам: так считали раньше, эти звёзды уже не вернуть, к уровню их не привязать */
 const SPENT_KEY = 'match3.floorSpent';
+const LEVEL_SPENT_KEY = 'match3.levelSpent';
 const MAX_LEVEL_STARS = 3;
 const MAX_FLOOR_SPENT = FLOOR_SIZE * MAX_LEVEL_STARS;
 
@@ -29,7 +31,8 @@ export function floorWallet(floor: number): number {
   const stars = loadLevelStars();
   const first = (floor - 1) * FLOOR_SIZE + 1;
   const ids = Array.from({ length: FLOOR_SIZE }, (_, i) => first + i);
-  const earned = ids.reduce((sum, id) => sum + (stars[id] ?? 0), 0);
+  const spent = loadRecord(LEVEL_SPENT_KEY);
+  const earned = ids.reduce((sum, id) => sum + (stars[id] ?? 0) - (spent[id] ?? 0), 0);
   return earned - (loadRecord(SPENT_KEY)[floor] ?? 0);
 }
 
@@ -42,10 +45,15 @@ export function isLevelOpen(levelId: number, stars: LevelStars): boolean {
 export interface ProgressCopy {
   stars: LevelStars;
   spent: LevelStars;
+  levelSpent: LevelStars;
 }
 
 export function exportProgress(): ProgressCopy {
-  return { stars: loadLevelStars(), spent: loadRecord(SPENT_KEY) };
+  return {
+    stars: loadLevelStars(),
+    spent: loadRecord(SPENT_KEY),
+    levelSpent: loadRecord(LEVEL_SPENT_KEY),
+  };
 }
 
 function parseRecord(value: unknown, max: number): LevelStars | null {
@@ -64,10 +72,13 @@ function parseRecord(value: unknown, max: number): LevelStars | null {
 /** Копия приходит с сервера, а сохранить её мог кто угодно: без проверки в прогресс не попадёт */
 export function parseProgress(value: unknown): ProgressCopy | null {
   if (typeof value !== 'object' || value === null) return null;
-  const { stars, spent } = value as Record<string, unknown>;
+  // levelSpent нет в копиях, сохранённых до учёта трат по уровням
+  const { stars, spent, levelSpent = {} } = value as Record<string, unknown>;
   const parsedStars = parseRecord(stars, MAX_LEVEL_STARS);
   const parsedSpent = parseRecord(spent, MAX_FLOOR_SPENT);
-  return parsedStars && parsedSpent ? { stars: parsedStars, spent: parsedSpent } : null;
+  const parsedLevelSpent = parseRecord(levelSpent, MAX_FLOOR_SPENT);
+  if (!parsedStars || !parsedSpent || !parsedLevelSpent) return null;
+  return { stars: parsedStars, spent: parsedSpent, levelSpent: parsedLevelSpent };
 }
 
 function bestOf(a: LevelStars, b: LevelStars): LevelStars {
@@ -85,20 +96,23 @@ export function mergeProgress(copy: ProgressCopy): void {
   try {
     localStorage.setItem(STARS_KEY, JSON.stringify(bestOf(local.stars, copy.stars)));
     localStorage.setItem(SPENT_KEY, JSON.stringify(bestOf(local.spent, copy.spent)));
+    localStorage.setItem(
+      LEVEL_SPENT_KEY,
+      JSON.stringify(bestOf(local.levelSpent, copy.levelSpent)),
+    );
   } catch {
     // Без хранилища прогресс живёт только до перезагрузки
   }
 }
 
-/** Вызывается только при победе: потраченное на проигранном уровне возвращается */
-export function spendFloorStars(floor: number, stars: number): void {
-  if (stars === 0) return;
-  const spent = loadRecord(SPENT_KEY);
+/**
+ * Вызывается только при победе: потраченное на проигранном уровне возвращается.
+ * Заменяет траты прошлой победы на этом уровне: победил дешевле — разница вернётся в кошелёк.
+ */
+export function saveLevelSpending(levelId: number, stars: number): void {
+  const spent = loadRecord(LEVEL_SPENT_KEY);
   try {
-    localStorage.setItem(
-      SPENT_KEY,
-      JSON.stringify({ ...spent, [floor]: (spent[floor] ?? 0) + stars }),
-    );
+    localStorage.setItem(LEVEL_SPENT_KEY, JSON.stringify({ ...spent, [levelId]: stars }));
   } catch {
     // Без хранилища прогресс живёт только до перезагрузки
   }

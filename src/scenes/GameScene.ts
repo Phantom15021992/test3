@@ -34,7 +34,7 @@ import { GameOverDialog } from '../ui/GameOverDialog';
 import { LevelResultDialog } from '../ui/LevelResultDialog';
 import { sendGameResult } from '../storage/gameResults';
 import { sendLevelResult, type LevelOutcome } from '../storage/levelResults';
-import { floorWallet, saveLevelStars, spendFloorStars } from '../storage/progress';
+import { floorWallet, saveLevelSpending, saveLevelStars } from '../storage/progress';
 import { remoteConfig, type GameTicket } from '../storage/remoteLeaderboard';
 import { goalsText, levelBriefing, levelMoveLimit, levelTitle } from '../ui/levelText';
 import { HIGHLIGHT_COLOR, UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
@@ -461,7 +461,7 @@ export class GameScene extends Phaser.Scene {
     this.sendLevelAttempt(stars > 0 ? 'won' : 'lost');
     if (stars > 0) {
       saveLevelStars(level.id, stars);
-      spendFloorStars(floorOf(level.id), session.starsSpent);
+      saveLevelSpending(level.id, session.starsSpent);
     }
     new LevelResultDialog(this).show(session, {
       onRetry: () => this.scene.restart({ level }),
