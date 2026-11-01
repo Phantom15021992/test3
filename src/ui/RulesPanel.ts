@@ -19,25 +19,27 @@ import { drawFigure, drawRuleIcon } from './ruleArt';
 
 const PADDING = 16;
 const COLUMN_GAP = 30;
-/** Левая колонка уже правой: подписи комбо длиннее значков комбинаций */
-const FIGURES_COLUMN_WIDTH = 290;
+/** Колонки одной ширины и высоты: вся панель делится пополам */
+const COLUMN_WIDTH = 311;
 const HEADER_HEIGHT = 44;
 const SPECIAL_ROW_HEIGHT = 46;
 const LEVELS_HEADER_HEIGHT = 30;
-const FIGURE_ROW_HEIGHT = 54;
+const FIGURE_ROW_HEIGHT = 51;
 const FIGURE_COLUMN_WIDTH = 68;
 const FIGURE_CELL = 11;
 const FIGURE_ICON_SIZE = 22;
 const FIGURE_ICON_STEP = 24;
-const LEVEL_COLUMN_WIDTH = 74;
+const LEVEL_COLUMN_WIDTH = 81;
 const FIGURE_ICON_Y = -11;
 const FIGURE_POINTS_Y = 15;
 const NOTE_ROW_HEIGHT = 32;
 const LEFT_NOTE_ROW_HEIGHT = 28;
-const PIECE_ICON_RADIUS = 17;
-const COMBO_ICON_STEP = 44;
+/** Отступ над заметками: левая колонка заканчивается вровень с правой */
+const NOTES_GAP = 12;
+const SPECIAL_ICON_SIZE = 32;
+const COMBO_ICON_STEP = 38;
 const FONT_HEADER = '28px';
-const FONT_ROW = '21px';
+const FONT_ROW = '19px';
 const FONT_NOTE = '20px';
 const FONT_POINTS = '17px';
 const LEVELS: readonly CellLevel[] = [1, 2, 3];
@@ -72,26 +74,20 @@ const COMBOS: readonly { pair: readonly [PieceType, PieceType]; text: string }[]
 ];
 
 /** Как применять спецфишки: одиночное нажатие их только выделяет */
-const ACTIVATION_NOTE = 'Взрывные: двойной клик или сдвиг';
+const ACTIVATION_NOTE = 'Взрывные: 2 клика или сдвиг';
 
 const NOTES = [
   'Поворот фигуры не важен',
   'Другие из 5+ — как линия 5',
   'Радуга при сдвиге',
   'с совпадением остаётся',
-  'Падение собрало линию:',
-  'комбо x1.1, x1.2… до x2',
 ];
-/** Левая колонка с заметками стала длиннее правой */
-const LEFT_COLUMN_EXTRA = NOTE_ROW_HEIGHT * 3;
 
-/** Высота панели: определяется правой, более длинной колонкой */
 export const RULES_PANEL_HEIGHT =
   PADDING * 2 +
   HEADER_HEIGHT * 2 +
   NOTE_ROW_HEIGHT +
-  SPECIAL_ROW_HEIGHT * (SPECIALS.length + COMBOS.length) +
-  LEFT_COLUMN_EXTRA;
+  SPECIAL_ROW_HEIGHT * (SPECIALS.length + COMBOS.length);
 
 // Панель экрана правил: слева — что дают фигуры, справа — спецфишки и их комбо.
 // Числа берутся из config и подсчёта очков игры, поэтому правила не расходятся с игрой.
@@ -108,11 +104,11 @@ export class RulesPanel {
 
     const contentTop = top + PADDING;
     // Черта между колонками: без неё очки слева сливаются со значками справа
-    const dividerX = left + PADDING + FIGURES_COLUMN_WIDTH + COLUMN_GAP / 2;
+    const dividerX = left + PADDING + COLUMN_WIDTH + COLUMN_GAP / 2;
     panel.lineStyle(2, UI_BUTTON_COLOR, 0.6);
     panel.lineBetween(dividerX, top + PADDING, dividerX, top + RULES_PANEL_HEIGHT - PADDING);
     this.drawFigures(left + PADDING, contentTop);
-    this.drawSpecials(left + PADDING + FIGURES_COLUMN_WIDTH + COLUMN_GAP, contentTop);
+    this.drawSpecials(left + PADDING + COLUMN_WIDTH + COLUMN_GAP, contentTop);
   }
 
   private drawFigures(x: number, top: number): void {
@@ -133,7 +129,7 @@ export class RulesPanel {
       this.drawFigureRow(figure, x, y + FIGURE_ROW_HEIGHT / 2, levelX);
       y += FIGURE_ROW_HEIGHT;
     }
-    y += 6;
+    y += NOTES_GAP;
     for (const note of NOTES) {
       this.text(x, y + LEFT_NOTE_ROW_HEIGHT / 2, note, FONT_NOTE, UI_MUTED_TEXT_COLOR);
       y += LEFT_NOTE_ROW_HEIGHT;
@@ -170,8 +166,8 @@ export class RulesPanel {
     this.text(x, y + NOTE_ROW_HEIGHT / 2, ACTIVATION_NOTE, FONT_NOTE, UI_MUTED_TEXT_COLOR);
     y += NOTE_ROW_HEIGHT;
     for (const { type, text } of SPECIALS) {
-      this.icon(x + PIECE_ICON_RADIUS, y + SPECIAL_ROW_HEIGHT / 2, type);
-      this.text(x + PIECE_ICON_RADIUS * 2 + 10, y + SPECIAL_ROW_HEIGHT / 2, text, FONT_ROW);
+      this.icon(x + SPECIAL_ICON_SIZE / 2, y + SPECIAL_ROW_HEIGHT / 2, type);
+      this.text(x + SPECIAL_ICON_SIZE + 8, y + SPECIAL_ROW_HEIGHT / 2, text, FONT_ROW);
       y += SPECIAL_ROW_HEIGHT;
     }
     this.text(
@@ -184,15 +180,15 @@ export class RulesPanel {
     y += HEADER_HEIGHT;
     for (const { pair, text } of COMBOS) {
       const rowY = y + SPECIAL_ROW_HEIGHT / 2;
-      this.icon(x + PIECE_ICON_RADIUS, rowY, pair[0]);
-      this.icon(x + PIECE_ICON_RADIUS + COMBO_ICON_STEP, rowY, pair[1]);
-      this.text(x + PIECE_ICON_RADIUS * 2 + COMBO_ICON_STEP + 8, rowY, text, FONT_ROW);
+      this.icon(x + SPECIAL_ICON_SIZE / 2, rowY, pair[0]);
+      this.icon(x + SPECIAL_ICON_SIZE / 2 + COMBO_ICON_STEP, rowY, pair[1]);
+      this.text(x + SPECIAL_ICON_SIZE + COMBO_ICON_STEP + 8, rowY, text, FONT_ROW);
       y += SPECIAL_ROW_HEIGHT;
     }
   }
 
   private icon(x: number, y: number, kind: PieceType): void {
-    drawRuleIcon(this.scene, x, y, kind);
+    drawRuleIcon(this.scene, x, y, kind, SPECIAL_ICON_SIZE);
   }
 
   private text(
