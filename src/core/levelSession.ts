@@ -48,6 +48,10 @@ export class LevelSession extends GameSession {
     return this.goalsDone || super.isOver;
   }
 
+  override get squareBomb(): boolean {
+    return true;
+  }
+
   get movesLeft(): number {
     return this.level.moves - this.moves;
   }

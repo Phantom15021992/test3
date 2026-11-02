@@ -62,6 +62,11 @@ export class GameSession {
     return this.moves >= this.moveLimit;
   }
 
+  /** Квадрат 2×2 из ячеек 2 уровня даёт бомбу — только в кампании */
+  get squareBomb(): boolean {
+    return false;
+  }
+
   /** Ход игрока; шаги отдаются для анимации */
   play(move: PlayerMove): Steps {
     this.moves++;
@@ -70,7 +75,11 @@ export class GameSession {
   }
 
   private *run(move: Move): Steps {
-    const steps = resolveMove(this.board, move, { colorCount: this.colorCount, rng: this.rng });
+    const steps = resolveMove(this.board, move, {
+      colorCount: this.colorCount,
+      rng: this.rng,
+      squareBomb: this.squareBomb,
+    });
     let next = steps.next();
     while (!next.done) {
       const step = next.value;

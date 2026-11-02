@@ -196,6 +196,33 @@ describe('resolveMove: ячейки 2–3 уровня', () => {
     ]);
   });
 
+  it('в кампании квадрат 2×2 из ячеек 2 уровня даёт ещё и бомбу', () => {
+    const board = parseBoard(`
+      B2 G1 B2
+      B2 B2 R1
+    `);
+    const move = { type: 'swap', from: p(0, 2), to: p(0, 1) } as const;
+    const result = runMove(board, move, { ...ctx(), squareBomb: true });
+    expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
+      { pos: p(0, 1), cell: { kind: 'tile', color: 2, level: 3 } },
+      { pos: p(0, 0), cell: { kind: 'tile', color: 2, level: 3 } },
+      { pos: p(1, 1), cell: { kind: 'piece', type: 'bomb' } },
+    ]);
+  });
+
+  it('в кампании линия из 4 ячеек 2 уровня бомбу не даёт, только ракету', () => {
+    const board = parseBoard(`
+      B2 B2 G1 B2
+      R1 G1 B2 R1
+    `);
+    const move = { type: 'swap', from: p(1, 2), to: p(0, 2) } as const;
+    const pieces = stepsOf(
+      runMove(board, move, { ...ctx(), squareBomb: true }).steps,
+      'transform',
+    )[0]!.placements.flatMap(({ cell }) => (cell?.kind === 'piece' ? [cell.type] : []));
+    expect(pieces).toEqual(['rocket']);
+  });
+
   it('квадрат 2×2 из ячеек 3 уровня — как 4 ячейки: ×20 и радуга', () => {
     const board = parseBoard(`
       R3 G1 R3

@@ -111,6 +111,8 @@ export interface ResolveResult {
 export interface ResolveContext {
   colorCount: number;
   rng: Rng;
+  /** Правило кампании: квадрат 2×2 из ячеек 2 уровня даёт ещё и бомбу (в свободной игре его нет) */
+  squareBomb?: boolean;
 }
 
 /** Защита от бесконечного цикла при ошибке в логике */
@@ -242,7 +244,7 @@ export function* resolveMove(
       const combos: ComboHit[] = [];
 
       for (const group of groups) {
-        const outcome = groupOutcome(group, current, landing);
+        const outcome = groupOutcome(group, current, landing, ctx.squareBomb ?? false);
         removal.push(...group.cells, ...boxesAround(current, group.cells));
         const step = dropped ? Math.min(++comboSteps, COMBO_MAX_STEPS) : 0;
         if (step > 0) combos.push({ at: pickSpot(group, []), step });
@@ -297,7 +299,12 @@ interface GroupOutcome {
 // и вся группа приносит очки. Вторая награда, если их две, встаёт в соседнюю клетку группы.
 // Фишки под цепью считаются в размере группы, но остаются на месте: награда встаёт только
 // в свободные клетки, и если их не хватает, лишняя награда пропадает.
-function groupOutcome(group: MatchGroup, board: Board, landing: Position[]): GroupOutcome {
+function groupOutcome(
+  group: MatchGroup,
+  board: Board,
+  landing: Position[],
+  squareBomb: boolean,
+): GroupOutcome {
   const crossReward =
     group.level !== 3 && isSevenCross(group.cells) ? SEVEN_CROSS_REWARDS[group.level] : null;
   const points = crossReward
@@ -325,6 +332,15 @@ function groupOutcome(group: MatchGroup, board: Board, landing: Position[]): Gro
       placements.map((placement) => placement.pos),
     );
     if (pos) placements.push({ pos, cell: { kind: 'piece', type: 'rocket', direction } });
+  }
+  // 4 ячейки 2 уровня не в линию — это квадрат 2×2: в кампании, как линия даёт ракету, он даёт бомбу
+  if (squareBomb && group.level === 2 && group.cells.length === 4 && !direction) {
+    const pos = neighborInGroup(
+      open,
+      spot,
+      placements.map((placement) => placement.pos),
+    );
+    if (pos) placements.push({ pos, cell: { kind: 'piece', type: 'bomb' } });
   }
   return { points, placements };
 }

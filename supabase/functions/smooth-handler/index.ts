@@ -730,7 +730,7 @@ function* resolveMove(board, move, ctx) {
       const points = /* @__PURE__ */ new Map();
       const combos = [];
       for (const group of groups) {
-        const outcome = groupOutcome(group, current, landing);
+        const outcome = groupOutcome(group, current, landing, ctx.squareBomb ?? false);
         removal.push(...group.cells, ...boxesAround(current, group.cells));
         const step = dropped ? Math.min(++comboSteps, COMBO_MAX_STEPS) : 0;
         if (step > 0) combos.push({ at: pickSpot(group, []), step });
@@ -765,7 +765,7 @@ function boxesAround(board, cells) {
 function hasEmpty(board) {
   return board.some((line) => line.includes(null));
 }
-function groupOutcome(group, board, landing) {
+function groupOutcome(group, board, landing, squareBomb) {
   const crossReward = group.level !== 3 && isSevenCross(group.cells) ? SEVEN_CROSS_REWARDS[group.level] : null;
   const points = crossReward ? group.level === 1 ? SEVEN_CROSS_LEVEL1_POINTS : matchPoints(3, 5) : matchPoints(group.level, group.cells.length);
   const open = { ...group, cells: group.cells.filter((pos) => !isChained(getCell(board, pos))) };
@@ -784,6 +784,14 @@ function groupOutcome(group, board, landing) {
       placements.map((placement) => placement.pos)
     );
     if (pos) placements.push({ pos, cell: { kind: "piece", type: "rocket", direction } });
+  }
+  if (squareBomb && group.level === 2 && group.cells.length === 4 && !direction) {
+    const pos = neighborInGroup(
+      open,
+      spot,
+      placements.map((placement) => placement.pos)
+    );
+    if (pos) placements.push({ pos, cell: { kind: "piece", type: "bomb" } });
   }
   return { points, placements };
 }
@@ -896,6 +904,10 @@ var GameSession = class {
   get isOver() {
     return this.moves >= this.moveLimit;
   }
+  /** Квадрат 2×2 из ячеек 2 уровня даёт бомбу — только в кампании */
+  get squareBomb() {
+    return false;
+  }
   /** Ход игрока; шаги отдаются для анимации */
   play(move) {
     this.moves++;
@@ -903,7 +915,11 @@ var GameSession = class {
     return this.run(move);
   }
   *run(move) {
-    const steps = resolveMove(this.board, move, { colorCount: this.colorCount, rng: this.rng });
+    const steps = resolveMove(this.board, move, {
+      colorCount: this.colorCount,
+      rng: this.rng,
+      squareBomb: this.squareBomb
+    });
     let next = steps.next();
     while (!next.done) {
       const step = next.value;

@@ -79,6 +79,7 @@ function moveValue(
   const { board, steps } = runMove(start, move, {
     colorCount: session.level.colors,
     rng,
+    squareBomb: true,
   });
   const need = (kind: string) =>
     session.level.goals.some((goal) => goal.kind === kind && session.goalValue(goal) < goal.count);
