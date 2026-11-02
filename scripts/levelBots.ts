@@ -4,8 +4,18 @@
 // и выбирает самый полезный для целей уровня; будущие фишки он не подглядывает (оценка идёт на
 // отдельном ГСЧ), но и наперёд не планирует, поэтому внимательный человек играет не хуже него.
 
-import { allPositions, getCell, posKey, type Board, type Position } from '../src/core/board';
-import { BONUS_TIERS } from '../src/core/config';
+import {
+  allPositions,
+  cloneBoard,
+  getCell,
+  isTile,
+  posKey,
+  setCell,
+  type Board,
+  type ColorId,
+  type Position,
+} from '../src/core/board';
+import { aimedPiece, bonusStars, isBonusTarget, type AimedBonus } from '../src/core/bonus';
 import type { Level } from '../src/core/level';
 import { LevelSession } from '../src/core/levelSession';
 import { findPossibleMoves } from '../src/core/moves';
@@ -19,6 +29,8 @@ export type Bot = 'novice' | 'expert' | 'buyer';
 export const BOTS: readonly Bot[] = ['novice', 'expert', 'buyer'];
 /** Сколько ходов оценивать за раз: перебор всех на поле 10×10 слишком долгий */
 const MAX_CANDIDATES = 40;
+/** Сколько клеток примерять для покупной бомбы */
+const MAX_AIM_CELLS = 30;
 
 export interface GameResult {
   won: boolean;
@@ -58,8 +70,13 @@ function itemRows(board: Board): number {
 }
 
 /** Насколько ход приближает к целям; очки — лишь слабая подсказка при равенстве */
-function moveValue(session: LevelSession, move: PlayerMove, rng: Rng): number {
-  const { board, steps } = runMove(session.board, move, {
+function moveValue(
+  session: LevelSession,
+  move: PlayerMove,
+  rng: Rng,
+  start: Board = session.board,
+): number {
+  const { board, steps } = runMove(start, move, {
     colorCount: session.level.colors,
     rng,
   });
@@ -97,15 +114,25 @@ function moveValue(session: LevelSession, move: PlayerMove, rng: Rng): number {
   return value;
 }
 
-function pickMove(session: LevelSession, bot: Bot, rng: Rng): PlayerMove | null {
+function shuffled<T>(items: T[], rng: Rng): T[] {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = rng.int(i + 1);
+    [items[i], items[j]] = [items[j]!, items[i]!];
+  }
+  return items;
+}
+
+interface Pick {
+  move: PlayerMove;
+  value: number;
+}
+
+function pickMove(session: LevelSession, bot: Bot, rng: Rng): Pick | null {
   const moves = candidates(session);
   if (moves.length === 0) return null;
-  if (bot === 'novice') return moves[rng.int(moves.length)]!;
+  if (bot === 'novice') return { move: moves[rng.int(moves.length)]!, value: 0 };
   // Перемешиваем, чтобы отбор не предпочитал верх поля
-  for (let i = moves.length - 1; i > 0; i--) {
-    const j = rng.int(i + 1);
-    [moves[i], moves[j]] = [moves[j]!, moves[i]!];
-  }
+  shuffled(moves, rng);
   // Ходы рядом с короной перебираем первыми: иначе отбор мог бы выбросить как раз их
   const crowns = allPositions(session.board).filter(
     (pos) => getCell(session.board, pos)?.kind === 'item',
@@ -123,16 +150,68 @@ function pickMove(session: LevelSession, bot: Bot, rng: Rng): PlayerMove | null 
       best = move;
     }
   }
-  return best;
+  return { move: best, value: bestValue };
 }
 
-/** Тратит звёзды сразу на самое дорогое, что может применить */
-function buyBest(session: LevelSession): void {
-  const affordable = BONUS_TIERS.filter(
-    (tier) => tier.type !== 'manipulator' && tier.stars <= session.starsLeft,
+type Purchase =
+  | { kind: 'aim'; bonus: AimedBonus; at: Position; value: number }
+  | { kind: 'rainbow'; color: ColorId; value: number };
+
+/** Ценность бомбы или ракеты в клетке: примеряется на копии поля */
+function aimValue(session: LevelSession, bonus: AimedBonus, at: Position, rng: Rng): number {
+  const board = cloneBoard(session.board);
+  setCell(board, at, aimedPiece(bonus));
+  return moveValue(session, { type: 'fire', at }, createRng(rng.int(2 ** 31)), board);
+}
+
+/** Самая полезная покупка, которая по карману; манипулятор бот не применяет */
+function bestPurchase(session: LevelSession, rng: Rng): Purchase | null {
+  const { board, starsLeft } = session;
+  const cells = shuffled(
+    allPositions(board).filter((pos) => isBonusTarget(board, pos)),
+    rng,
   );
-  const tier = affordable[affordable.length - 1];
-  if (tier && session.buy(tier.type)) session.shuffleIfStuck();
+  const options: Purchase[] = [];
+  const aim = (bonus: AimedBonus, at: Position) => {
+    options.push({ kind: 'aim', bonus, at, value: aimValue(session, bonus, at, rng) });
+  };
+  if (starsLeft >= bonusStars('bomb')) {
+    cells.slice(0, MAX_AIM_CELLS).forEach((at) => aim('bomb', at));
+  }
+  if (starsLeft >= bonusStars('rocket')) {
+    // Ракета бьёт по всей строке: достаточно одной клетки в каждой
+    const rows = new Set(cells.map((pos) => pos.row));
+    rows.forEach((row) =>
+      aim(
+        'rocket',
+        cells.find((pos) => pos.row === row)!,
+      ),
+    );
+  }
+  if (starsLeft >= bonusStars('rainbow')) {
+    const colors = new Set(
+      allPositions(board).flatMap((pos) => {
+        const cell = getCell(board, pos);
+        return isTile(cell) ? [cell.color] : [];
+      }),
+    );
+    colors.forEach((color) => {
+      const move: PlayerMove = { type: 'boughtRainbow', color };
+      const value = moveValue(session, move, createRng(rng.int(2 ** 31)));
+      options.push({ kind: 'rainbow', color, value });
+    });
+  }
+  return options.reduce<Purchase | null>(
+    (best, option) => (!best || option.value > best.value ? option : best),
+    null,
+  );
+}
+
+function applyPurchase(session: LevelSession, purchase: Purchase): PlayerMove | null {
+  if (purchase.kind === 'rainbow') {
+    return session.payBonus('rainbow') ? { type: 'boughtRainbow', color: purchase.color } : null;
+  }
+  return session.aimBonus(purchase.bonus, purchase.at) ? { type: 'fire', at: purchase.at } : null;
 }
 
 function finish(steps: Generator<ResolveStep, void, undefined>): void {
@@ -145,8 +224,14 @@ export function play(level: Level, seed: number, bot: Bot, wallet = 0): GameResu
   const rng = createRng(seed ^ 0x5bd1e995);
   const reached = level.goals.map((): number[] => []);
   while (!session.isOver) {
-    if (bot === 'buyer') buyBest(session);
-    const move = pickMove(session, bot, rng);
+    const pick = pickMove(session, bot, rng);
+    // Покупка и есть ход, поэтому бот берёт её, когда она полезнее лучшего обычного хода
+    const purchase = bot === 'buyer' ? bestPurchase(session, rng) : null;
+    const bought =
+      purchase && purchase.value > (pick?.value ?? -Infinity)
+        ? applyPurchase(session, purchase)
+        : null;
+    const move = bought ?? pick?.move;
     if (!move) break;
     finish(session.play(move));
     session.shuffleIfStuck();

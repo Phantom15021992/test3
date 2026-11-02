@@ -3,6 +3,7 @@ import {
   cloneBoard,
   getCell,
   isChained,
+  isPiece,
   setCell,
   type Board,
   type Piece,
@@ -11,7 +12,8 @@ import {
 import { BONUS_TIERS } from './config';
 import type { Rng } from './rng';
 
-// Покупка спецфишек: в свободной игре за очки счёта, в кампании за звёзды. Хода не тратит.
+// Покупка спецфишек: в свободной игре за очки счёта, встаёт на случайную фишку и хода не тратит.
+// В кампании — за звёзды: бомба и ракета срабатывают сразу в клетке, которую выбрал игрок.
 
 export type BonusType = (typeof BONUS_TIERS)[number]['type'];
 
@@ -30,6 +32,33 @@ export function canBuyBonus(score: number, type: BonusType): boolean {
 /** Счёт после покупки, или null — если очков не хватает */
 export function buyBonus(score: number, type: BonusType): number | null {
   return canBuyBonus(score, type) ? score - bonusCost(type) : null;
+}
+
+/** Спецфишки, которые в кампании срабатывают сразу в выбранной клетке */
+export type AimedBonus = Extract<BonusType, 'bomb' | 'rocket'>;
+
+const SIDES = [
+  [0, 1],
+  [0, -1],
+  [1, 0],
+  [-1, 0],
+] as const;
+
+/**
+ * Куда можно направить покупку: только обычная фишка 1 уровня и не рядом со спецфишкой, иначе
+ * покупка срабатывала бы как дешёвое комбо со спецфишкой, заработанной на поле.
+ */
+export function isBonusTarget(board: Board, pos: Position): boolean {
+  const cell = getCell(board, pos);
+  if (cell?.kind !== 'tile' || cell.level !== 1 || isChained(cell)) return false;
+  return !SIDES.some(([dr, dc]) =>
+    isPiece(getCell(board, { row: pos.row + dr, col: pos.col + dc })),
+  );
+}
+
+/** Покупная ракета бьёт только по строке: по столбцу она сразу роняла бы корону на дно */
+export function aimedPiece(type: AimedBonus): Piece {
+  return type === 'rocket' ? { kind: 'piece', type, direction: 'row' } : { kind: 'piece', type };
 }
 
 function bonusPiece(type: BonusType, rng: Rng): Piece {

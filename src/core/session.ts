@@ -130,6 +130,9 @@ export class GameSession {
     switch (action.type) {
       case 'buy':
         return true; // проверяет сама покупка
+      case 'boughtRainbow':
+      case 'boughtManipulator':
+        return false; // такие ходы есть только в кампании, а её партии сервер не проверяет
       case 'swap':
         return (
           isFilled(board, action.from) &&

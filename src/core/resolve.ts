@@ -58,6 +58,9 @@ export type Move =
   /** Ракета, бомба или мега-бомба срабатывает на месте (двойной клик) */
   | { type: 'fire'; at: Position }
   | { type: 'manipulator'; at: Position; a: Position; b: Position }
+  /** Кампания: купленная радуга и манипулятор применяются сразу, на поле их нет */
+  | { type: 'boughtRainbow'; color: ColorId }
+  | { type: 'boughtManipulator'; a: Position; b: Position }
   /** Конец партии: все спецфишки на поле срабатывают на месте */
   | { type: 'finale' };
 
@@ -199,6 +202,16 @@ export function* resolveMove(
     case 'manipulator': {
       current = removeCells(current, [move.at]);
       yield { kind: 'clear', cells: [move.at], points: 0, pieces: 1 };
+      current = swapCells(current, move.a, move.b);
+      yield { kind: 'swap', a: move.a, b: move.b };
+      landing = [move.b, move.a];
+      break;
+    }
+    case 'boughtRainbow': {
+      yield* destroy(tilesOfColor(current, move.color));
+      break;
+    }
+    case 'boughtManipulator': {
       current = swapCells(current, move.a, move.b);
       yield { kind: 'swap', a: move.a, b: move.b };
       landing = [move.b, move.a];

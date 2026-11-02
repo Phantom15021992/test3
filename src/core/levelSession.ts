@@ -1,13 +1,13 @@
-import type { Piece, Position } from './board';
-import { bonusStars, type BonusType } from './bonus';
+import { cloneBoard, setCell, type Piece, type Position } from './board';
+import { aimedPiece, bonusStars, isBonusTarget, type AimedBonus, type BonusType } from './bonus';
 import { recordPurchase } from './gameStats';
 import { boardTemplate, iceTemplate, type Goal, type GoalKind, type Level } from './level';
 import type { ResolveStep } from './resolve';
 import { GameSession } from './session';
 
 // Партия на уровне: те же ходы, что и в свободной игре, плюс лёд, цели и звёзды.
-// Спецфишки покупаются за звёзды этажа. Списание сохраняет сцена только при победе: на проигранном
-// уровне потраченное возвращается. Уровень заканчивается сразу, как выполнены цели;
+// Спецфишки покупаются за звёзды этажа и применяются сразу: копить их нельзя. Списание сохраняет
+// сцена только при победе: на проигранном уровне потраченное возвращается. Уровень заканчивается сразу, как выполнены цели;
 // финала со спецфишками здесь нет.
 
 export type GoalProgress = Record<GoalKind, number>;
@@ -60,14 +60,31 @@ export class LevelSession extends GameSession {
     return this.wallet - this.starsSpent;
   }
 
-  override buy(type: BonusType): { pos: Position; piece: Piece } | null {
+  /** Покупка на случайную клетку — только для свободной игры */
+  override buy(): null {
+    return null;
+  }
+
+  /** Платит за покупку; false — звёзд не хватает */
+  payBonus(type: BonusType): boolean {
     const cost = bonusStars(type);
-    if (this.starsLeft < cost) return null;
-    const placed = this.placeBought(type);
-    if (!placed) return null;
+    if (this.starsLeft < cost) return false;
     this.starsSpent += cost;
     recordPurchase(this.stats, type, 0);
-    return placed;
+    return true;
+  }
+
+  /**
+   * Покупная бомба или ракета встаёт в выбранную клетку: фишка исчезает без очков, а срабатывает
+   * спецфишка следующим ходом 'fire'. null — клетка не подходит или не хватает звёзд.
+   */
+  aimBonus(type: AimedBonus, at: Position): Piece | null {
+    if (!isBonusTarget(this.board, at) || !this.payBonus(type)) return null;
+    const piece = aimedPiece(type);
+    const next = cloneBoard(this.board);
+    setCell(next, at, piece);
+    this.board = next;
+    return piece;
   }
 
   /** Насколько выполнены цели, в процентах: показывает, близко ли было поражение */

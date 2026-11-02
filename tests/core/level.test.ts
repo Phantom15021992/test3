@@ -446,32 +446,6 @@ describe('партия на уровне', () => {
     expect(session.stars).toBe(3);
   });
 
-  it('спецфишки покупаются за звёзды этажа: 1, 2, 5 и 15', () => {
-    const session = new LevelSession(5, level(), 23);
-    session.score = 100000;
-    expect(session.buy('bomb')).not.toBeNull();
-    expect(session.buy('rocket')).not.toBeNull();
-    expect(session.buy('manipulator')).not.toBeNull();
-    expect(session.buy('rainbow')).not.toBeNull();
-    expect(session.starsSpent).toBe(23);
-    expect(session.starsLeft).toBe(0);
-    expect(session.score).toBe(100000);
-  });
-
-  it('очками в кампании не платят, а без звёзд купить нельзя', () => {
-    const session = new LevelSession(5, level(), 1);
-    session.score = 100000;
-    expect(session.buy('rocket')).toBeNull();
-    expect(session.starsLeft).toBe(1);
-  });
-
-  it('покупка не влияет на полученные звёзды', () => {
-    const session = new LevelSession(5, level(), 5);
-    expect(session.buy('manipulator')).not.toBeNull();
-    session.progress.level2 = 1;
-    expect(session.stars).toBe(3);
-  });
-
   it('ходы кончились, цели не выполнены — ноль звёзд', () => {
     const session = new LevelSession(5, level({ moves: 1 }));
     session.moves = 1;

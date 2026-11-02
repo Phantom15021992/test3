@@ -59,7 +59,7 @@ describe('запись попытки уровня', () => {
     session.progress.level2 = 2;
     session.progress.level3 = 2;
     expect(session.goalsPercent).toBe(75);
-    expect(session.buy('bomb')).not.toBeNull();
+    expect(session.payBonus('bomb')).toBe(true);
     expect(session.stats.bought.bomb).toBe(1);
     expect(session.stats.pointsSpent).toBe(0);
   });

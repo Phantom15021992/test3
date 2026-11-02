@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import {
+  allPositions,
   getCell,
   isChained,
   isFixed,
@@ -20,7 +21,7 @@ import {
   type Difficulty,
   type DifficultyId,
 } from '../core/config';
-import type { BonusType } from '../core/bonus';
+import { bonusStars, isBonusTarget, type AimedBonus, type BonusType } from '../core/bonus';
 import { strongestMove, type HintKind } from '../core/hint';
 import { areAdjacent, isValidSwap } from '../core/moves';
 import type { ChoiceOption, ResolveStep } from '../core/resolve';
@@ -50,7 +51,11 @@ type Mode =
   | { type: 'idle' }
   | { type: 'rainbowColor'; at: Position }
   | { type: 'comboColor'; from: Position; to: Position }
-  | { type: 'manipulator'; at: Position; first: Position | null };
+  | { type: 'manipulator'; at: Position; first: Position | null }
+  // Покупки кампании: звёзды списываются, только когда игрок выбрал цель
+  | { type: 'aim'; bonus: AimedBonus }
+  | { type: 'boughtRainbow' }
+  | { type: 'boughtManipulator'; first: Position | null };
 
 export class GameScene extends Phaser.Scene {
   private session!: GameSession;
@@ -258,7 +263,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Свайп: как только палец ушёл достаточно далеко, меняем с соседом в этом направлении */
   private onPointerMove(pointer: Phaser.Input.Pointer): void {
-    if (!this.pressed || this.busy) return;
+    if (!this.pressed || this.busy || isBuying(this.mode)) return;
     const dx = pointer.x - this.pressed.x;
     const dy = pointer.y - this.pressed.y;
     if (Math.max(Math.abs(dx), Math.abs(dy)) < this.view.cellSize * SWIPE_THRESHOLD) return;
@@ -284,6 +289,29 @@ export class GameScene extends Phaser.Scene {
     const board = this.session.board;
     const content = getCell(board, cell);
     const mode = this.mode;
+
+    if (mode.type === 'aim') {
+      if (isBonusTarget(board, cell)) void this.fireAimed(mode.bonus, cell);
+      return;
+    }
+
+    if (mode.type === 'boughtRainbow') {
+      if (isTile(content)) {
+        void this.playBought('rainbow', { type: 'boughtRainbow', color: content.color });
+      }
+      return;
+    }
+
+    if (mode.type === 'boughtManipulator') {
+      if (!isOnField(content)) return;
+      if (!mode.first) return this.setMode({ ...mode, first: cell });
+      if (samePos(mode.first, cell)) return this.setMode({ ...mode, first: null });
+      return void this.playBought('manipulator', {
+        type: 'boughtManipulator',
+        a: mode.first,
+        b: cell,
+      });
+    }
 
     if (mode.type === 'rainbowColor') {
       if (samePos(mode.at, cell)) {
@@ -525,9 +553,38 @@ export class GameScene extends Phaser.Scene {
 
   // ---------- Бонусы ----------
 
-  /** Покупка спецфишки: встаёт на случайную фишку 1 уровня, хода не тратит */
+  /** Кнопка покупки: в кампании включает выбор цели, повторное нажатие его отменяет */
+  private chooseBonus(session: LevelSession, type: BonusType): void {
+    if (session.starsLeft < bonusStars(type)) return;
+    const next = buyingMode(type);
+    const same = this.mode.type === next.type && (next.type !== 'aim' || sameAim(this.mode, next));
+    this.setSelected(null);
+    this.setMode(same ? { type: 'idle' } : next);
+  }
+
+  /** Покупная бомба или ракета появляется в выбранной клетке и сразу срабатывает */
+  private async fireAimed(bonus: AimedBonus, at: Position): Promise<void> {
+    if (!(this.session instanceof LevelSession)) return;
+    const piece = this.session.aimBonus(bonus, at);
+    if (!piece) return;
+    this.setMode({ type: 'idle' });
+    this.busy = true;
+    this.updateBonusShop();
+    await this.view.place([{ pos: at, cell: piece }]);
+    await this.play({ type: 'fire', at });
+  }
+
+  private async playBought(bonus: BonusType, move: PlayerMove): Promise<void> {
+    if (!(this.session instanceof LevelSession) || !this.session.payBonus(bonus)) return;
+    this.setMode({ type: 'idle' });
+    await this.play(move);
+  }
+
+  /** Покупка спецфишки в свободной игре: встаёт на случайную фишку 1 уровня, хода не тратит */
   private async takeBonus(type: BonusType): Promise<void> {
-    if (this.busy || this.mode.type !== 'idle') return;
+    if (this.busy) return;
+    if (this.session instanceof LevelSession) return this.chooseBonus(this.session, type);
+    if (this.mode.type !== 'idle') return;
     const placed = this.session.buy(type);
     if (!placed) return;
     this.busy = true;
@@ -547,8 +604,19 @@ export class GameScene extends Phaser.Scene {
     const marked: Position | null =
       mode.type === 'rainbowColor' || mode.type === 'manipulator'
         ? (mode.type === 'manipulator' && mode.first) || mode.at
-        : null;
+        : mode.type === 'boughtManipulator'
+          ? mode.first
+          : null;
     this.view.select(marked);
+    const { board } = this.session;
+    this.view.setBlocked(
+      mode.type === 'aim'
+        ? allPositions(board).filter((pos) => {
+            const cell = getCell(board, pos);
+            return cell?.kind !== 'hole' && !isBonusTarget(board, pos);
+          })
+        : [],
+    );
     this.hintText.setText(hintFor(mode));
     this.updateBonusShop();
   }
@@ -570,10 +638,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateBonusShop(): void {
-    // Покупка — только в спокойном состоянии: не во время хода и не в режиме выбора клеток
+    // Покупка — только в спокойном состоянии: не во время хода и не в режиме выбора клеток.
+    // Пока выбирается цель покупки, кнопки работают: ими её можно отменить или заменить
     const { session } = this;
     const budget = session instanceof LevelSession ? session.starsLeft : session.score;
-    this.bonusShop.update(budget, !this.busy && this.mode.type === 'idle');
+    this.bonusShop.update(budget, !this.busy && (this.mode.type === 'idle' || isBuying(this.mode)));
     this.walletText?.setText(`★ ${budget}`);
   }
 }
@@ -601,10 +670,31 @@ const HINT_TEXTS: Readonly<Record<HintKind, string>> = {
 /** Одиночное нажатие взрывную спецфишку только выделяет — подсказываем, что с ней делать */
 const PIECE_HINT = 'Двойной клик — сработает на месте,\nсдвиг — на соседней клетке';
 
+function isBuying(mode: Mode): boolean {
+  return mode.type === 'aim' || mode.type === 'boughtRainbow' || mode.type === 'boughtManipulator';
+}
+
+function sameAim(a: Mode, b: Mode): boolean {
+  return a.type === 'aim' && b.type === 'aim' && a.bonus === b.bonus;
+}
+
+function buyingMode(type: BonusType): Mode {
+  if (type === 'rainbow') return { type: 'boughtRainbow' };
+  if (type === 'manipulator') return { type: 'boughtManipulator', first: null };
+  return { type: 'aim', bonus: type };
+}
+
 function hintFor(mode: Mode): string {
   switch (mode.type) {
     case 'idle':
+    case 'aim':
       return '';
+    case 'boughtRainbow':
+      return 'Радуга: нажмите на фишку нужного цвета\n(нажатие на кнопку — отмена)';
+    case 'boughtManipulator':
+      return mode.first
+        ? 'Манипулятор: выберите вторую клетку'
+        : 'Манипулятор: выберите две клетки для обмена\n(нажатие на кнопку — отмена)';
     case 'rainbowColor':
       return 'Радуга: нажмите на фишку нужного цвета\n(нажатие на радугу — отмена)';
     case 'comboColor':

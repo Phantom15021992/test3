@@ -72,8 +72,8 @@ export const BONUS_TIERS: readonly {
   stars: number;
   type: 'bomb' | 'rocket' | 'manipulator' | 'rainbow';
 }[] = [
-  { cost: 150, stars: 1, type: 'bomb' },
-  { cost: 300, stars: 2, type: 'rocket' },
+  { cost: 150, stars: 3, type: 'bomb' },
+  { cost: 300, stars: 5, type: 'rocket' },
   { cost: 500, stars: 5, type: 'manipulator' },
   { cost: 750, stars: 15, type: 'rainbow' },
 ];

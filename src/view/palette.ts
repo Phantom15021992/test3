@@ -14,6 +14,9 @@ export const TILE_COLORS: readonly number[] = [
 export const BOARD_CELL_DARK = 0x262b40;
 export const BOARD_CELL_LIGHT = 0x2c3249;
 export const SELECTION_COLOR = 0xffffff;
+/** Клетки, куда нельзя направить покупку */
+export const BLOCKED_COLOR = 0x0b0e1a;
+export const BLOCKED_ALPHA = 0.72;
 
 export const HIGHLIGHT_COLOR = 0xffd54a;
 

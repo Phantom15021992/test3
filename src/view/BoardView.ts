@@ -14,6 +14,8 @@ import type { Fall, Spawn } from '../core/gravity';
 import type { ChainLink, ComboHit, Placement } from '../core/resolve';
 import { comboTextureKey } from './comboLabel';
 import {
+  BLOCKED_ALPHA,
+  BLOCKED_COLOR,
   BOARD_CELL_DARK,
   BOARD_CELL_LIGHT,
   HIGHLIGHT_COLOR,
@@ -36,6 +38,7 @@ export class BoardView {
   private readonly selection: Phaser.GameObjects.Graphics;
   private readonly highlight: Phaser.GameObjects.Graphics;
   private readonly hintLayer: Phaser.GameObjects.Graphics;
+  private readonly blocked: Phaser.GameObjects.Graphics;
   private hintPulse: Phaser.Tweens.Tween | null = null;
   // Новые фишки появляются над полем — маска скрывает их, пока не долетят до поля
   private readonly maskShape: Phaser.GameObjects.Graphics;
@@ -55,6 +58,7 @@ export class BoardView {
     this.selection = scene.add.graphics().setDepth(1);
     this.highlight = scene.add.graphics().setDepth(1);
     this.hintLayer = scene.add.graphics().setDepth(1);
+    this.blocked = scene.add.graphics().setDepth(1);
     this.maskShape = scene.make.graphics({}, false);
     this.mask = this.maskShape.createGeometryMask();
   }
@@ -143,6 +147,17 @@ export class BoardView {
   setHighlight(cells: Position[]): void {
     this.highlight.clear();
     for (const pos of cells) this.outline(this.highlight, pos, HIGHLIGHT_COLOR);
+  }
+
+  /** Затемняет клетки, куда нельзя направить покупку */
+  setBlocked(cells: Position[]): void {
+    this.blocked.clear();
+    this.blocked.fillStyle(BLOCKED_COLOR, BLOCKED_ALPHA);
+    for (const { row, col } of cells) {
+      const x = this.originX + col * this.cellSize;
+      const y = this.originY + row * this.cellSize;
+      this.blocked.fillRect(x, y, this.cellSize, this.cellSize);
+    }
   }
 
   /** Подсказка хода: клетки пульсируют, пока игрок не начнёт действовать */

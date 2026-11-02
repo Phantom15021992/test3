@@ -37,8 +37,8 @@ var MEGA_BOMB_BOMB_SIZE = 7;
 var ROCKET_BOMB_WIDTH = 3;
 var MEGA_BOMB_ROCKET_WIDTH = 5;
 var BONUS_TIERS = [
-  { cost: 150, stars: 1, type: "bomb" },
-  { cost: 300, stars: 2, type: "rocket" },
+  { cost: 150, stars: 3, type: "bomb" },
+  { cost: 300, stars: 5, type: "rocket" },
   { cost: 500, stars: 5, type: "manipulator" },
   { cost: 750, stars: 15, type: "rainbow" }
 ];
@@ -699,6 +699,16 @@ function* resolveMove(board, move, ctx) {
       landing = [move.b, move.a];
       break;
     }
+    case "boughtRainbow": {
+      yield* destroy(tilesOfColor(current, move.color));
+      break;
+    }
+    case "boughtManipulator": {
+      current = swapCells(current, move.a, move.b);
+      yield { kind: "swap", a: move.a, b: move.b };
+      landing = [move.b, move.a];
+      break;
+    }
     case "finale": {
       yield* destroy(...finaleBlast(current, ctx.rng));
       break;
@@ -946,6 +956,10 @@ var GameSession = class {
       case "buy":
         return true;
       // проверяет сама покупка
+      case "boughtRainbow":
+      case "boughtManipulator":
+        return false;
+      // такие ходы есть только в кампании, а её партии сервер не проверяет
       case "swap":
         return isFilled(board, action.from) && isFilled(board, action.to) && isValidSwap(board, action.from, action.to) && (comboNeedsColor(board, action.from, action.to) ? hasColor(board, action.color) : action.color === void 0);
       case "rainbow":
