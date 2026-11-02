@@ -334,6 +334,20 @@ describe('короны', () => {
     expect(itemsOnBottom(b)).toEqual([p(1, 0), p(0, 2)]);
   });
 
+  it('корона над дыркой посреди столбца не засчитывается: пролетает её и доходит до дна', () => {
+    const b = parseBoard(`
+      R1
+      .
+      .
+    `);
+    b[0]![0] = ITEM;
+    b[1]![0] = { kind: 'hole' };
+    expect(itemsOnBottom(b)).toEqual([]);
+    const fallen = applyGravity(b).board;
+    expect(fallen[2]?.[0]).toEqual(ITEM);
+    expect(itemsOnBottom(fallen)).toEqual([p(2, 0)]);
+  });
+
   it('манипулятор двигает корону', () => {
     const game = new GameSession(1, 4);
     game.board = parseBoard(`
