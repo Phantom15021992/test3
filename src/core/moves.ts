@@ -87,7 +87,8 @@ const RECOLOR_ATTEMPTS = 500;
 
 /**
  * Перемешивает поле, когда ходов обычными фишками нет. Переставляются все фишки, ячейки
- * и спецфишки, а также камни и короны; дыры, коробки и фишки под цепью стоят на месте.
+ * и спецфишки; препятствия (дыры, камни, коробки, короны, фишки под цепью) стоят на месте:
+ * иначе перемешивание само опускало бы корону на дно. Лёд — слой клетки, он тоже остаётся.
  * Результат — без готовых совпадений и с ходом.
  * Если такую перестановку найти не удалось — отдельные фишки 1 уровня меняют цвет,
  * пока ход не появится (уровни выше и спецфишки не перекрашиваются).
@@ -95,7 +96,7 @@ const RECOLOR_ATTEMPTS = 500;
 export function shuffleBoard(board: Board, colorCount: number, rng: Rng): Board {
   const positions = allPositions(board).filter((pos) => {
     const cell = getCell(board, pos);
-    return cell != null && !isFixed(cell);
+    return (cell?.kind === 'tile' || cell?.kind === 'piece') && !isFixed(cell);
   });
   const cells = positions.map((pos) => getCell(board, pos)!);
 

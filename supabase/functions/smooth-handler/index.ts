@@ -486,7 +486,7 @@ var RECOLOR_ATTEMPTS = 500;
 function shuffleBoard(board, colorCount, rng) {
   const positions = allPositions(board).filter((pos) => {
     const cell = getCell(board, pos);
-    return cell != null && !isFixed(cell);
+    return (cell?.kind === "tile" || cell?.kind === "piece") && !isFixed(cell);
   });
   const cells = positions.map((pos) => getCell(board, pos));
   let candidate = board;

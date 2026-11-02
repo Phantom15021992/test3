@@ -111,7 +111,7 @@ describe('камни', () => {
     expect(clears(steps)[0]?.stones).toBe(1);
   });
 
-  it('перемешивание переставляет камни и короны наравне с фишками', () => {
+  it('перемешивание оставляет камни и короны на месте', () => {
     const b = parseBoard(`
       R1 G1 B1 Y1
       G1 B1 Y1 R1
@@ -120,10 +120,11 @@ describe('камни', () => {
     `);
     b[1]![1] = STONE;
     b[2]![2] = ITEM;
-    const shuffled = shuffleBoard(b, 4, createRng(3));
-    expect(shuffled[1]?.[1]).not.toEqual(STONE);
-    expect(shuffled.flat().filter((cell) => cell?.kind === 'stone')).toHaveLength(1);
-    expect(shuffled.flat().filter((cell) => cell?.kind === 'item')).toHaveLength(1);
+    for (let seed = 1; seed <= 20; seed++) {
+      const shuffled = shuffleBoard(b, 4, createRng(seed));
+      expect(shuffled[1]?.[1]).toEqual(STONE);
+      expect(shuffled[2]?.[2]).toEqual(ITEM);
+    }
   });
 });
 
