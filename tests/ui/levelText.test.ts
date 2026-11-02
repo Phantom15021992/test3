@@ -8,7 +8,7 @@ const level = (overrides: Partial<Level>): Level => ({ ...LEVELS[0]!, ...overrid
 describe('подписи уровня', () => {
   it('номер — этаж-уровень', () => {
     expect(levelNumber(LEVELS[9]!)).toBe('1-10');
-    expect(levelTitle(LEVELS[9]!)).toBe('1-10 · Ледяной ромб');
+    expect(levelTitle(LEVELS[9]!)).toBe('1-10');
   });
 
   it('задание и все три звезды расписаны подробно', () => {

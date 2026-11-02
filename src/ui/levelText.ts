@@ -34,8 +34,9 @@ export function levelNumber(level: Level): string {
   return `${floor}-${level.id - (floor - 1) * FLOOR_SIZE}`;
 }
 
+/** Заголовок экрана уровня — только номер: название в JSON остаётся для редактора */
 export function levelTitle(level: Level): string {
-  return `${levelNumber(level)} · ${level.title}`;
+  return levelNumber(level);
 }
 
 /** Русское склонение после числа: 1 льдина, 2 льдины, 5 льдин, 21 льдина */
