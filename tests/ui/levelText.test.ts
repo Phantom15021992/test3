@@ -56,7 +56,7 @@ describe('подписи уровня', () => {
     expect(starTaskText({ kind: 'score', count: 1 })).toBe('Набрать 1 очко');
     expect(starTaskText({ kind: 'score', count: 3 })).toBe('Набрать 3 очка');
     expect(starTaskText({ kind: 'level2', count: 5 })).toBe(
-      'Собрать 5 ячеек 2 уровня (3 уровень сразу из фишек — за две)',
+      'Собрать 5 ячеек 2 уровня (3 ур. из фишек — за две)',
     );
   });
 });
