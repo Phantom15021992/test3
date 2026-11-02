@@ -97,7 +97,7 @@ function hintValue(session: GameSession, hint: Hint): number {
   const { steps, board } = runMove(session.board, hint.move, {
     colorCount: session.colorCount,
     rng: createRng(PREVIEW_SEED),
-    squareBomb: session.squareBomb,
+    campaign: session.campaign,
   });
   const drop = steps.findIndex((step) => step.kind === 'drop');
   const immediate = drop < 0 ? steps : steps.slice(0, drop);

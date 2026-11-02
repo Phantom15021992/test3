@@ -482,18 +482,51 @@ describe('партия на уровне', () => {
     expect(session.stars).toBe(1);
   });
 
-  it('ячейка 3 уровня сразу из фишек идёт в задачу на звезду за две ячейки 2 уровня', () => {
-    const session = new LevelSession(5, level({ goals: [{ kind: 'level3', count: 50 }] }));
-    swap(
-      session,
-      `
+  it('ячейка 3 уровня сразу из фишек идёт в цель на ячейки 2 уровня за две', () => {
+    const session = new LevelSession(5, level({ goals: [{ kind: 'level2', count: 50 }] }));
+    session.board = parseBoard(`
       R1 R1 G1 R1 R1
       B1 Y1 R1 Y1 B1
-    `,
+    `);
+    const steps = session.play({ type: 'swap', from: p(0, 2), to: p(1, 2) });
+    let next = steps.next();
+    while (next.value?.kind !== 'transform') next = steps.next();
+    expect(next.value).toMatchObject({ kind: 'transform', direct3: 1 });
+    expect(session.progress.level2).toBe(2);
+    expect(session.progress.level3).toBe(1);
+  });
+
+  it('с коронами уровень идёт до последней короны: за вторую — звезда', () => {
+    const session = new LevelSession(
+      5,
+      level({
+        layout: ['o...', '....', '....', '...o'],
+        goals: [{ kind: 'item', count: 1 }],
+        stars: [
+          { kind: 'score', count: 1 },
+          { kind: 'item', count: 2 },
+        ],
+      }),
     );
-    expect(session.progress.level3).toBeGreaterThanOrEqual(1);
-    expect(session.level2Stars).toBeGreaterThanOrEqual(2);
-    expect(session.level2Stars).toBe(session.progress.level2 + 2);
+    session.progress.item = 1;
+    expect(session.goalsDone).toBe(true);
+    expect(session.isOver).toBe(false);
+    expect(session.stars).toBe(1);
+    session.progress.item = 2;
+    session.score = 10;
+    expect(session.isOver).toBe(true);
+    expect(session.stars).toBe(3);
+  });
+
+  it('с коронами ходы кончились после первой короны — победа', () => {
+    const session = new LevelSession(
+      5,
+      level({ layout: ['o...', '....', '....', '...o'], goals: [{ kind: 'item', count: 1 }] }),
+    );
+    session.progress.item = 1;
+    session.moves = 10;
+    expect(session.isOver).toBe(true);
+    expect(session.stars).toBeGreaterThan(0);
   });
 
   it('ходы кончились, цели не выполнены — ноль звёзд', () => {

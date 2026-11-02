@@ -36,6 +36,7 @@ var BOMB_BOMB_SIZE = 5;
 var MEGA_BOMB_BOMB_SIZE = 7;
 var ROCKET_BOMB_WIDTH = 3;
 var MEGA_BOMB_ROCKET_WIDTH = 5;
+var CAMPAIGN_BOMB_GROUP = 6;
 var BONUS_TIERS = [
   { cost: 150, stars: 3, type: "bomb" },
   { cost: 300, stars: 5, type: "rocket" },
@@ -731,14 +732,16 @@ function* resolveMove(board, move, ctx) {
       const combos = [];
       let direct3 = 0;
       for (const group of groups) {
-        const outcome = groupOutcome(group, current, landing, ctx.squareBomb ?? false);
+        const outcome = groupOutcome(group, current, landing, ctx.campaign ?? false);
         removal.push(...group.cells, ...boxesAround(current, group.cells));
         const step = dropped ? Math.min(++comboSteps, COMBO_MAX_STEPS) : 0;
         if (step > 0) combos.push({ at: pickSpot(group, []), step });
         spreadPoints(group.cells, Math.round(outcome.points * comboMultiplier(step)), points);
         placements.push(...outcome.placements);
         if (group.level === 1) {
-          direct3 += outcome.placements.filter(({ cell }) => isTile(cell) && cell.level === 3).length;
+          direct3 += outcome.placements.filter(
+            ({ cell }) => isTile(cell) && cell.level === 3
+          ).length;
         }
       }
       yield* destroy(removal, void 0, points, combos);
@@ -769,7 +772,7 @@ function boxesAround(board, cells) {
 function hasEmpty(board) {
   return board.some((line) => line.includes(null));
 }
-function groupOutcome(group, board, landing, squareBomb) {
+function groupOutcome(group, board, landing, campaign) {
   const crossReward = group.level !== 3 && isSevenCross(group.cells) ? SEVEN_CROSS_REWARDS[group.level] : null;
   const points = crossReward ? group.level === 1 ? SEVEN_CROSS_LEVEL1_POINTS : matchPoints(3, 5) : matchPoints(group.level, group.cells.length);
   const open = { ...group, cells: group.cells.filter((pos) => !isChained(getCell(board, pos))) };
@@ -789,7 +792,15 @@ function groupOutcome(group, board, landing, squareBomb) {
     );
     if (pos) placements.push({ pos, cell: { kind: "piece", type: "rocket", direction } });
   }
-  if (squareBomb && group.level === 2 && group.cells.length === 4 && !direction) {
+  if (campaign && group.level === 2 && group.cells.length === 4 && !direction) {
+    const pos = neighborInGroup(
+      open,
+      spot,
+      placements.map((placement) => placement.pos)
+    );
+    if (pos) placements.push({ pos, cell: { kind: "piece", type: "bomb" } });
+  }
+  if (campaign && group.level === 1 && group.cells.length >= CAMPAIGN_BOMB_GROUP) {
     const pos = neighborInGroup(
       open,
       spot,
@@ -908,8 +919,8 @@ var GameSession = class {
   get isOver() {
     return this.moves >= this.moveLimit;
   }
-  /** Квадрат 2×2 из ячеек 2 уровня даёт бомбу — только в кампании */
-  get squareBomb() {
+  /** Правила кампании: бомбы из квадрата 2×2 ячеек 2 уровня и из 6+ фишек 1 уровня */
+  get campaign() {
     return false;
   }
   /** Ход игрока; шаги отдаются для анимации */
@@ -922,7 +933,7 @@ var GameSession = class {
     const steps = resolveMove(this.board, move, {
       colorCount: this.colorCount,
       rng: this.rng,
-      squareBomb: this.squareBomb
+      campaign: this.campaign
     });
     let next = steps.next();
     while (!next.done) {

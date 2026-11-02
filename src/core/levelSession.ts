@@ -36,8 +36,6 @@ export class LevelSession extends GameSession {
   ice: boolean[][];
   /** Сколько звёзд этажа потрачено в этой попытке */
   starsSpent = 0;
-  /** Ячейки 2 уровня для задачи на звезду: ячейка 3 уровня сразу из фишек считается за две */
-  level2Stars = 0;
 
   constructor(
     seed: number,
@@ -53,11 +51,22 @@ export class LevelSession extends GameSession {
     return this.level.goals.every((goal) => this.goalValue(goal) >= goal.count);
   }
 
+  /**
+   * Уровень кончается, как выполнены цели. С коронами — только когда на дне все короны поля
+   * (за вторую корону — звезда), или когда кончились ходы: победа уже засчитана
+   */
   get isOver(): boolean {
-    return this.goalsDone || super.isOver;
+    if (super.isOver) return true;
+    if (!this.goalsDone) return false;
+    return this.progress.item >= this.crowns;
   }
 
-  override get squareBomb(): boolean {
+  /** Сколько корон на поле в начале уровня */
+  get crowns(): number {
+    return this.level.layout.join('').split('o').length - 1;
+  }
+
+  override get campaign(): boolean {
     return true;
   }
 
@@ -124,8 +133,7 @@ export class LevelSession extends GameSession {
 
   /** Насколько выполнена задача на звезду */
   starTaskValue(task: StarTask): number {
-    if (task.kind === 'score') return this.score;
-    return task.kind === 'level2' ? this.level2Stars : this.progress.level3;
+    return task.kind === 'score' ? this.score : this.progress[task.kind];
   }
 
   protected override onStep(step: ResolveStep): void {
@@ -144,9 +152,9 @@ export class LevelSession extends GameSession {
       this.progress.item += step.items ?? 0;
     }
     if (step.kind === 'transform') {
-      this.level2Stars += (step.direct3 ?? 0) * 2;
+      // Ячейка 3 уровня сразу из фишек 1 уровня (в обход 2 уровня) идёт в ячейки 2 уровня за две
+      this.progress.level2 += (step.direct3 ?? 0) * 2;
       for (const { cell } of step.placements) {
-        if (cell?.kind === 'tile' && cell.level === 2) this.level2Stars++;
         if (cell?.kind === 'tile' && cell.level === 2) this.progress.level2++;
         if (cell?.kind === 'tile' && cell.level === 3) this.progress.level3++;
         if (cell?.kind === 'piece' && cell.type === 'megaBomb') this.progress.megaBomb++;

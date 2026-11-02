@@ -81,7 +81,7 @@ function moveValue(
   const { board, steps } = runMove(start, move, {
     colorCount: session.level.colors,
     rng,
-    squareBomb: true,
+    campaign: true,
   });
   const need = (kind: string) =>
     session.level.goals.some((goal) => goal.kind === kind && session.goalValue(goal) < goal.count);
@@ -240,7 +240,7 @@ export function play(level: Level, seed: number, bot: Bot, wallet = 0): GameResu
     finish(session.play(move));
     session.shuffleIfStuck();
     track.score.push(session.score);
-    track.level2.push(session.level2Stars);
+    track.level2.push(session.progress.level2);
     track.level3.push(session.progress.level3);
     level.goals.forEach((goal, i) => {
       const line = reached[i]!;

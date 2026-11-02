@@ -202,7 +202,7 @@ describe('resolveMove: ячейки 2–3 уровня', () => {
       B2 B2 R1
     `);
     const move = { type: 'swap', from: p(0, 2), to: p(0, 1) } as const;
-    const result = runMove(board, move, { ...ctx(), squareBomb: true });
+    const result = runMove(board, move, { ...ctx(), campaign: true });
     expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
       { pos: p(0, 1), cell: { kind: 'tile', color: 2, level: 3 } },
       { pos: p(0, 0), cell: { kind: 'tile', color: 2, level: 3 } },
@@ -217,10 +217,24 @@ describe('resolveMove: ячейки 2–3 уровня', () => {
     `);
     const move = { type: 'swap', from: p(1, 2), to: p(0, 2) } as const;
     const pieces = stepsOf(
-      runMove(board, move, { ...ctx(), squareBomb: true }).steps,
+      runMove(board, move, { ...ctx(), campaign: true }).steps,
       'transform',
     )[0]!.placements.flatMap(({ cell }) => (cell?.kind === 'piece' ? [cell.type] : []));
     expect(pieces).toEqual(['rocket']);
+  });
+
+  it('в кампании 6 фишек 1 уровня дают ячейку 3 уровня и бомбу, в свободной игре — без бомбы', () => {
+    const board = parseBoard(`
+      R1 R1 G1 R1 R1 R1
+      B1 Y1 R1 Y1 B1 G1
+    `);
+    const move = { type: 'swap', from: p(1, 2), to: p(0, 2) } as const;
+    const pieces = (campaign: boolean) =>
+      stepsOf(runMove(board, move, { ...ctx(), campaign }).steps, 'transform')[0]!.placements.map(
+        ({ cell }) => (cell?.kind === 'piece' ? cell.type : `${cell?.kind}`),
+      );
+    expect(pieces(true)).toEqual(['tile', 'bomb']);
+    expect(pieces(false)).toEqual(['tile']);
   });
 
   it('квадрат 2×2 из ячеек 3 уровня — как 4 ячейки: ×20 и радуга', () => {

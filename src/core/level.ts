@@ -20,15 +20,15 @@ export interface Goal {
 }
 
 /** Дополнительные задачи: каждая выполненная даёт ещё одну звезду. score — очки за уровень;
- *  level2 — ячейки 2 уровня, причём ячейка 3 уровня, собранная сразу из фишек, считается за две */
-export type StarTaskKind = 'score' | 'level2' | 'level3';
+ *  level2, level3 и item — считаются как одноимённые цели */
+export type StarTaskKind = 'score' | 'level2' | 'level3' | 'item';
 
 export interface StarTask {
   kind: StarTaskKind;
   count: number;
 }
 
-const STAR_TASK_KINDS: readonly StarTaskKind[] = ['score', 'level2', 'level3'];
+const STAR_TASK_KINDS: readonly StarTaskKind[] = ['score', 'level2', 'level3', 'item'];
 
 export interface Level {
   id: number;

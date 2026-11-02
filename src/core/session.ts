@@ -62,8 +62,8 @@ export class GameSession {
     return this.moves >= this.moveLimit;
   }
 
-  /** Квадрат 2×2 из ячеек 2 уровня даёт бомбу — только в кампании */
-  get squareBomb(): boolean {
+  /** Правила кампании: бомбы из квадрата 2×2 ячеек 2 уровня и из 6+ фишек 1 уровня */
+  get campaign(): boolean {
     return false;
   }
 
@@ -78,7 +78,7 @@ export class GameSession {
     const steps = resolveMove(this.board, move, {
       colorCount: this.colorCount,
       rng: this.rng,
-      squareBomb: this.squareBomb,
+      campaign: this.campaign,
     });
     let next = steps.next();
     while (!next.done) {

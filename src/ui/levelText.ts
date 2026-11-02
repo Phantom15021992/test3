@@ -21,6 +21,9 @@ const GOAL_NAMES: Readonly<Record<GoalKind, string>> = {
   item: 'Короны',
 };
 
+/** Ячейка 3 уровня, собранная сразу из фишек, засчитывается как две ячейки 2 уровня */
+const DIRECT3_NOTE = ' (3 ур. из фишек — за две)';
+
 /** Прогресс целей одной строкой: «Лёд 3/12 · Камни 0/4» */
 export function goalsText(session: LevelSession): string {
   return session.level.goals
@@ -52,7 +55,7 @@ function goalTaskText({ kind, count }: Goal): string {
   const n = String(count);
   switch (kind) {
     case 'level2':
-      return `собери ${n} ${plural(count, 'ячейку', 'ячейки', 'ячеек')} 2 уровня`;
+      return `собери ${n} ${plural(count, 'ячейку', 'ячейки', 'ячеек')} 2 уровня${DIRECT3_NOTE}`;
     case 'level3':
       return `собери ${n} ${plural(count, 'ячейку', 'ячейки', 'ячеек')} 3 уровня`;
     case 'megaBomb':
@@ -78,9 +81,11 @@ export function starTaskText({ kind, count }: StarTask): string {
     case 'score':
       return `Набрать ${count} ${plural(count, 'очко', 'очка', 'очков')}`;
     case 'level2':
-      return `Собрать ${count} ${cells} 2 уровня (3 ур. из фишек — за две)`;
+      return `Собрать ${count} ${cells} 2 уровня${DIRECT3_NOTE}`;
     case 'level3':
       return `Собрать ${count} ${cells} 3 уровня`;
+    case 'item':
+      return `Опустить на дно ${count} ${plural(count, 'корону', 'короны', 'корон')}`;
   }
 }
 

@@ -15,6 +15,7 @@ import {
 } from './board';
 import {
   BASE_POINTS_PER_TILE,
+  CAMPAIGN_BOMB_GROUP,
   COMBO_MAX_STEPS,
   LEVEL2_SCORE_MULTIPLIER,
   LEVEL2_BIG_MATCH_POINTS,
@@ -112,8 +113,9 @@ export interface ResolveResult {
 export interface ResolveContext {
   colorCount: number;
   rng: Rng;
-  /** Правило кампании: квадрат 2×2 из ячеек 2 уровня даёт ещё и бомбу (в свободной игре его нет) */
-  squareBomb?: boolean;
+  /** Правила кампании (в свободной игре их нет): квадрат 2×2 из ячеек 2 уровня и группа из 6+ фишек
+   *  1 уровня дают ещё и бомбу */
+  campaign?: boolean;
 }
 
 /** Защита от бесконечного цикла при ошибке в логике */
@@ -173,7 +175,9 @@ export function* resolveMove(
     if (placements.length === 0) return;
     current = cloneBoard(current);
     for (const { pos, cell } of placements) setCell(current, pos, cell);
-    yield direct3 > 0 ? { kind: 'transform', placements, direct3 } : { kind: 'transform', placements };
+    yield direct3 > 0
+      ? { kind: 'transform', placements, direct3 }
+      : { kind: 'transform', placements };
   }
 
   // ---------- Эффект самого хода ----------
@@ -249,14 +253,16 @@ export function* resolveMove(
       let direct3 = 0;
 
       for (const group of groups) {
-        const outcome = groupOutcome(group, current, landing, ctx.squareBomb ?? false);
+        const outcome = groupOutcome(group, current, landing, ctx.campaign ?? false);
         removal.push(...group.cells, ...boxesAround(current, group.cells));
         const step = dropped ? Math.min(++comboSteps, COMBO_MAX_STEPS) : 0;
         if (step > 0) combos.push({ at: pickSpot(group, []), step });
         spreadPoints(group.cells, Math.round(outcome.points * comboMultiplier(step)), points);
         placements.push(...outcome.placements);
         if (group.level === 1) {
-          direct3 += outcome.placements.filter(({ cell }) => isTile(cell) && cell.level === 3).length;
+          direct3 += outcome.placements.filter(
+            ({ cell }) => isTile(cell) && cell.level === 3,
+          ).length;
         }
       }
 
@@ -311,7 +317,7 @@ function groupOutcome(
   group: MatchGroup,
   board: Board,
   landing: Position[],
-  squareBomb: boolean,
+  campaign: boolean,
 ): GroupOutcome {
   const crossReward =
     group.level !== 3 && isSevenCross(group.cells) ? SEVEN_CROSS_REWARDS[group.level] : null;
@@ -342,7 +348,16 @@ function groupOutcome(
     if (pos) placements.push({ pos, cell: { kind: 'piece', type: 'rocket', direction } });
   }
   // 4 ячейки 2 уровня не в линию — это квадрат 2×2: в кампании, как линия даёт ракету, он даёт бомбу
-  if (squareBomb && group.level === 2 && group.cells.length === 4 && !direction) {
+  if (campaign && group.level === 2 && group.cells.length === 4 && !direction) {
+    const pos = neighborInGroup(
+      open,
+      spot,
+      placements.map((placement) => placement.pos),
+    );
+    if (pos) placements.push({ pos, cell: { kind: 'piece', type: 'bomb' } });
+  }
+  // 6+ фишек 1 уровня (и фигура из 7 клеток): к ячейкам 3 уровня — маленькая бомба
+  if (campaign && group.level === 1 && group.cells.length >= CAMPAIGN_BOMB_GROUP) {
     const pos = neighborInGroup(
       open,
       spot,
