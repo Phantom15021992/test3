@@ -1,11 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import type { Level } from '../../src/core/level';
 import { LEVELS } from '../../src/levels';
-import { levelBriefing, levelNumber, levelTitle, starTaskText } from '../../src/ui/levelText';
+import { LevelSession } from '../../src/core/levelSession';
+import {
+  goalsText,
+  levelBriefing,
+  levelNumber,
+  levelTitle,
+  starTaskText,
+} from '../../src/ui/levelText';
 
 const level = (overrides: Partial<Level>): Level => ({ ...LEVELS[0]!, ...overrides });
 
 describe('подписи уровня', () => {
+  it('короны в прогрессе — из всех на поле: после первой «1/2»', () => {
+    const session = new LevelSession(
+      1,
+      level({ layout: ['o...', '....', '....', '...o'], goals: [{ kind: 'item', count: 1 }] }),
+    );
+    expect(goalsText(session)).toBe('Короны 0/2');
+    session.progress.item = 1;
+    expect(goalsText(session)).toBe('Короны 1/2');
+  });
+
   it('номер — этаж-уровень', () => {
     expect(levelNumber(LEVELS[9]!)).toBe('1-10');
     expect(levelTitle(LEVELS[9]!)).toBe('1-10');

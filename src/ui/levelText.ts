@@ -24,10 +24,17 @@ const GOAL_NAMES: Readonly<Record<GoalKind, string>> = {
 /** Ячейка 3 уровня, собранная сразу из фишек, засчитывается как две ячейки 2 уровня */
 const DIRECT3_NOTE = ' (3 ур. из фишек — за две)';
 
-/** Прогресс целей одной строкой: «Лёд 3/12 · Камни 0/4» */
+/**
+ * Прогресс целей одной строкой: «Лёд 3/12 · Камни 0/4». Короны — из всех на поле («1/2»):
+ * уровень идёт до последней короны, и «1/1» выглядело бы так, будто он уже закончен
+ */
 export function goalsText(session: LevelSession): string {
   return session.level.goals
-    .map((goal) => `${GOAL_NAMES[goal.kind]} ${session.goalValue(goal)}/${goal.count}`)
+    .map((goal) =>
+      goal.kind === 'item'
+        ? `${GOAL_NAMES.item} ${Math.min(session.progress.item, session.crowns)}/${session.crowns}`
+        : `${GOAL_NAMES[goal.kind]} ${session.goalValue(goal)}/${goal.count}`,
+    )
     .join('  ·  ');
 }
 
