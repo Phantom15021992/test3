@@ -67,6 +67,13 @@ export const ROCKET_BOMB_WIDTH = 3;
 export const MEGA_BOMB_ROCKET_WIDTH = 5;
 
 // Спецфишки, которые можно купить: за очки счёта в свободной игре, за звёзды этажа в кампании
+/** Сколько раз за попытку уровня кампании можно купить спецфишку; нет в списке — без ограничения */
+export const CAMPAIGN_BONUS_LIMITS: Readonly<
+  Partial<Record<'bomb' | 'rocket' | 'manipulator' | 'rainbow', number>>
+> = {
+  bomb: 1,
+};
+
 export const BONUS_TIERS: readonly {
   cost: number;
   stars: number;

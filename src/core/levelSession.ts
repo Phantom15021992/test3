@@ -1,5 +1,6 @@
 import { cloneBoard, setCell, type Piece, type Position } from './board';
 import { aimedPiece, bonusStars, isBonusTarget, type AimedBonus, type BonusType } from './bonus';
+import { CAMPAIGN_BONUS_LIMITS } from './config';
 import { recordPurchase } from './gameStats';
 import { boardTemplate, iceTemplate, type Goal, type GoalKind, type Level } from './level';
 import type { ResolveStep } from './resolve';
@@ -65,10 +66,18 @@ export class LevelSession extends GameSession {
     return null;
   }
 
-  /** Платит за покупку; false — звёзд не хватает */
+  /** Хватает ли звёзд и не исчерпан ли лимит покупок этой спецфишки на уровне */
+  canBuy(type: BonusType): boolean {
+    const limit = CAMPAIGN_BONUS_LIMITS[type];
+    return (
+      this.starsLeft >= bonusStars(type) && (limit === undefined || this.stats.bought[type] < limit)
+    );
+  }
+
+  /** Платит за покупку; false — звёзд не хватает или лимит исчерпан */
   payBonus(type: BonusType): boolean {
+    if (!this.canBuy(type)) return false;
     const cost = bonusStars(type);
-    if (this.starsLeft < cost) return false;
     this.starsSpent += cost;
     recordPurchase(this.stats, type, 0);
     return true;

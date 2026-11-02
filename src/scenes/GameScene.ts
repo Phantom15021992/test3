@@ -21,7 +21,7 @@ import {
   type Difficulty,
   type DifficultyId,
 } from '../core/config';
-import { bonusStars, isBonusTarget, type AimedBonus, type BonusType } from '../core/bonus';
+import { isBonusTarget, type AimedBonus, type BonusType } from '../core/bonus';
 import { strongestMove, type HintKind } from '../core/hint';
 import { areAdjacent, isValidSwap } from '../core/moves';
 import type { ChoiceOption, ResolveStep } from '../core/resolve';
@@ -555,7 +555,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Кнопка покупки: в кампании включает выбор цели, повторное нажатие его отменяет */
   private chooseBonus(session: LevelSession, type: BonusType): void {
-    if (session.starsLeft < bonusStars(type)) return;
+    if (!session.canBuy(type)) return;
     const next = buyingMode(type);
     const same = this.mode.type === next.type && (next.type !== 'aim' || sameAim(this.mode, next));
     this.setSelected(null);
@@ -642,7 +642,13 @@ export class GameScene extends Phaser.Scene {
     // Пока выбирается цель покупки, кнопки работают: ими её можно отменить или заменить
     const { session } = this;
     const budget = session instanceof LevelSession ? session.starsLeft : session.score;
-    this.bonusShop.update(budget, !this.busy && (this.mode.type === 'idle' || isBuying(this.mode)));
+    const allowed =
+      session instanceof LevelSession ? (type: BonusType) => session.canBuy(type) : undefined;
+    this.bonusShop.update(
+      budget,
+      !this.busy && (this.mode.type === 'idle' || isBuying(this.mode)),
+      allowed,
+    );
     this.walletText?.setText(`★ ${budget}`);
   }
 }

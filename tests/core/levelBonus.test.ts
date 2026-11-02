@@ -115,6 +115,17 @@ describe('покупка спецфишек в кампании', () => {
     expect(isBonusTarget(cells, { row: 2, col: 2 })).toBe(true);
   });
 
+  it('бомбу можно купить только одну за попытку, остальное — без ограничения', () => {
+    const session = sessionOn(board(), 20);
+    expect(session.canBuy('bomb')).toBe(true);
+    expect(session.aimBonus('bomb', { row: 0, col: 0 })).not.toBeNull();
+    expect(session.canBuy('bomb')).toBe(false);
+    expect(session.aimBonus('bomb', { row: 3, col: 3 })).toBeNull();
+    expect(session.starsSpent).toBe(bonusStars('bomb'));
+    expect(session.payBonus('rocket')).toBe(true);
+    expect(session.payBonus('rocket')).toBe(true);
+  });
+
   it('без звёзд или в запрещённую клетку ничего не списывается', () => {
     const poor = sessionOn(board(), 2);
     expect(poor.aimBonus('bomb', { row: 0, col: 0 })).toBeNull();

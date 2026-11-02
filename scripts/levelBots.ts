@@ -15,7 +15,7 @@ import {
   type ColorId,
   type Position,
 } from '../src/core/board';
-import { aimedPiece, bonusStars, isBonusTarget, type AimedBonus } from '../src/core/bonus';
+import { aimedPiece, isBonusTarget, type AimedBonus } from '../src/core/bonus';
 import type { Level } from '../src/core/level';
 import { LevelSession } from '../src/core/levelSession';
 import { findPossibleMoves } from '../src/core/moves';
@@ -166,7 +166,7 @@ function aimValue(session: LevelSession, bonus: AimedBonus, at: Position, rng: R
 
 /** Самая полезная покупка, которая по карману; манипулятор бот не применяет */
 function bestPurchase(session: LevelSession, rng: Rng): Purchase | null {
-  const { board, starsLeft } = session;
+  const { board } = session;
   const cells = shuffled(
     allPositions(board).filter((pos) => isBonusTarget(board, pos)),
     rng,
@@ -175,10 +175,10 @@ function bestPurchase(session: LevelSession, rng: Rng): Purchase | null {
   const aim = (bonus: AimedBonus, at: Position) => {
     options.push({ kind: 'aim', bonus, at, value: aimValue(session, bonus, at, rng) });
   };
-  if (starsLeft >= bonusStars('bomb')) {
+  if (session.canBuy('bomb')) {
     cells.slice(0, MAX_AIM_CELLS).forEach((at) => aim('bomb', at));
   }
-  if (starsLeft >= bonusStars('rocket')) {
+  if (session.canBuy('rocket')) {
     // Ракета бьёт по всей строке: достаточно одной клетки в каждой
     const rows = new Set(cells.map((pos) => pos.row));
     rows.forEach((row) =>
@@ -188,7 +188,7 @@ function bestPurchase(session: LevelSession, rng: Rng): Purchase | null {
       ),
     );
   }
-  if (starsLeft >= bonusStars('rainbow')) {
+  if (session.canBuy('rainbow')) {
     const colors = new Set(
       allPositions(board).flatMap((pos) => {
         const cell = getCell(board, pos);

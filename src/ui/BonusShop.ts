@@ -22,6 +22,7 @@ const BONUS_ICONS: Record<BonusType, Piece> = {
 };
 
 interface ShopButton {
+  type: BonusType;
   cost: number;
   container: Phaser.GameObjects.Container;
   ring: Phaser.GameObjects.Graphics;
@@ -35,6 +36,7 @@ export class BonusShop {
   private readonly buttons: ShopButton[];
   private budget = 0;
   private enabled = true;
+  private allowed: (type: BonusType) => boolean = () => true;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -60,7 +62,7 @@ export class BonusShop {
         .zone(0, 0, BUTTON_RADIUS * 2, BUTTON_RADIUS * 2)
         .setInteractive({ useHandCursor: true })
         .on('pointerup', () => {
-          if (this.enabled && this.budget >= cost) onBuy(type);
+          if (this.enabled && this.budget >= cost && this.allowed(type)) onBuy(type);
         });
       const container = scene.add.container(x, y, [circle, icon, ring, hit]);
       const costText = scene.add
@@ -70,16 +72,22 @@ export class BonusShop {
           color: UI_MUTED_TEXT_COLOR,
         })
         .setOrigin(0.5);
-      return { cost, container, ring, costText, pulse: null };
+      return { type, cost, container, ring, costText, pulse: null };
     });
     this.update(0, true);
   }
 
-  update(budget: number, enabled: boolean): void {
+  /** allowed — не исчерпан ли лимит покупок этой спецфишки (в кампании бомба одна на уровень) */
+  update(
+    budget: number,
+    enabled: boolean,
+    allowed: (type: BonusType) => boolean = () => true,
+  ): void {
     this.budget = budget;
     this.enabled = enabled;
+    this.allowed = allowed;
     for (const button of this.buttons) {
-      const ready = budget >= button.cost;
+      const ready = budget >= button.cost && allowed(button.type);
       button.container.setAlpha(ready ? 1 : LOCKED_ALPHA);
       button.ring.setVisible(ready);
       button.costText.setColor(ready ? UI_TEXT_COLOR : UI_MUTED_TEXT_COLOR);
