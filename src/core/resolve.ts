@@ -84,8 +84,9 @@ export interface Placement {
 
 export type ResolveStep =
   | { kind: 'swap'; a: Position; b: Position }
-  /** Клетки заменяются новыми: созданные спецфишки, объединённые ячейки, превращения в комбо */
-  | { kind: 'transform'; placements: Placement[] }
+  /** Клетки заменяются новыми: созданные спецфишки, объединённые ячейки, превращения в комбо.
+   *  direct3 — сколько из новых ячеек 3 уровня собрано сразу из фишек 1 уровня (для задачи на звезду) */
+  | { kind: 'transform'; placements: Placement[]; direct3?: number }
   /** pieces — сколько спецфишек среди убранных клеток (сработали) — для статистики партии;
    *  stones, boxes и items — сколько камней и коробок сломано и корон дошло до дна, а links —
    *  фишки, с которых снято звено цепи (они остаются на месте; left — сколько звеньев ещё держит) */
@@ -165,11 +166,14 @@ export function* resolveMove(
     };
   }
 
-  function* place(placements: Placement[]): Generator<ResolveStep, void, ChoiceOption | undefined> {
+  function* place(
+    placements: Placement[],
+    direct3 = 0,
+  ): Generator<ResolveStep, void, ChoiceOption | undefined> {
     if (placements.length === 0) return;
     current = cloneBoard(current);
     for (const { pos, cell } of placements) setCell(current, pos, cell);
-    yield { kind: 'transform', placements };
+    yield direct3 > 0 ? { kind: 'transform', placements, direct3 } : { kind: 'transform', placements };
   }
 
   // ---------- Эффект самого хода ----------
@@ -242,6 +246,7 @@ export function* resolveMove(
       const placements: Placement[] = [];
       const points = new Map<string, number>();
       const combos: ComboHit[] = [];
+      let direct3 = 0;
 
       for (const group of groups) {
         const outcome = groupOutcome(group, current, landing, ctx.squareBomb ?? false);
@@ -250,10 +255,13 @@ export function* resolveMove(
         if (step > 0) combos.push({ at: pickSpot(group, []), step });
         spreadPoints(group.cells, Math.round(outcome.points * comboMultiplier(step)), points);
         placements.push(...outcome.placements);
+        if (group.level === 1) {
+          direct3 += outcome.placements.filter(({ cell }) => isTile(cell) && cell.level === 3).length;
+        }
       }
 
       yield* destroy(removal, undefined, points, combos);
-      yield* place(placements);
+      yield* place(placements, direct3);
     }
 
     landing = [];

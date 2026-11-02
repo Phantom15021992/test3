@@ -16,8 +16,8 @@ const level: Level = {
   moves: 10,
   goals: [{ kind: 'level3', count: 50 }],
   stars: [
-    { kind: 'movesLeft', count: 1 },
-    { kind: 'movesLeft', count: 2 },
+    { kind: 'score', count: 1 },
+    { kind: 'score', count: 2 },
   ],
 };
 
@@ -178,6 +178,7 @@ describe('покупка спецфишек в кампании', () => {
     const session = sessionOn(board(), 5);
     session.payBonus('manipulator');
     session.progress.level3 = 50;
+    session.score = 2;
     expect(session.stars).toBe(3);
   });
 });

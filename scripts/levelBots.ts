@@ -42,6 +42,8 @@ export interface GameResult {
   movesLeft: number;
   /** Какая доля целей выполнена: показывает, насколько близко было поражение */
   done: number;
+  /** После каждого хода: очки и счётчики задач на звёзды — по ним подгоняются условия звёзд */
+  track: { score: number[]; level2: number[]; level3: number[] };
 }
 
 function candidates(session: LevelSession): PlayerMove[] {
@@ -224,6 +226,7 @@ export function play(level: Level, seed: number, bot: Bot, wallet = 0): GameResu
   const session = new LevelSession(seed, level, wallet);
   const rng = createRng(seed ^ 0x5bd1e995);
   const reached = level.goals.map((): number[] => []);
+  const track: GameResult['track'] = { score: [], level2: [], level3: [] };
   while (!session.isOver) {
     const pick = pickMove(session, bot, rng);
     // Покупка и есть ход, поэтому бот берёт её, когда она полезнее лучшего обычного хода
@@ -236,6 +239,9 @@ export function play(level: Level, seed: number, bot: Bot, wallet = 0): GameResu
     if (!move) break;
     finish(session.play(move));
     session.shuffleIfStuck();
+    track.score.push(session.score);
+    track.level2.push(session.level2Stars);
+    track.level3.push(session.progress.level3);
     level.goals.forEach((goal, i) => {
       const line = reached[i]!;
       while (line.length < Math.min(session.progress[goal.kind], goal.count)) {
@@ -251,5 +257,6 @@ export function play(level: Level, seed: number, bot: Bot, wallet = 0): GameResu
     stars: session.stars,
     movesLeft: session.goalsDone ? session.movesLeft : 0,
     done: shares.reduce((sum, share) => sum + share, 0) / shares.length,
+    track,
   };
 }

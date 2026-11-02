@@ -19,8 +19,16 @@ export interface Goal {
   count: number;
 }
 
-/** Дополнительные задачи: каждая выполненная даёт ещё одну звезду */
-export type StarTask = { kind: 'movesLeft'; count: number } | { kind: 'level3'; count: number };
+/** Дополнительные задачи: каждая выполненная даёт ещё одну звезду. score — очки за уровень;
+ *  level2 — ячейки 2 уровня, причём ячейка 3 уровня, собранная сразу из фишек, считается за две */
+export type StarTaskKind = 'score' | 'level2' | 'level3';
+
+export interface StarTask {
+  kind: StarTaskKind;
+  count: number;
+}
+
+const STAR_TASK_KINDS: readonly StarTaskKind[] = ['score', 'level2', 'level3'];
 
 export interface Level {
   id: number;
@@ -110,6 +118,10 @@ export function parseLevel(value: unknown): Level {
   }
   if (!Array.isArray(level.stars) || level.stars.length !== STAR_TASKS) {
     fail(`нужно ${STAR_TASKS} дополнительные задачи`);
+  }
+  for (const task of level.stars) {
+    if (!STAR_TASK_KINDS.includes(task.kind)) fail(`неизвестная задача ${task.kind}`);
+    if (!Number.isInteger(task.count) || task.count < 1) fail(`нет числа у задачи ${task.kind}`);
   }
   return level;
 }

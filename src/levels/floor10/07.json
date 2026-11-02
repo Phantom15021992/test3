@@ -32,12 +32,12 @@
   ],
   "stars": [
     {
-      "kind": "movesLeft",
-      "count": 6
+      "kind": "score",
+      "count": 2000
     },
     {
-      "kind": "movesLeft",
-      "count": 14
+      "kind": "level2",
+      "count": 17
     }
   ]
 }

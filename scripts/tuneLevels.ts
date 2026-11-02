@@ -5,10 +5,19 @@
 // каждая цель. Эта одна серия партий сразу показывает, сколько партий он прошёл бы при любом лимите
 // и любом размере целей. Поэтому скрипт берёт самые большие цели, которые укладываются в разумное
 // число ходов (лишние препятствия остаются на поле помехой), и выставляет ходы и условия звёзд.
+// Звёзды: вторая — за очки, третья — за ячейки (2 уровня на нечётных местах этажа, 3 — на чётных);
+// пороги берутся из тех же партий: сколько очков и ячеек было к ходу, когда выполнены цели.
 // С --keep-moves цели и ходы не трогаются: только условия звёзд (их на первом этаже задал владелец).
 // С --only подгоняются только эти места этажа: остальные уровни могли быть поправлены вручную.
 
-import { FLOOR_SIZE, floorOf, type Goal, type Level, type StarTask } from '../src/core/level';
+import {
+  FLOOR_SIZE,
+  floorOf,
+  type Goal,
+  type Level,
+  type StarTask,
+  type StarTaskKind,
+} from '../src/core/level';
 import { LEVELS } from '../src/levels';
 import { levelNumber } from '../src/ui/levelText';
 import { play, type GameResult } from './levelBots';
@@ -54,6 +63,56 @@ function finishedAt(game: GameResult, goals: readonly Goal[]): number {
   return Math.max(...moves);
 }
 
+/** Порог, которого достигает доля share значений: берём снизу, чтобы доля не вышла меньше */
+function threshold(values: readonly number[], share: number): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  if (sorted.length === 0) return 1;
+  return sorted[Math.max(0, Math.floor(sorted.length * (1 - share)))]!;
+}
+
+/**
+ * Вторая звезда — очки: её берут примерно (win + three) / 2 партий. Третья — ячейки: обе задачи
+ * вместе — примерно three. Считается по ходу, на котором партия выполнила цели.
+ */
+function starTasks(
+  played: readonly GameResult[],
+  goals: readonly Goal[],
+  moves: number,
+  place: number,
+  win: number,
+  three: number,
+): StarTask[] {
+  const cells: StarTaskKind = place % 2 === 0 ? 'level2' : 'level3';
+  const won = played.flatMap((game) => {
+    const at = finishedAt(game, goals);
+    return at <= moves
+      ? [{ score: game.track.score[at - 1] ?? 0, cells: game.track[cells][at - 1] ?? 0 }]
+      : [];
+  });
+  const middle = (win + three) / 2;
+  const score = Math.max(
+    10,
+    Math.floor(
+      threshold(
+        won.map((game) => game.score),
+        middle / win,
+      ) / 10,
+    ) * 10,
+  );
+  const rich = won.filter((game) => game.score >= score);
+  const count = Math.max(
+    1,
+    threshold(
+      rich.map((game) => game.cells),
+      three / middle,
+    ),
+  );
+  return [
+    { kind: 'score', count: score },
+    { kind: cells, count },
+  ];
+}
+
 function tune(level: Level, place: number) {
   const open: Level = { ...level, moves: NO_LIMIT };
   const played = Array.from({ length: games }, (_, i) =>
@@ -76,14 +135,8 @@ function tune(level: Level, place: number) {
     ? level.moves
     : Math.min(NO_LIMIT, Math.max(MIN_MOVES, quantile(used, winShare)));
   const win = used.filter((value) => value <= moves).length / games;
-  const left = (share: number) => Math.max(1, moves - Math.min(moves, quantile(used, share)));
   const three = Math.min(THREE_STARS_CURVE[place]!, win);
-  const first = Math.min(left((win + three) / 2), moves - 1);
-  const second = Math.max(first + 1, Math.min(left(three), moves - 1));
-  const stars: StarTask[] = [
-    { kind: 'movesLeft', count: first },
-    { kind: 'movesLeft', count: second },
-  ];
+  const stars = starTasks(played, goals, moves, place, win, three);
   return { goals, moves, stars, win };
 }
 

@@ -659,11 +659,11 @@ function* resolveMove(board, move, ctx) {
       ...combos.length > 0 && { combos }
     };
   }
-  function* place(placements) {
+  function* place(placements, direct3 = 0) {
     if (placements.length === 0) return;
     current = cloneBoard(current);
     for (const { pos, cell } of placements) setCell(current, pos, cell);
-    yield { kind: "transform", placements };
+    yield direct3 > 0 ? { kind: "transform", placements, direct3 } : { kind: "transform", placements };
   }
   switch (move.type) {
     case "swap": {
@@ -729,6 +729,7 @@ function* resolveMove(board, move, ctx) {
       const placements = [];
       const points = /* @__PURE__ */ new Map();
       const combos = [];
+      let direct3 = 0;
       for (const group of groups) {
         const outcome = groupOutcome(group, current, landing, ctx.squareBomb ?? false);
         removal.push(...group.cells, ...boxesAround(current, group.cells));
@@ -736,9 +737,12 @@ function* resolveMove(board, move, ctx) {
         if (step > 0) combos.push({ at: pickSpot(group, []), step });
         spreadPoints(group.cells, Math.round(outcome.points * comboMultiplier(step)), points);
         placements.push(...outcome.placements);
+        if (group.level === 1) {
+          direct3 += outcome.placements.filter(({ cell }) => isTile(cell) && cell.level === 3).length;
+        }
       }
       yield* destroy(removal, void 0, points, combos);
-      yield* place(placements);
+      yield* place(placements, direct3);
     }
     landing = [];
     dropped = true;

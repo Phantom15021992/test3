@@ -72,12 +72,16 @@ function goalTaskText({ kind, count }: Goal): string {
   }
 }
 
-export function starTaskText(task: StarTask): string {
-  const { count } = task;
-  if (task.kind === 'movesLeft') {
-    return `Закончить, когда осталось ${count} ${plural(count, 'ход', 'хода', 'ходов')} или больше`;
+export function starTaskText({ kind, count }: StarTask): string {
+  const cells = plural(count, 'ячейку', 'ячейки', 'ячеек');
+  switch (kind) {
+    case 'score':
+      return `Набрать ${count} ${plural(count, 'очко', 'очка', 'очков')}`;
+    case 'level2':
+      return `Собрать ${count} ${cells} 2 уровня (3 уровень сразу из фишек — за две)`;
+    case 'level3':
+      return `Собрать ${count} ${cells} 3 уровня`;
   }
-  return `Собрать ${count} ${plural(count, 'ячейку', 'ячейки', 'ячеек')} 3 уровня`;
 }
 
 /** Задание и условия звёзд — подробно, внизу экрана уровня */

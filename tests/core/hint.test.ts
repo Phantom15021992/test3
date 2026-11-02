@@ -23,8 +23,8 @@ const iceLevel: Level = {
   moves: 10,
   goals: [{ kind: 'ice', count: 3 }],
   stars: [
-    { kind: 'movesLeft', count: 1 },
-    { kind: 'movesLeft', count: 2 },
+    { kind: 'score', count: 1 },
+    { kind: 'score', count: 2 },
   ],
 };
 

@@ -36,12 +36,12 @@
   ],
   "stars": [
     {
-      "kind": "movesLeft",
-      "count": 2
+      "kind": "score",
+      "count": 880
     },
     {
-      "kind": "movesLeft",
-      "count": 5
+      "kind": "level3",
+      "count": 3
     }
   ]
 }

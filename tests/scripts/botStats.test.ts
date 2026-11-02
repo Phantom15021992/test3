@@ -11,8 +11,8 @@ const level: Level = {
   moves: 27,
   goals: [{ kind: 'chain', count: 5 }],
   stars: [
-    { kind: 'movesLeft', count: 1 },
-    { kind: 'movesLeft', count: 6 },
+    { kind: 'score', count: 1 },
+    { kind: 'score', count: 6 },
   ],
 };
 

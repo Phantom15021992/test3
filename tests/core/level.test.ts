@@ -34,8 +34,8 @@ function level(overrides: Partial<Level> = {}): Level {
     moves: 10,
     goals: [{ kind: 'level2', count: 1 }],
     stars: [
-      { kind: 'movesLeft', count: 3 },
-      { kind: 'movesLeft', count: 5 },
+      { kind: 'score', count: 30 },
+      { kind: 'level2', count: 1 },
     ],
     ...overrides,
   };
@@ -444,7 +444,7 @@ describe('партия на уровне', () => {
     expect(session.ice[2]?.[1]).toBe(true);
   });
 
-  it('цели считаются, уровень кончается сразу, звёзды — за запас ходов', () => {
+  it('цели считаются, уровень кончается сразу, звёзды — за очки и ячейки', () => {
     const session = new LevelSession(5, level());
     expect(session.isOver).toBe(false);
     swap(
@@ -459,6 +459,41 @@ describe('партия на уровне', () => {
     expect(session.isOver).toBe(true);
     expect(session.movesLeft).toBe(9);
     expect(session.stars).toBe(3);
+  });
+
+  it('задача на звезду не выполнена — звезды нет', () => {
+    const session = new LevelSession(
+      5,
+      level({
+        stars: [
+          { kind: 'score', count: 100000 },
+          { kind: 'level3', count: 50 },
+        ],
+      }),
+    );
+    swap(
+      session,
+      `
+      R1 R1 G1
+      B1 Y1 R1
+    `,
+    );
+    expect(session.goalsDone).toBe(true);
+    expect(session.stars).toBe(1);
+  });
+
+  it('ячейка 3 уровня сразу из фишек идёт в задачу на звезду за две ячейки 2 уровня', () => {
+    const session = new LevelSession(5, level({ goals: [{ kind: 'level3', count: 50 }] }));
+    swap(
+      session,
+      `
+      R1 R1 G1 R1 R1
+      B1 Y1 R1 Y1 B1
+    `,
+    );
+    expect(session.progress.level3).toBeGreaterThanOrEqual(1);
+    expect(session.level2Stars).toBeGreaterThanOrEqual(2);
+    expect(session.level2Stars).toBe(session.progress.level2 + 2);
   });
 
   it('ходы кончились, цели не выполнены — ноль звёзд', () => {
@@ -481,7 +516,16 @@ describe('проверка описания уровня', () => {
     ['нет целей', { goals: [] }],
     ['неизвестная цель', { goals: [{ kind: 'score', count: 1 }] }],
     ['льда меньше цели', { goals: [{ kind: 'ice', count: 5 }] }],
-    ['не две задачи', { stars: [{ kind: 'movesLeft', count: 1 }] }],
+    ['не две задачи', { stars: [{ kind: 'score', count: 1 }] }],
+    [
+      'запас ходов больше не задача',
+      {
+        stars: [
+          { kind: 'movesLeft', count: 1 },
+          { kind: 'score', count: 1 },
+        ],
+      },
+    ],
   ])('отклоняет: %s', (_, overrides) => {
     expect(() => parseLevel(level(overrides as Partial<Level>))).toThrow();
   });

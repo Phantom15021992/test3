@@ -16,7 +16,7 @@ describe('подписи уровня', () => {
       level({
         goals: [{ kind: 'ice', count: 14 }],
         stars: [
-          { kind: 'movesLeft', count: 6 },
+          { kind: 'score', count: 1500 },
           { kind: 'level3', count: 2 },
         ],
       }),
@@ -24,7 +24,7 @@ describe('подписи уровня', () => {
     expect(text.split('\n')).toEqual([
       'Задание: сломай 14 льдин',
       '★ Выполнить задание',
-      '★ Закончить, когда осталось 6 ходов или больше',
+      '★ Набрать 1500 очков',
       '★ Собрать 2 ячейки 3 уровня',
     ]);
   });
@@ -52,8 +52,11 @@ describe('подписи уровня', () => {
     expect(first).toBe(`Задание: ${expected}`);
   });
 
-  it('склоняется и запас ходов', () => {
-    expect(starTaskText({ kind: 'movesLeft', count: 1 })).toContain('1 ход или больше');
-    expect(starTaskText({ kind: 'movesLeft', count: 3 })).toContain('3 хода или больше');
+  it('задачи на звёзды: очки и ячейки', () => {
+    expect(starTaskText({ kind: 'score', count: 1 })).toBe('Набрать 1 очко');
+    expect(starTaskText({ kind: 'score', count: 3 })).toBe('Набрать 3 очка');
+    expect(starTaskText({ kind: 'level2', count: 5 })).toBe(
+      'Собрать 5 ячеек 2 уровня (3 уровень сразу из фишек — за две)',
+    );
   });
 });
