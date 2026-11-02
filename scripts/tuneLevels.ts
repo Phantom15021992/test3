@@ -5,7 +5,8 @@
 // каждая цель. Эта одна серия партий сразу показывает, сколько партий он прошёл бы при любом лимите
 // и любом размере целей. Поэтому скрипт берёт самые большие цели, которые укладываются в разумное
 // число ходов (лишние препятствия остаются на поле помехой), и выставляет ходы и условия звёзд.
-// Звёзды: вторая — за очки, третья — за ячейки (2 уровня на нечётных местах этажа, 3 — на чётных);
+// Уменьшил цель — лишние препятствия убираются с поля. Звёзды: вторая — за очки, третья — за ячейки
+// (2 уровня на нечётных местах этажа, 3 — на чётных; с коронами — за все короны поля);
 // пороги берутся из тех же партий: сколько очков и ячеек было к ходу, когда выполнены цели.
 // С --keep-moves цели и ходы не трогаются: только условия звёзд (их на первом этаже задал владелец).
 // С --only подгоняются только эти места этажа: остальные уровни могли быть поправлены вручную.
@@ -75,6 +76,7 @@ function threshold(values: readonly number[], share: number): number {
  * вместе — примерно three. Считается по ходу, на котором партия выполнила цели.
  */
 function starTasks(
+  level: Level,
   played: readonly GameResult[],
   goals: readonly Goal[],
   moves: number,
@@ -107,10 +109,47 @@ function starTasks(
       three / middle,
     ),
   );
+  // С коронами третья звезда — за все короны поля, цель — одна
+  const crowns = level.layout.join('').split('o').length - 1;
   return [
     { kind: 'score', count: score },
-    { kind: cells, count },
+    crowns > 0 ? { kind: 'item', count: crowns } : { kind: cells, count },
   ];
+}
+
+const OBSTACLES: Partial<Record<Goal['kind'], string>> = { ice: 'i', box: 'b', chain: '123' };
+
+/**
+ * Лишние препятствия убираются: их на поле ровно столько, сколько требует цель, иначе у игрока
+ * остаётся чувство незавершённости. Убираем сверху, парами зеркальных клеток, чтобы поле осталось
+ * симметричным.
+ */
+function trimLayout(layout: readonly string[], goals: readonly Goal[]): string[] {
+  const grid = layout.map((line) => [...line]);
+  const width = grid[0]?.length ?? 0;
+  for (const goal of goals) {
+    const symbols = OBSTACLES[goal.kind];
+    if (!symbols) continue;
+    const cells = () =>
+      grid.flatMap((line, row) =>
+        line.flatMap((symbol, col) => (symbols.includes(symbol) ? [{ row, col }] : [])),
+      );
+    for (let list = cells(); list.length > goal.count; list = cells()) {
+      const mirror = (col: number) => width - 1 - col;
+      const single = list.find(({ col }) => col === mirror(col));
+      const pair = list.find(
+        ({ row, col }) => col !== mirror(col) && symbols.includes(grid[row]![mirror(col)]!),
+      );
+      if ((list.length - goal.count) % 2 === 1 || !pair) {
+        const { row, col } = single ?? list[0]!;
+        grid[row]![col] = '.';
+      } else {
+        grid[pair.row]![pair.col] = '.';
+        grid[pair.row]![mirror(pair.col)] = '.';
+      }
+    }
+  }
+  return grid.map((line) => line.join(''));
 }
 
 function tune(level: Level, place: number) {
@@ -136,8 +175,8 @@ function tune(level: Level, place: number) {
     : Math.min(NO_LIMIT, Math.max(MIN_MOVES, quantile(used, winShare)));
   const win = used.filter((value) => value <= moves).length / games;
   const three = Math.min(THREE_STARS_CURVE[place]!, win);
-  const stars = starTasks(played, goals, moves, place, win, three);
-  return { goals, moves, stars, win };
+  const stars = starTasks(level, played, goals, moves, place, win, three);
+  return { goals, moves, stars, win, layout: trimLayout(level.layout, goals) };
 }
 
 const fs = require('node:fs');
@@ -145,13 +184,13 @@ for (const level of LEVELS) {
   if (floorOf(level.id) !== floor) continue;
   const place = (level.id - 1) % FLOOR_SIZE;
   if (only && !only.includes(place + 1)) continue;
-  const { goals, moves, stars, win } = tune(level, place);
+  const { goals, moves, stars, win, layout } = tune(level, place);
   const name = String(place + 1).padStart(2, '0');
   const path = `src/levels/floor${String(floor).padStart(2, '0')}/${name}.json`;
   const file = JSON.parse(fs.readFileSync(path, 'utf8')) as Level;
   fs.writeFileSync(
     path,
-    `${JSON.stringify({ ...file, goals, moves, stars }, null, 2)}
+    `${JSON.stringify({ ...file, layout, goals, moves, stars }, null, 2)}
 `,
   );
   const text = goals.map((goal) => `${goal.kind} ${goal.count}`).join(', ');

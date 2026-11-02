@@ -38,6 +38,28 @@ describe('кампания', () => {
     }
   });
 
+  it('льда, коробок и цепей на поле ровно столько, сколько в цели: лишних нет', () => {
+    const symbols = { ice: 'i', box: 'b', chain: '123' } as const;
+    for (const { id, layout, goals } of LEVELS) {
+      const all = layout.join('');
+      for (const [kind, chars] of Object.entries(symbols)) {
+        const onBoard = [...all].filter((symbol) => chars.includes(symbol)).length;
+        const goal = goals.find((g) => g.kind === kind)?.count ?? 0;
+        expect(onBoard, `уровень ${id}, ${kind}`).toBe(goal);
+      }
+    }
+  });
+
+  it('с коронами: на поле 2, цель — одна, третья звезда — за обе', () => {
+    for (const { id, layout, goals, stars } of LEVELS) {
+      const crowns = layout.join('').split('o').length - 1;
+      if (crowns === 0) continue;
+      expect(crowns, `уровень ${id}`).toBe(2);
+      expect(goals.find((goal) => goal.kind === 'item')?.count, `уровень ${id}`).toBe(1);
+      expect(stars[1], `уровень ${id}`).toEqual({ kind: 'item', count: 2 });
+    }
+  });
+
   it('цветов 3, четыре — только на сплошном поле без дыр', () => {
     for (const { id, layout, colors } of LEVELS) {
       const solid = !layout.join('').includes('#');
