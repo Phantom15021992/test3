@@ -38,6 +38,13 @@ describe('кампания', () => {
     }
   });
 
+  it('цветов 3, четыре — только на сплошном поле без дыр', () => {
+    for (const { id, layout, colors } of LEVELS) {
+      const solid = !layout.join('').includes('#');
+      expect(colors, `уровень ${id}`).toBeLessThanOrEqual(solid ? 4 : 3);
+    }
+  });
+
   it('лёд не лежит в просветах тоньше 3 клеток', () => {
     const solid = (layout: readonly string[], row: number, col: number) =>
       [0, 1, 2].every((i) => [0, 1, 2].every((j) => (layout[row + i]?.[col + j] ?? '#') !== '#'));
