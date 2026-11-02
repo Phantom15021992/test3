@@ -65,6 +65,7 @@ describe('кампания', () => {
             distance,
             `уровень ${id}, клетки ${a.row},${a.col} и ${b.row},${b.col}`,
           ).toBeGreaterThanOrEqual(3);
+          expect(a.row, `уровень ${id}: две цепи в строке ${a.row}`).not.toBe(b.row);
         }
       });
     }
