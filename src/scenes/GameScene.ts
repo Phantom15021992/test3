@@ -65,6 +65,7 @@ export class GameScene extends Phaser.Scene {
   /** Уровень; null — свободная игра */
   private level: Level | null = null;
   private goalsText: Phaser.GameObjects.Text | null = null;
+  private briefingText: Phaser.GameObjects.Text | null = null;
   private view!: BoardView;
   private dialog!: ChoiceDialog;
   private scoreText!: Phaser.GameObjects.Text;
@@ -180,9 +181,8 @@ export class GameScene extends Phaser.Scene {
           })
           .setOrigin(0.5)
       : null;
-    this.refreshGoals();
     if (this.level) {
-      this.add
+      this.briefingText = this.add
         .text(centerX, boxBottom + LEVEL_BRIEFING_Y_OFFSET, levelBriefing(this.level), {
           fontFamily: 'sans-serif',
           fontSize: '24px',
@@ -191,6 +191,7 @@ export class GameScene extends Phaser.Scene {
           wordWrap: { width: boxSize },
         })
         .setOrigin(0.5, 0);
+      this.refreshGoals();
       this.add
         .text(30, boxTop - 275, '← Карта', {
           fontFamily: 'sans-serif',
@@ -244,9 +245,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private refreshGoals(): void {
-    if (this.goalsText && this.session instanceof LevelSession) {
-      this.goalsText.setText(goalsText(this.session));
-    }
+    if (!(this.session instanceof LevelSession)) return;
+    this.goalsText?.setText(goalsText(this.session));
+    this.briefingText?.setText(levelBriefing(this.session.level, this.session));
   }
 
   /** Только для отладки: подменить поле */

@@ -96,13 +96,23 @@ export function starTaskText({ kind, count }: StarTask): string {
   }
 }
 
-/** Задание и условия звёзд — подробно, внизу экрана уровня */
-export function levelBriefing(level: Level): string {
+const DONE = ' — готово';
+
+/**
+ * Задание и условия звёзд — подробно, внизу экрана уровня. С партией у каждой звезды виден прогресс:
+ * прогресс задания крупно над полем, а сколько набрано для звёзд, иначе было бы не понять
+ */
+export function levelBriefing(level: Level, session?: LevelSession): string {
   const tasks = level.goals.map(goalTaskText).join(' и ');
+  const progress = (task: StarTask) => {
+    if (!session) return '';
+    const value = session.starTaskValue(task);
+    return value >= task.count ? DONE : ` — ${value}/${task.count}`;
+  };
   return [
     `Задание: ${tasks}`,
-    '★ Выполнить задание',
-    ...level.stars.map((task) => `★ ${starTaskText(task)}`),
+    `★ Выполнить задание${session?.goalsDone ? DONE : ''}`,
+    ...level.stars.map((task) => `★ ${starTaskText(task)}${progress(task)}`),
   ].join('\n');
 }
 

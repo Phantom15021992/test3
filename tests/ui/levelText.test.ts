@@ -46,6 +46,31 @@ describe('подписи уровня', () => {
     ]);
   });
 
+  it('во время партии у каждой звезды виден прогресс, выполненная — «готово»', () => {
+    const played = level({
+      goals: [{ kind: 'level2', count: 3 }],
+      stars: [
+        { kind: 'score', count: 1500 },
+        { kind: 'level3', count: 18 },
+      ],
+    });
+    const session = new LevelSession(1, played);
+    session.score = 420;
+    session.progress.level3 = 5;
+    expect(levelBriefing(played, session).split('\n').slice(1)).toEqual([
+      '★ Выполнить задание',
+      '★ Набрать 1500 очков — 420/1500',
+      '★ Собрать 18 ячеек 3 уровня — 5/18',
+    ]);
+    session.progress.level2 = 3;
+    session.score = 1600;
+    expect(levelBriefing(played, session).split('\n').slice(1)).toEqual([
+      '★ Выполнить задание — готово',
+      '★ Набрать 1500 очков — готово',
+      '★ Собрать 18 ячеек 3 уровня — 5/18',
+    ]);
+  });
+
   it('второй этаж нумеруется своими 1–10', () => {
     expect(levelNumber(level({ id: 11 }))).toBe('2-1');
     expect(levelNumber(level({ id: 20 }))).toBe('2-10');
