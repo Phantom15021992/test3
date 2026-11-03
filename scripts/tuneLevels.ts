@@ -22,7 +22,7 @@ import {
 import { LEVELS } from '../src/levels';
 import { levelNumber } from '../src/ui/levelText';
 import { play, type GameResult } from './levelBots';
-import { resizeLevel, type SizedLevel } from './levelLayout';
+import { lowerCrowns, resizeLevel, type SizedLevel } from './levelLayout';
 
 // Скрипт запускается в Node (vite-node), а типов Node в проекте нет
 declare const process: { argv: string[] };
@@ -165,6 +165,7 @@ const usedMoves = (played: readonly GameResult[], goals: readonly Goal[]) =>
 function chooseSize(level: Level, place: number): SizedLevel {
   const winShare = WIN_CURVE[place]!;
   const wanted = MOVES_CURVE[place]!;
+  if (level.layout.join('').includes('o')) return chooseCrownHeight(level, winShare, wanted);
   const tried: { scale: number; sized: SizedLevel; moves: number }[] = [];
   const attempt = (scale: number) => {
     const sized = resizeLevel(level.layout, level.goals, scale);
@@ -188,6 +189,24 @@ function chooseSize(level: Level, place: number): SizedLevel {
   }
   const distance = (moves: number) => Math.abs(Math.min(moves, NO_LIMIT * 2) - wanted);
   return tried.reduce((best, t) => (distance(t.moves) < distance(best.moves) ? t : best)).sized;
+}
+
+/**
+ * На уровнях с коронами рычаг сложности — высота корон: они опускаются, пока на уровень не будет
+ * уходить не больше задуманного числа ходов. Остальные цели не меняются
+ */
+function chooseCrownHeight(level: Level, winShare: number, wanted: number): SizedLevel {
+  const goals = [...level.goals];
+  let layout = [...level.layout];
+  for (let rows = 1; rows <= level.layout.length; rows++) {
+    const played = playAll(level, { layout, goals }, SEARCH_GAMES);
+    if (quantile(usedMoves(played, goals), winShare) <= wanted) break;
+    const lower = lowerCrowns(level.layout, rows);
+    // Ниже некуда: короны уже над самым дном
+    if (lower.join() === layout.join()) break;
+    layout = lower;
+  }
+  return { layout, goals };
 }
 
 function tune(level: Level, place: number) {

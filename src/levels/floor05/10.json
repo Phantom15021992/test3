@@ -15,7 +15,7 @@
     "iiiiiiiiii"
   ],
   "colors": 3,
-  "moves": 22,
+  "moves": 23,
   "goals": [
     {
       "kind": "item",
@@ -29,7 +29,7 @@
   "stars": [
     {
       "kind": "score",
-      "count": 6340
+      "count": 7080
     },
     {
       "kind": "item",

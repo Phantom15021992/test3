@@ -166,3 +166,24 @@ function resizeChains(grid: Grid, scale: number): number {
   }
   return cellsOf(grid, '123').length;
 }
+
+/**
+ * Короны опускаются на rows клеток своего столбца (дыры не клетки): так уровень с коронами
+ * становится легче, а цели не меняются. На дно столбца корону не ставим — она засчиталась бы сразу,
+ * и встаёт она только на свободную клетку: если та занята, корона остаётся выше.
+ */
+export function lowerCrowns(layout: readonly string[], rows: number): string[] {
+  const grid = layout.map((line) => [...line]);
+  for (const crown of cellsOf(grid, 'o')) {
+    const below = grid
+      .map((line, row) => ({ row, symbol: line[crown.col]! }))
+      .filter(({ row, symbol }) => row > crown.row && symbol !== '#')
+      .slice(0, -1);
+    let target = Math.min(rows, below.length) - 1;
+    while (target >= 0 && below[target]!.symbol !== '.') target--;
+    if (target < 0) continue;
+    grid[crown.row]![crown.col] = '.';
+    grid[below[target]!.row]![crown.col] = 'o';
+  }
+  return grid.map((line) => line.join(''));
+}
