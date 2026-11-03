@@ -11,24 +11,24 @@
     "..ii#ii..",
     "....#....",
     "....#....",
-    "....#...."
+    "...i#i..."
   ],
   "colors": 3,
-  "moves": 25,
+  "moves": 33,
   "goals": [
     {
       "kind": "ice",
-      "count": 12
+      "count": 14
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 1000
+      "count": 770
     },
     {
       "kind": "level3",
-      "count": 4
+      "count": 3
     }
   ]
 }

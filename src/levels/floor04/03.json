@@ -15,7 +15,7 @@
     ".........."
   ],
   "colors": 3,
-  "moves": 20,
+  "moves": 15,
   "goals": [
     {
       "kind": "chain",
@@ -25,11 +25,11 @@
   "stars": [
     {
       "kind": "score",
-      "count": 800
+      "count": 540
     },
     {
       "kind": "level2",
-      "count": 7
+      "count": 15
     }
   ]
 }

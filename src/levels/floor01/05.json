@@ -12,24 +12,24 @@
     "..iiiiii..",
     "..........",
     "..........",
-    ".........."
+    "...iiii..."
   ],
   "colors": 3,
-  "moves": 20,
+  "moves": 32,
   "goals": [
     {
       "kind": "ice",
-      "count": 14
+      "count": 18
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 800
+      "count": 1070
     },
     {
       "kind": "level2",
-      "count": 7
+      "count": 29
     }
   ]
 }

@@ -15,7 +15,7 @@
     "###...1###"
   ],
   "colors": 3,
-  "moves": 22,
+  "moves": 50,
   "goals": [
     {
       "kind": "box",
@@ -29,11 +29,11 @@
   "stars": [
     {
       "kind": "score",
-      "count": 880
+      "count": 410
     },
     {
       "kind": "level3",
-      "count": 3
+      "count": 1
     }
   ]
 }

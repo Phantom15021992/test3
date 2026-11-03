@@ -3,7 +3,7 @@
   "title": "Восьмёрка",
   "hint": "Камни падают вниз. Разбить их можно только взрывом",
   "layout": [
-    "....ss...i",
+    "....ss....",
     "....ss....",
     "....##....",
     "...s..s...",
@@ -15,25 +15,25 @@
     "i........i"
   ],
   "colors": 3,
-  "moves": 23,
+  "moves": 28,
   "goals": [
     {
       "kind": "ice",
-      "count": 7
+      "count": 6
     },
     {
       "kind": "level3",
-      "count": 3
+      "count": 2
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 920
+      "count": 1050
     },
     {
       "kind": "level2",
-      "count": 8
+      "count": 30
     }
   ]
 }

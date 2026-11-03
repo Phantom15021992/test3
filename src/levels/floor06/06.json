@@ -12,24 +12,24 @@
     "...b..b...",
     "b...##...b",
     "....##....",
-    "....##...."
+    "...b##b..."
   ],
   "colors": 3,
-  "moves": 21,
+  "moves": 33,
   "goals": [
     {
       "kind": "box",
-      "count": 13
+      "count": 15
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 840
+      "count": 590
     },
     {
       "kind": "level3",
-      "count": 3
+      "count": 1
     }
   ]
 }

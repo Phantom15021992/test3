@@ -6,28 +6,28 @@
     "........",
     "........",
     "...ss...",
-    "i.issi.i",
+    "..issi.i",
     "........",
     "........",
     "........",
     ".i....i."
   ],
   "colors": 3,
-  "moves": 15,
+  "moves": 29,
   "goals": [
     {
       "kind": "ice",
-      "count": 6
+      "count": 5
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 600
+      "count": 290
     },
     {
       "kind": "level3",
-      "count": 2
+      "count": 1
     }
   ]
 }

@@ -12,24 +12,24 @@
     "###.bb.###",
     "###....###",
     "###....###",
-    "###....###"
+    "###.bb.###"
   ],
   "colors": 3,
-  "moves": 15,
+  "moves": 17,
   "goals": [
     {
       "kind": "box",
-      "count": 8
+      "count": 10
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 600
+      "count": 390
     },
     {
       "kind": "level2",
-      "count": 5
+      "count": 11
     }
   ]
 }

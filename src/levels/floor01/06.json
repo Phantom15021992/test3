@@ -14,21 +14,21 @@
     "........."
   ],
   "colors": 3,
-  "moves": 25,
+  "moves": 29,
   "goals": [
     {
       "kind": "level3",
-      "count": 6
+      "count": 24
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 1000
+      "count": 6080
     },
     {
       "kind": "level3",
-      "count": 4
+      "count": 24
     }
   ]
 }

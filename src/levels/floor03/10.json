@@ -9,31 +9,31 @@
     "b..b..b..b",
     ".ibb..bbi.",
     "..bbbbbb..",
-    "....##....",
-    ".b.iiii.b.",
-    "..........",
-    ".........."
+    "...i##i...",
+    "ibiiiiiibi",
+    "bbbbbbbbbb",
+    "bbbbbbbbbb"
   ],
   "colors": 3,
-  "moves": 17,
+  "moves": 45,
   "goals": [
     {
       "kind": "box",
-      "count": 20
+      "count": 40
     },
     {
       "kind": "ice",
-      "count": 6
+      "count": 12
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 680
+      "count": 8280
     },
     {
       "kind": "level3",
-      "count": 3
+      "count": 31
     }
   ]
 }

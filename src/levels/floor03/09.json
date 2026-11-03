@@ -12,28 +12,28 @@
     "b....#####",
     "..b....b..",
     "..i....i..",
-    ".........."
+    ".ibbbbbbi."
   ],
   "colors": 3,
-  "moves": 21,
+  "moves": 27,
   "goals": [
     {
       "kind": "box",
-      "count": 15
+      "count": 21
     },
     {
       "kind": "ice",
-      "count": 5
+      "count": 7
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 840
+      "count": 1920
     },
     {
       "kind": "level2",
-      "count": 7
+      "count": 47
     }
   ]
 }

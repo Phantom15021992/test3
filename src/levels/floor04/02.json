@@ -10,24 +10,24 @@
     "........",
     "...1....",
     "........",
-    "........"
+    "......1."
   ],
   "colors": 3,
-  "moves": 17,
+  "moves": 23,
   "goals": [
     {
       "kind": "chain",
-      "count": 4
+      "count": 5
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 680
+      "count": 480
     },
     {
       "kind": "level3",
-      "count": 3
+      "count": 1
     }
   ]
 }

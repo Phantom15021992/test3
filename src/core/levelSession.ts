@@ -42,6 +42,8 @@ export class LevelSession extends GameSession {
     readonly level: Level,
     /** Звёзды этажа, доступные к началу попытки */
     private readonly wallet = 0,
+    /** Лимиты покупок; другие — только для замеров бота (например, сколько бомб нужно на уровень) */
+    private readonly limits: Partial<Record<BonusType, number>> = CAMPAIGN_BONUS_LIMITS,
   ) {
     super(seed, level.colors, boardTemplate(level), level.moves);
     this.ice = iceTemplate(level);
@@ -90,7 +92,7 @@ export class LevelSession extends GameSession {
 
   /** Хватает ли звёзд и не исчерпан ли лимит покупок этой спецфишки на уровне */
   canBuy(type: BonusType): boolean {
-    const limit = CAMPAIGN_BONUS_LIMITS[type];
+    const limit = this.limits[type];
     return (
       this.starsLeft >= bonusStars(type) && (limit === undefined || this.stats.bought[type] < limit)
     );

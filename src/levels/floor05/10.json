@@ -11,11 +11,11 @@
     "..........",
     "....##....",
     "....ii....",
-    "...i..i...",
-    ".........."
+    ".iiiiiiii.",
+    "iiiiiiiiii"
   ],
   "colors": 3,
-  "moves": 28,
+  "moves": 22,
   "goals": [
     {
       "kind": "item",
@@ -23,13 +23,13 @@
     },
     {
       "kind": "ice",
-      "count": 4
+      "count": 20
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 1120
+      "count": 5740
     },
     {
       "kind": "item",

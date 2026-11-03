@@ -31,6 +31,11 @@ export const BOTS: readonly Bot[] = ['novice', 'expert', 'buyer'];
 const MAX_CANDIDATES = 40;
 /** Сколько клеток примерять для покупной бомбы */
 const MAX_AIM_CELLS = 30;
+/** Ценность хода, который продвигает цель: всё ниже — только очки и объединения */
+const GOAL_PROGRESS = 50;
+/** Наперёд на два хода бот думает, когда препятствий цели осталось не больше стольких */
+const LOOKAHEAD_TARGETS = 3;
+const LOOKAHEAD_MOVES = 10;
 
 export interface GameResult {
   won: boolean;
@@ -43,7 +48,9 @@ export interface GameResult {
   /** Какая доля целей выполнена: показывает, насколько близко было поражение */
   done: number;
   /** После каждого хода: очки и счётчики задач на звёзды — по ним подгоняются условия звёзд */
-  track: { score: number[]; level2: number[]; level3: number[] };
+  track: { score: number[]; level2: number[]; level3: number[]; item: number[] };
+  /** Сколько спецфишек куплено */
+  bought: number;
 }
 
 function candidates(session: LevelSession): PlayerMove[] {
@@ -117,6 +124,21 @@ function moveValue(
   return value;
 }
 
+/** Клетки препятствий, которые ещё нужны целям уровня */
+function goalTargets(session: LevelSession): Position[] {
+  const need = (kind: string) =>
+    session.level.goals.some((goal) => goal.kind === kind && session.goalValue(goal) < goal.count);
+  return allPositions(session.board).filter((pos) => {
+    const cell = getCell(session.board, pos);
+    return (
+      (need('ice') && session.ice[pos.row]?.[pos.col] === true) ||
+      (need('chain') && cell?.kind === 'tile' && (cell.chain ?? 0) > 0) ||
+      (need('box') && cell?.kind === 'box') ||
+      (need('stone') && cell?.kind === 'stone')
+    );
+  });
+}
+
 function shuffled<T>(items: T[], rng: Rng): T[] {
   for (let i = items.length - 1; i > 0; i--) {
     const j = rng.int(i + 1);
@@ -130,20 +152,35 @@ interface Pick {
   value: number;
 }
 
-function pickMove(session: LevelSession, bot: Bot, rng: Rng): Pick | null {
+export function pickMove(session: LevelSession, bot: Bot, rng: Rng): Pick | null {
   const moves = candidates(session);
   if (moves.length === 0) return null;
   if (bot === 'novice') return { move: moves[rng.int(moves.length)]!, value: 0 };
   // Перемешиваем, чтобы отбор не предпочитал верх поля
   shuffled(moves, rng);
-  // Ходы рядом с короной перебираем первыми: иначе отбор мог бы выбросить как раз их
+  // Ходы рядом с короной и с оставшимися препятствиями цели перебираем первыми: иначе отбор мог
+  // выбросить как раз их, и последняя цепь в углу ждала бы десятки ходов, а человек бьёт в неё сразу
   const crowns = allPositions(session.board).filter(
     (pos) => getCell(session.board, pos)?.kind === 'item',
   );
-  const nearCrown = (move: PlayerMove) =>
-    move.type === 'swap' &&
-    crowns.some((pos) => Math.abs(pos.col - move.from.col) + Math.abs(pos.col - move.to.col) <= 2);
-  moves.sort((x, y) => Number(nearCrown(y)) - Number(nearCrown(x)));
+  const targets = goalTargets(session);
+  const distance = (move: PlayerMove) => {
+    if (move.type !== 'swap') return Infinity;
+    const { from, to } = move;
+    if (crowns.some((pos) => Math.abs(pos.col - from.col) + Math.abs(pos.col - to.col) <= 2)) {
+      return 0;
+    }
+    return Math.min(
+      ...targets.map((pos) =>
+        Math.min(
+          Math.abs(pos.row - from.row) + Math.abs(pos.col - from.col),
+          Math.abs(pos.row - to.row) + Math.abs(pos.col - to.col),
+        ),
+      ),
+    );
+  };
+  const order = new Map(moves.map((move) => [move, distance(move)]));
+  moves.sort((x, y) => order.get(x)! - order.get(y)!);
   let best = moves[0]!;
   let bestValue = -Infinity;
   for (const move of moves.slice(0, MAX_CANDIDATES)) {
@@ -153,7 +190,36 @@ function pickMove(session: LevelSession, bot: Bot, rng: Rng): Pick | null {
       best = move;
     }
   }
+  // Ни один ход не продвигает цель, а препятствий осталось мало (последняя цепь в углу): человек
+  // готовит её за два хода. Ходы рядом с препятствиями примеряются вместе с лучшим следующим
+  if (bestValue < GOAL_PROGRESS && targets.length > 0 && targets.length <= LOOKAHEAD_TARGETS) {
+    for (const move of moves.slice(0, LOOKAHEAD_MOVES)) {
+      const value = lookahead(session, move, targets, createRng(rng.int(2 ** 31)));
+      if (value > bestValue) {
+        bestValue = value;
+        best = move;
+      }
+    }
+  }
   return { move: best, value: bestValue };
+}
+
+/** Ход и лучший за ним ход рядом с препятствиями цели; второй ход — со скидкой, он ещё не сделан */
+function lookahead(session: LevelSession, move: PlayerMove, targets: Position[], rng: Rng): number {
+  const first = runMove(session.board, move, {
+    colorCount: session.level.colors,
+    rng,
+    campaign: true,
+  });
+  const near = (pos: Position) =>
+    targets.some((target) => Math.abs(target.row - pos.row) + Math.abs(target.col - pos.col) <= 1);
+  let next = 0;
+  for (const { from, to } of findPossibleMoves(first.board)) {
+    if (!near(from) && !near(to)) continue;
+    const swap: PlayerMove = { type: 'swap', from, to };
+    next = Math.max(next, moveValue(session, swap, rng, first.board));
+  }
+  return moveValue(session, move, rng) + next * 0.5;
 }
 
 type Purchase =
@@ -168,7 +234,7 @@ function aimValue(session: LevelSession, bonus: AimedBonus, at: Position, rng: R
 }
 
 /** Самая полезная покупка, которая по карману; манипулятор бот не применяет */
-function bestPurchase(session: LevelSession, rng: Rng): Purchase | null {
+function bestPurchase(session: LevelSession, rng: Rng, onlyBombs = false): Purchase | null {
   const { board } = session;
   const cells = shuffled(
     allPositions(board).filter((pos) => isBonusTarget(board, pos)),
@@ -181,7 +247,7 @@ function bestPurchase(session: LevelSession, rng: Rng): Purchase | null {
   if (session.canBuy('bomb')) {
     cells.slice(0, MAX_AIM_CELLS).forEach((at) => aim('bomb', at));
   }
-  if (session.canBuy('rocket')) {
+  if (!onlyBombs && session.canBuy('rocket')) {
     // Ракета бьёт по всей строке: достаточно одной клетки в каждой
     const rows = new Set(cells.map((pos) => pos.row));
     rows.forEach((row) =>
@@ -191,7 +257,7 @@ function bestPurchase(session: LevelSession, rng: Rng): Purchase | null {
       ),
     );
   }
-  if (session.canBuy('rainbow')) {
+  if (!onlyBombs && session.canBuy('rainbow')) {
     const colors = new Set(
       allPositions(board).flatMap((pos) => {
         const cell = getCell(board, pos);
@@ -222,26 +288,39 @@ function finish(steps: Generator<ResolveStep, void, undefined>): void {
   while (!next.done) next = steps.next();
 }
 
-export function play(level: Level, seed: number, bot: Bot, wallet = 0): GameResult {
-  const session = new LevelSession(seed, level, wallet);
+/**
+ * bombs — замер «сколько бомб нужно»: опытный бот покупает только бомбы, не больше стольких
+ * (лимит правил снят), звёзд без ограничения
+ */
+export function play(level: Level, seed: number, bot: Bot, wallet = 0, bombs?: number): GameResult {
+  const session =
+    bombs === undefined
+      ? new LevelSession(seed, level, wallet)
+      : new LevelSession(seed, level, 1000, { bomb: bombs, rocket: 0, manipulator: 0, rainbow: 0 });
   const rng = createRng(seed ^ 0x5bd1e995);
   const reached = level.goals.map((): number[] => []);
-  const track: GameResult['track'] = { score: [], level2: [], level3: [] };
+  const track: GameResult['track'] = { score: [], level2: [], level3: [], item: [] };
+  let bought = 0;
   while (!session.isOver) {
     const pick = pickMove(session, bot, rng);
     // Покупка и есть ход, поэтому бот берёт её, когда она полезнее лучшего обычного хода
-    const purchase = bot === 'buyer' ? bestPurchase(session, rng) : null;
-    const bought =
+    const purchase =
+      bot === 'buyer' || bombs !== undefined
+        ? bestPurchase(session, rng, bombs !== undefined)
+        : null;
+    const purchased =
       purchase && purchase.value > (pick?.value ?? -Infinity)
         ? applyPurchase(session, purchase)
         : null;
-    const move = bought ?? pick?.move;
+    if (purchased) bought++;
+    const move = purchased ?? pick?.move;
     if (!move) break;
     finish(session.play(move));
     session.shuffleIfStuck();
     track.score.push(session.score);
     track.level2.push(session.progress.level2);
     track.level3.push(session.progress.level3);
+    track.item.push(session.progress.item);
     level.goals.forEach((goal, i) => {
       const line = reached[i]!;
       while (line.length < Math.min(session.progress[goal.kind], goal.count)) {
@@ -258,5 +337,6 @@ export function play(level: Level, seed: number, bot: Bot, wallet = 0): GameResu
     movesLeft: session.goalsDone ? session.movesLeft : 0,
     done: shares.reduce((sum, share) => sum + share, 0) / shares.length,
     track,
+    bought,
   };
 }

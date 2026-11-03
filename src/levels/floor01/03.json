@@ -14,7 +14,7 @@
     "###...###"
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 33,
   "goals": [
     {
       "kind": "megaBomb",
@@ -24,11 +24,11 @@
   "stars": [
     {
       "kind": "score",
-      "count": 1200
+      "count": 1280
     },
     {
       "kind": "level2",
-      "count": 10
+      "count": 19
     }
   ]
 }

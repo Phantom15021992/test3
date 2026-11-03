@@ -52,7 +52,13 @@ describe('подписи уровня', () => {
   });
 
   it('две цели идут через «и»', () => {
-    const text = levelBriefing(LEVELS[8]!);
+    const text = levelBriefing({
+      ...LEVELS[8]!,
+      goals: [
+        { kind: 'ice', count: 10 },
+        { kind: 'level3', count: 9 },
+      ],
+    });
     expect(text.split('\n')[0]).toBe('Задание: сломай 10 льдин и собери 9 ячеек 3 уровня');
   });
 

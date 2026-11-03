@@ -12,14 +12,14 @@
     "....bb....",
     "..........",
     "..........",
-    ".........."
+    "....b....."
   ],
   "colors": 3,
-  "moves": 17,
+  "moves": 15,
   "goals": [
     {
       "kind": "box",
-      "count": 5
+      "count": 6
     },
     {
       "kind": "chain",
@@ -29,11 +29,11 @@
   "stars": [
     {
       "kind": "score",
-      "count": 680
+      "count": 780
     },
     {
       "kind": "level3",
-      "count": 3
+      "count": 1
     }
   ]
 }
