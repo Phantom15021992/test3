@@ -110,13 +110,14 @@ export function expandChain(
   board: Board,
   initial: Position[],
   preActivated: ReadonlySet<string> = new Set(),
+  spared: ReadonlySet<string> = new Set(),
 ): Position[] {
   const destroyed = new Map<string, Position>();
   const queue = [...initial];
   while (queue.length > 0) {
     const pos = queue.shift()!;
     const key = posKey(pos);
-    if (destroyed.has(key)) continue;
+    if (destroyed.has(key) || spared.has(key)) continue;
     const cell = getCell(board, pos);
     // Корону взрывы не задевают: иначе её нельзя было бы донести до дна
     if (cell == null || cell.kind === 'hole' || cell.kind === 'item') continue;

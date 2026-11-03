@@ -43,7 +43,7 @@ var BONUS_TIERS = [
   { cost: 500, stars: 5, type: "manipulator" },
   { cost: 750, stars: 15, type: "rainbow" }
 ];
-var RULES_VERSION = 4;
+var RULES_VERSION = 5;
 var MOVE_LIMIT = 35;
 var COMBO_MAX_STEPS = 10;
 var MANIPULATOR_FINALE_POINTS = 250;
@@ -341,13 +341,13 @@ function activationArea(board, pos, cell) {
       return [];
   }
 }
-function expandChain(board, initial, preActivated = /* @__PURE__ */ new Set()) {
+function expandChain(board, initial, preActivated = /* @__PURE__ */ new Set(), spared = /* @__PURE__ */ new Set()) {
   const destroyed = /* @__PURE__ */ new Map();
   const queue = [...initial];
   while (queue.length > 0) {
     const pos = queue.shift();
     const key = posKey(pos);
-    if (destroyed.has(key)) continue;
+    if (destroyed.has(key) || spared.has(key)) continue;
     const cell = getCell(board, pos);
     if (cell == null || cell.kind === "hole" || cell.kind === "item") continue;
     destroyed.set(key, pos);
@@ -633,8 +633,8 @@ function* resolveMove(board, move, ctx) {
   let landing = [];
   let dropped = false;
   let comboSteps = 0;
-  function* destroy(initial, preActivated, pointsOverride, combos = []) {
-    const cells = expandChain(current, initial, preActivated);
+  function* destroy(initial, preActivated, pointsOverride, combos = [], spared) {
+    const cells = expandChain(current, initial, preActivated, spared);
     if (cells.length === 0) return;
     const points = cells.reduce(
       (sum, pos) => sum + (pointsOverride?.get(posKey(pos)) ?? hitPoints(getCell(current, pos))),
@@ -666,6 +666,27 @@ function* resolveMove(board, move, ctx) {
     for (const { pos, cell } of placements) setCell(current, pos, cell);
     yield direct3 > 0 ? { kind: "transform", placements, direct3 } : { kind: "transform", placements };
   }
+  function* matchWave(groups) {
+    const removal = [];
+    const placements = [];
+    const points = /* @__PURE__ */ new Map();
+    const combos = [];
+    let direct3 = 0;
+    for (const group of groups) {
+      const outcome = groupOutcome(group, current, landing, ctx.campaign ?? false);
+      removal.push(...group.cells, ...boxesAround(current, group.cells));
+      const step = dropped ? Math.min(++comboSteps, COMBO_MAX_STEPS) : 0;
+      if (step > 0) combos.push({ at: pickSpot(group, []), step });
+      spreadPoints(group.cells, Math.round(outcome.points * comboMultiplier(step)), points);
+      placements.push(...outcome.placements);
+      if (group.level === 1) {
+        direct3 += outcome.placements.filter(({ cell }) => isTile(cell) && cell.level === 3).length;
+      }
+    }
+    yield* destroy(removal, void 0, points, combos);
+    yield* place(placements, direct3);
+    return placements.map(({ pos }) => pos);
+  }
   switch (move.type) {
     case "swap": {
       const combo = isCombo(current, move.from, move.to);
@@ -677,7 +698,9 @@ function* resolveMove(board, move, ctx) {
         yield* place(effect.conversions);
         yield* destroy(effect.initial, effect.preActivated);
       } else if (fireAt) {
-        yield* destroy([fireAt]);
+        landing = [posKey(fireAt) === posKey(move.to) ? move.from : move.to];
+        const rewards = yield* matchWave(findMatches(current));
+        yield* destroy([fireAt], void 0, void 0, [], new Set(rewards.map(posKey)));
       } else {
         landing = [move.to, move.from];
       }
@@ -726,26 +749,7 @@ function* resolveMove(board, move, ctx) {
         yield { kind: "clear", cells: arrived, points: 0, pieces: 0, items: arrived.length };
       }
     } else {
-      const removal = [];
-      const placements = [];
-      const points = /* @__PURE__ */ new Map();
-      const combos = [];
-      let direct3 = 0;
-      for (const group of groups) {
-        const outcome = groupOutcome(group, current, landing, ctx.campaign ?? false);
-        removal.push(...group.cells, ...boxesAround(current, group.cells));
-        const step = dropped ? Math.min(++comboSteps, COMBO_MAX_STEPS) : 0;
-        if (step > 0) combos.push({ at: pickSpot(group, []), step });
-        spreadPoints(group.cells, Math.round(outcome.points * comboMultiplier(step)), points);
-        placements.push(...outcome.placements);
-        if (group.level === 1) {
-          direct3 += outcome.placements.filter(
-            ({ cell }) => isTile(cell) && cell.level === 3
-          ).length;
-        }
-      }
-      yield* destroy(removal, void 0, points, combos);
-      yield* place(placements, direct3);
+      yield* matchWave(groups);
     }
     landing = [];
     dropped = true;

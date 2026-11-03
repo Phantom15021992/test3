@@ -300,6 +300,26 @@ describe('resolveMove: срабатывание спецфишек', () => {
     expect(clear!.points).toBe(20);
   });
 
+  it('фишка, сдвинутая со спецфишкой, сначала собирает совпадение, потом спецфишка срабатывает', () => {
+    const board = parseBoard(`
+      R1 G1 B1
+      -  R1 P1
+      R1 Y1 B1
+    `);
+    // Ракета уезжает в (1, 1), красная фишка встаёт в (1, 0) и собирает столбец
+    const result = runMove(board, { type: 'swap', from: p(1, 0), to: p(1, 1) }, ctx());
+    const [match, blast] = stepsOf(result.steps, 'clear');
+    expect(sortCells(match!.cells)).toEqual([p(0, 0), p(1, 0), p(2, 0)]);
+    expect(match!.points).toBe(30);
+    expect(stepsOf(result.steps, 'transform')[0]!.placements).toEqual([
+      { pos: p(1, 0), cell: { kind: 'tile', color: 0, level: 2 } },
+    ]);
+    // Ракета бьёт по строке, но награду совпадения не трогает
+    expect(sortCells(blast!.cells)).toEqual([p(1, 1), p(1, 2)]);
+    expect(blast!.points).toBe(10);
+    expect(result.steps.indexOf(match!)).toBeLessThan(result.steps.indexOf(blast!));
+  });
+
   it('если двигали обычную фишку на бомбу — бомба срабатывает там, куда переехала', () => {
     const board = parseBoard(`
       G1 B1 Y1 O1

@@ -134,14 +134,18 @@ export function* resolveMove(
   let dropped = false;
   let comboSteps = 0;
 
-  /** Уничтожает клетки с цепной реакцией; pointsOverride — очки клеток из совпадений */
+  /**
+   * Уничтожает клетки с цепной реакцией; pointsOverride — очки клеток из совпадений,
+   * spared — клетки, которых взрыв не задевает
+   */
   function* destroy(
     initial: Position[],
     preActivated?: ReadonlySet<string>,
     pointsOverride?: ReadonlyMap<string, number>,
     combos: ComboHit[] = [],
+    spared?: ReadonlySet<string>,
   ): Generator<ResolveStep, void, ChoiceOption | undefined> {
-    const cells = expandChain(current, initial, preActivated);
+    const cells = expandChain(current, initial, preActivated, spared);
     if (cells.length === 0) return;
     const points = cells.reduce(
       (sum, pos) => sum + (pointsOverride?.get(posKey(pos)) ?? hitPoints(getCell(current, pos))),
@@ -180,6 +184,33 @@ export function* resolveMove(
       : { kind: 'transform', placements };
   }
 
+  /** Совпадения убираются и превращаются в награды; возвращает клетки, куда встали награды */
+  function* matchWave(
+    groups: MatchGroup[],
+  ): Generator<ResolveStep, Position[], ChoiceOption | undefined> {
+    const removal: Position[] = [];
+    const placements: Placement[] = [];
+    const points = new Map<string, number>();
+    const combos: ComboHit[] = [];
+    let direct3 = 0;
+
+    for (const group of groups) {
+      const outcome = groupOutcome(group, current, landing, ctx.campaign ?? false);
+      removal.push(...group.cells, ...boxesAround(current, group.cells));
+      const step = dropped ? Math.min(++comboSteps, COMBO_MAX_STEPS) : 0;
+      if (step > 0) combos.push({ at: pickSpot(group, []), step });
+      spreadPoints(group.cells, Math.round(outcome.points * comboMultiplier(step)), points);
+      placements.push(...outcome.placements);
+      if (group.level === 1) {
+        direct3 += outcome.placements.filter(({ cell }) => isTile(cell) && cell.level === 3).length;
+      }
+    }
+
+    yield* destroy(removal, undefined, points, combos);
+    yield* place(placements, direct3);
+    return placements.map(({ pos }) => pos);
+  }
+
   // ---------- Эффект самого хода ----------
 
   switch (move.type) {
@@ -193,8 +224,11 @@ export function* resolveMove(
         yield* place(effect.conversions);
         yield* destroy(effect.initial, effect.preActivated);
       } else if (fireAt) {
-        // Ракета/бомба срабатывает там, куда её передвинули
-        yield* destroy([fireAt]);
+        // Сначала совпадение, которое собрала сдвинутая фишка (награда — в её клетке), потом
+        // ракета/бомба срабатывает там, куда её передвинули. Награду этого совпадения взрыв не трогает
+        landing = [posKey(fireAt) === posKey(move.to) ? move.from : move.to];
+        const rewards = yield* matchWave(findMatches(current));
+        yield* destroy([fireAt], undefined, undefined, [], new Set(rewards.map(posKey)));
       } else {
         landing = [move.to, move.from];
       }
@@ -246,28 +280,7 @@ export function* resolveMove(
         yield { kind: 'clear', cells: arrived, points: 0, pieces: 0, items: arrived.length };
       }
     } else {
-      const removal: Position[] = [];
-      const placements: Placement[] = [];
-      const points = new Map<string, number>();
-      const combos: ComboHit[] = [];
-      let direct3 = 0;
-
-      for (const group of groups) {
-        const outcome = groupOutcome(group, current, landing, ctx.campaign ?? false);
-        removal.push(...group.cells, ...boxesAround(current, group.cells));
-        const step = dropped ? Math.min(++comboSteps, COMBO_MAX_STEPS) : 0;
-        if (step > 0) combos.push({ at: pickSpot(group, []), step });
-        spreadPoints(group.cells, Math.round(outcome.points * comboMultiplier(step)), points);
-        placements.push(...outcome.placements);
-        if (group.level === 1) {
-          direct3 += outcome.placements.filter(
-            ({ cell }) => isTile(cell) && cell.level === 3,
-          ).length;
-        }
-      }
-
-      yield* destroy(removal, undefined, points, combos);
-      yield* place(placements, direct3);
+      yield* matchWave(groups);
     }
 
     landing = [];

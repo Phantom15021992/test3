@@ -92,7 +92,7 @@ export const BONUS_TIERS: readonly {
  * Версия правил хода: повышать при каждом изменении логики. Функция на сервере отдаёт её в ответ
  * на неизвестное действие, поэтому видно, что она обновлена раньше сайта.
  */
-export const RULES_VERSION = 4;
+export const RULES_VERSION = 5;
 
 // Партия: лимит ходов и финал
 export const MOVE_LIMIT = 35;
