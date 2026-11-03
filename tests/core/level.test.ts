@@ -444,7 +444,7 @@ describe('партия на уровне', () => {
     expect(session.ice[2]?.[1]).toBe(true);
   });
 
-  it('цели считаются, уровень кончается сразу, звёзды — за очки и ячейки', () => {
+  it('цели и задачи на звёзды выполнены одним ходом — уровень кончается, три звезды', () => {
     const session = new LevelSession(5, level());
     expect(session.isOver).toBe(false);
     swap(
@@ -461,7 +461,7 @@ describe('партия на уровне', () => {
     expect(session.stars).toBe(3);
   });
 
-  it('задача на звезду не выполнена — звезды нет', () => {
+  it('цели выполнены, а задачи на звёзды нет — уровень идёт до конца ходов', () => {
     const session = new LevelSession(
       5,
       level({
@@ -480,6 +480,35 @@ describe('партия на уровне', () => {
     );
     expect(session.goalsDone).toBe(true);
     expect(session.stars).toBe(1);
+    expect(session.isOver).toBe(false);
+    session.moves = 10;
+    expect(session.isOver).toBe(true);
+    expect(session.stars).toBe(1);
+  });
+
+  it('после целей уровень кончается, как только выполнены все задачи на звёзды', () => {
+    const session = new LevelSession(
+      5,
+      level({
+        stars: [
+          { kind: 'score', count: 1000 },
+          { kind: 'level3', count: 2 },
+        ],
+      }),
+    );
+    swap(
+      session,
+      `
+      R1 R1 G1
+      B1 Y1 R1
+    `,
+    );
+    expect(session.isOver).toBe(false);
+    session.score = 1000;
+    expect(session.isOver).toBe(false);
+    session.progress.level3 = 2;
+    expect(session.isOver).toBe(true);
+    expect(session.stars).toBe(3);
   });
 
   it('ячейка 3 уровня сразу из фишек идёт в цель на ячейки 2 уровня за две', () => {
@@ -496,7 +525,7 @@ describe('партия на уровне', () => {
     expect(session.progress.level3).toBe(1);
   });
 
-  it('с коронами уровень идёт до последней короны: за вторую — звезда', () => {
+  it('с коронами уровень идёт до второй короны и очков: за них — звёзды', () => {
     const session = new LevelSession(
       5,
       level({
@@ -513,6 +542,7 @@ describe('партия на уровне', () => {
     expect(session.isOver).toBe(false);
     expect(session.stars).toBe(1);
     session.progress.item = 2;
+    expect(session.isOver).toBe(false);
     session.score = 10;
     expect(session.isOver).toBe(true);
     expect(session.stars).toBe(3);

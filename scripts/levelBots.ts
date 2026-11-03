@@ -16,7 +16,7 @@ import {
   type Position,
 } from '../src/core/board';
 import { aimedPiece, isBonusTarget, type AimedBonus } from '../src/core/bonus';
-import type { Level } from '../src/core/level';
+import type { Level, StarTaskKind } from '../src/core/level';
 import { LevelSession } from '../src/core/levelSession';
 import { findPossibleMoves } from '../src/core/moves';
 import { runMove, type ResolveStep } from '../src/core/resolve';
@@ -92,14 +92,21 @@ function moveValue(
   });
   const need = (kind: string) =>
     session.level.goals.some((goal) => goal.kind === kind && session.goalValue(goal) < goal.count);
+  // Цели выполнены — уровень идёт до конца ходов, и бот добирает задачи на звёзды
+  const star = (kind: StarTaskKind) =>
+    session.goalsDone &&
+    session.level.stars.some(
+      (task) => task.kind === kind && session.starTaskValue(task) < task.count,
+    );
   // Камни бьются только взрывом, а взрывы дают объединения высоких уровней
-  const wantsHighLevels = need('level3') || need('megaBomb') || need('rainbow') || need('stone');
+  const wantsHighLevels =
+    need('level3') || need('megaBomb') || need('rainbow') || need('stone') || star('level3');
   const iced = new Set<string>();
   let value = (itemRows(board) - itemRows(session.board)) * 40;
 
   const scoreStep = (step: ResolveStep) => {
     if (step.kind === 'clear') {
-      value += step.points * 0.05 + (step.items ?? 0) * 800;
+      value += step.points * (star('score') ? 0.5 : 0.05) + (step.items ?? 0) * 800;
       value += (step.stones ?? 0) * (need('stone') ? 120 : 15);
       value += (step.boxes ?? 0) * (need('box') ? 70 : 5);
       value += (step.links?.length ?? 0) * (need('chain') ? 70 : 5);
@@ -113,7 +120,7 @@ function moveValue(
     if (step.kind !== 'transform') return;
     for (const { cell } of step.placements) {
       if (cell?.kind === 'tile' && cell.level === 2) {
-        value += need('level2') ? 70 : wantsHighLevels ? 20 : 2;
+        value += need('level2') || star('level2') ? 70 : wantsHighLevels ? 20 : 2;
       }
       if (cell?.kind === 'tile' && cell.level === 3) value += wantsHighLevels ? 90 : 4;
       if (cell?.kind === 'piece' && cell.type === 'megaBomb') value += need('megaBomb') ? 400 : 50;

@@ -89,13 +89,12 @@ function starTasks(
   three: number,
 ): StarTask[] {
   const crowns = layout.join('').split('o').length - 1;
-  const cells: StarTaskKind = crowns > 0 ? 'item' : place % 2 === 0 ? 'level2' : 'level3';
+  const cells = cellsTask(layout, place);
   const won = played.flatMap((game) => {
     const at = finishedAt(game, goals);
     if (at > moves) return [];
-    const allCrowns = game.track.item.findIndex((count) => count >= crowns) + 1;
-    const end =
-      crowns > 0 ? Math.min(moves, allCrowns > 0 ? allCrowns : game.track.item.length) : at;
+    // Выполнив цели, игрок играет до конца ходов (или пока не взял все звёзды): значения — на последний ход
+    const end = Math.min(moves, game.track.score.length);
     return [{ score: game.track.score[end - 1] ?? 0, cells: game.track[cells][end - 1] ?? 0 }];
   });
   const middle = (win + three) / 2;
@@ -135,8 +134,23 @@ function starTasks(
   ];
 }
 
+/** Третья звезда: ячейки 2 уровня на нечётных местах этажа, 3 — на чётных, с коронами — все короны */
+function cellsTask(layout: readonly string[], place: number): StarTaskKind {
+  if (layout.join('').includes('o')) return 'item';
+  return place % 2 === 0 ? 'level2' : 'level3';
+}
+
+/**
+ * Партии почти без лимита ходов. Задачи на звёзды — недостижимые: партия идёт до последнего хода,
+ * а бот после целей добирает то же, что и игрок, — очки и ячейки для звёзд
+ */
 function playAll(level: Level, sized: SizedLevel, count: number): GameResult[] {
-  const open: Level = { ...level, ...sized, moves: NO_LIMIT };
+  const place = (level.id - 1) % FLOOR_SIZE;
+  const stars: StarTask[] = [
+    { kind: 'score', count: Infinity },
+    { kind: cellsTask(sized.layout, place), count: Infinity },
+  ];
+  const open: Level = { ...level, ...sized, stars, moves: NO_LIMIT };
   return Array.from({ length: count }, (_, i) => play(open, 7000 * level.id + i + 1, 'expert'));
 }
 

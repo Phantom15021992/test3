@@ -54,13 +54,13 @@ export class LevelSession extends GameSession {
   }
 
   /**
-   * Уровень кончается, как выполнены цели. С коронами — только когда на дне все короны поля
-   * (за вторую корону — звезда), или когда кончились ходы: победа уже засчитана
+   * Выполнены цели — победа уже засчитана, но уровень идёт дальше, пока не выполнены все задачи
+   * на звёзды (очки, ячейки, вторая корона) или не кончились ходы: иначе досрочный конец отнимал бы
+   * у игрока шанс на три звезды
    */
   get isOver(): boolean {
     if (super.isOver) return true;
-    if (!this.goalsDone) return false;
-    return this.progress.item >= this.crowns;
+    return this.goalsDone && this.stars === 1 + this.level.stars.length;
   }
 
   /** Сколько корон на поле в начале уровня */

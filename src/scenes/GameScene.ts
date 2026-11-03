@@ -201,7 +201,10 @@ export class GameScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true })
         .on('pointerup', () => {
           if (this.busy) return;
-          if (this.session.moves > 0) this.sendLevelAttempt('left');
+          const { session } = this;
+          // Цели выполнены — победа уже засчитана, даже если игрок не стал добирать звёзды
+          if (session instanceof LevelSession && session.goalsDone) this.saveLevelResult(session);
+          else if (session.moves > 0) this.sendLevelAttempt('left');
           this.scene.start('LevelMap', this.mapData());
         });
     }
@@ -486,16 +489,22 @@ export class GameScene extends Phaser.Scene {
 
   /** Уровень окончен: цели выполнены или кончились ходы */
   private async finishLevel(session: LevelSession): Promise<void> {
+    const { level } = session;
+    this.saveLevelResult(session);
+    new LevelResultDialog(this).show(session, {
+      onRetry: () => this.scene.restart({ level }),
+      onMap: () => this.scene.start('LevelMap', this.mapData()),
+    });
+  }
+
+  /** Попытка уходит в статистику, а победа — в прогресс: звёзды и траты */
+  private saveLevelResult(session: LevelSession): void {
     const { level, stars } = session;
     this.sendLevelAttempt(stars > 0 ? 'won' : 'lost');
     if (stars > 0) {
       saveLevelStars(level.id, stars);
       saveLevelSpending(level.id, session.starsSpent);
     }
-    new LevelResultDialog(this).show(session, {
-      onRetry: () => this.scene.restart({ level }),
-      onMap: () => this.scene.start('LevelMap', this.mapData()),
-    });
   }
 
   private mapData(): { floor?: number } {
