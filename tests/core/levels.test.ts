@@ -29,34 +29,41 @@ describe('кампания', () => {
     }
   });
 
-  it('уровни с целью на ячейки 2 уровня идут на поле от 8×8', () => {
-    const levels = LEVELS.filter((level) => level.goals.some((goal) => goal.kind === 'level2'));
-    expect(levels.length).toBeGreaterThan(0);
-    for (const level of levels) {
+  it('поле — от 8×8', () => {
+    for (const level of LEVELS) {
       expect(level.layout.length).toBeGreaterThanOrEqual(8);
       expect(level.layout[0]!.length).toBeGreaterThanOrEqual(8);
     }
   });
 
-  it('льда и сундуков на поле ровно столько, сколько в цели: лишних нет', () => {
-    const symbols = { ice: 'i', box: 'bt123uvw' } as const;
+  it('льда, сундуков и золота на поле ровно столько, сколько в цели: лишних нет', () => {
+    // Лёд и сундуки со слитками и сокровищами считаются и в золото, поэтому без своей цели
+    // на поле может быть только золото
+    const symbols = [
+      ['ice', 'iJg', 'iJ'],
+      ['box', 'bt123uvw', 'b123'],
+      ['gold', 'gtuvw', 'gtuvw'],
+    ] as const;
     for (const { id, layout, goals } of LEVELS) {
-      const all = layout.join('');
-      for (const [kind, chars] of Object.entries(symbols)) {
-        const onBoard = [...all].filter((symbol) => chars.includes(symbol)).length;
-        const goal = goals.find((g) => g.kind === kind)?.count ?? 0;
-        expect(onBoard, `уровень ${id}, ${kind}`).toBe(goal);
+      const count = (chars: string) => [...layout.join('')].filter((s) => chars.includes(s)).length;
+      for (const [kind, all, own] of symbols) {
+        const goal = goals.find((g) => g.kind === kind)?.count;
+        if (goal === undefined) expect(count(own), `уровень ${id}, ${kind}`).toBe(0);
+        else expect(count(all), `уровень ${id}, ${kind}`).toBe(goal);
       }
     }
   });
 
-  it('с коронами: на поле 2, цель — одна, третья звезда — за обе', () => {
+  it('с коронами: на поле одна или две, цель — все; звёзды — за очки и ячейки', () => {
     for (const { id, layout, goals, stars } of LEVELS) {
       const crowns = layout.join('').split('o').length - 1;
       if (crowns === 0) continue;
-      expect(crowns, `уровень ${id}`).toBe(2);
-      expect(goals.find((goal) => goal.kind === 'item')?.count, `уровень ${id}`).toBe(1);
-      expect(stars[1], `уровень ${id}`).toEqual({ kind: 'item', count: 2 });
+      expect([1, 2], `уровень ${id}`).toContain(crowns);
+      expect(goals.find((goal) => goal.kind === 'item')?.count, `уровень ${id}`).toBe(crowns);
+      expect(
+        stars.map((task) => task.kind),
+        `уровень ${id}`,
+      ).not.toContain('item');
     }
   });
 
@@ -73,7 +80,7 @@ describe('кампания', () => {
     for (const { id, layout } of LEVELS) {
       layout.forEach((line, row) =>
         [...line].forEach((symbol, col) => {
-          if (symbol !== 'i') return;
+          if (!'iJg'.includes(symbol)) return;
           const offsets = [0, 1, 2];
           const thick = offsets.some((i) => offsets.some((j) => solid(layout, row - i, col - j)));
           expect(thick, `уровень ${id}, клетка ${row},${col}`).toBe(true);
@@ -82,10 +89,10 @@ describe('кампания', () => {
     }
   });
 
-  it('фишки под цепями стоят не ближе 3 клеток друг от друга', () => {
+  it('сундуки в цепях стоят не ближе 3 клеток друг от друга', () => {
     for (const { id, layout } of LEVELS) {
       const chains = layout.flatMap((line, row) =>
-        [...line].flatMap((symbol, col) => ('123'.includes(symbol) ? [{ row, col }] : [])),
+        [...line].flatMap((symbol, col) => ('123uvw'.includes(symbol) ? [{ row, col }] : [])),
       );
       chains.forEach((a, i) => {
         for (const b of chains.slice(i + 1)) {

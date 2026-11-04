@@ -11,12 +11,16 @@ describe('размер целей уровня', () => {
     for (const level of LEVELS) {
       for (const scale of [0.6, 1.5, 3]) {
         const { layout, goals } = resizeLevel(level.layout, level.goals, scale);
-        for (const [kind, symbols] of [
-          ['ice', 'i'],
-          ['box', 'bt123uvw'],
+        // Золото во льду и сундуках не меняется: без цели на лёд или сундуки на поле только оно
+        for (const [kind, all, own] of [
+          ['ice', 'iJg', 'iJ'],
+          ['box', 'bt123uvw', 'b123'],
+          ['gold', 'gtuvw', 'gtuvw'],
         ] as const) {
-          const goal = goals.find((g) => g.kind === kind)?.count ?? 0;
-          expect(count(layout, symbols), `уровень ${level.id}, ${kind}, ×${scale}`).toBe(goal);
+          const goal = goals.find((g) => g.kind === kind)?.count;
+          const where = `уровень ${level.id}, ${kind}, ×${scale}`;
+          if (goal === undefined) expect(count(layout, own), where).toBe(0);
+          else expect(count(layout, all), where).toBe(goal);
         }
         expect(count(layout, '#')).toBe(count(level.layout, '#'));
         expect(count(layout, 'o')).toBe(count(level.layout, 'o'));

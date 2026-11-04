@@ -1,39 +1,44 @@
 {
   "id": 50,
-  "title": "Восьмёрка",
-  "hint": "Доведи корону до самой нижней клетки столбца. Разрушить её нельзя",
+  "title": "Кольцо",
+  "hint": "Последний уровень этажа: здесь можно купить спецфишки",
   "layout": [
     "..........",
-    "..........",
-    "...o##o...",
     "..........",
     "..........",
     "..........",
     "....##....",
-    "....ii....",
-    ".iiiiiiii.",
-    "iiiiiiiiii"
+    "....##....",
+    "..........",
+    "JtJJ..JJtJ",
+    ".J.JJJJ.J.",
+    "JttJttJttJ"
   ],
   "colors": 3,
-  "moves": 23,
+  "moves": 30,
   "goals": [
     {
-      "kind": "item",
-      "count": 1
+      "kind": "ice",
+      "count": 16
     },
     {
-      "kind": "ice",
-      "count": 20
+      "kind": "gold",
+      "count": 8
+    },
+    {
+      "kind": "level3color",
+      "count": 4,
+      "color": 1
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 7080
+      "count": 1000
     },
     {
-      "kind": "item",
-      "count": 2
+      "kind": "level3",
+      "count": 10
     }
   ]
 }

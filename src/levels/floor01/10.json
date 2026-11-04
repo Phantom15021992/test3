@@ -1,35 +1,42 @@
 {
   "id": 10,
-  "title": "Ледяной ромб",
-  "hint": "Лёд лежит по краю ромба — самое трудное место",
+  "title": "Сердце",
+  "hint": "Последний уровень этажа: здесь можно купить спецфишки",
   "layout": [
-    "####..####",
-    "###iiii###",
-    "##iiiiii##",
-    "#iiiiiiii#",
-    ".iiiiiiii.",
-    ".iiiiiiii.",
-    "#iiiiiiii#",
-    "##iiiiii##",
+    "#...##...#",
+    "..........",
+    "..........",
+    "i.i....i.i",
+    "#i.i..i.i#",
+    "##i.ii.i##",
     "###iiii###",
     "####..####"
   ],
   "colors": 3,
-  "moves": 15,
+  "moves": 30,
   "goals": [
     {
       "kind": "ice",
-      "count": 52
+      "count": 16
+    },
+    {
+      "kind": "level3",
+      "count": 8
+    },
+    {
+      "kind": "level3color",
+      "count": 4,
+      "color": 2
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 4870
+      "count": 1000
     },
     {
       "kind": "level3",
-      "count": 17
+      "count": 10
     }
   ]
 }

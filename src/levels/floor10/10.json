@@ -1,43 +1,45 @@
 {
   "id": 100,
-  "title": "Восьмёрка",
-  "hint": "Здесь всё сразу: камни, сундуки в цепях и короны",
+  "title": "Круг",
+  "hint": "Последний уровень этажа: здесь можно купить спецфишки",
   "layout": [
-    "....ss....",
-    "....ss....",
-    "....##...i",
-    ".....b....",
-    "....ss....",
-    "...o..o...",
-    "....##....",
-    "....bb2...",
-    "...3......",
-    "i........i"
+    "###.oo.###",
+    "#........#",
+    "cccc..cccc",
+    "cccc..cccc",
+    "cccc..cccc",
+    "cccc..cccc",
+    "..........",
+    "..........",
+    "#ttt..ttt#",
+    "###t..t###"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 30,
   "goals": [
     {
+      "kind": "coal",
+      "count": 2
+    },
+    {
       "kind": "item",
-      "count": 1
+      "count": 2
     },
     {
-      "kind": "box",
-      "count": 5
-    },
-    {
-      "kind": "ice",
-      "count": 3
+      "kind": "gold",
+      "count": 8
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 9800
+      "count": 1000
     },
     {
-      "kind": "item",
-      "count": 2
+      "kind": "level3",
+      "count": 10
     }
-  ]
+  ],
+  "coalLayers": 9,
+  "iceCracks": true
 }

@@ -1,39 +1,42 @@
 {
   "id": 30,
-  "title": "Восьмёрка",
-  "hint": "Сундук стоит на месте: совпадение рядом или взрыв открывает его, следующий удар ломает",
+  "title": "Бриллиант",
+  "hint": "Последний уровень этажа: здесь можно купить спецфишки",
   "layout": [
+    "##..o...##",
+    "#........#",
     "..........",
     "..........",
-    ".bb.##.bb.",
-    "b..b..b..b",
-    ".ibb..bbi.",
-    "..bbbbbb..",
-    "...i##i...",
-    "ibiiiiiibi",
-    "bbbbbbbbbb",
-    "bbbbbbbbbb"
+    "#........#",
+    "##bbbbbb##",
+    "###bbbb###",
+    "####..####"
   ],
   "colors": 3,
-  "moves": 45,
+  "moves": 30,
   "goals": [
     {
-      "kind": "box",
-      "count": 40
+      "kind": "item",
+      "count": 1
     },
     {
-      "kind": "ice",
-      "count": 12
+      "kind": "level3color",
+      "count": 4,
+      "color": 0
+    },
+    {
+      "kind": "box",
+      "count": 10
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 12480
+      "count": 1000
     },
     {
       "kind": "level3",
-      "count": 38
+      "count": 10
     }
   ]
 }
