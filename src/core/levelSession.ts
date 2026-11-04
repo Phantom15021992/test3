@@ -14,7 +14,9 @@ import { CAMPAIGN_BONUS_LIMITS, FINALE_MAX_ROUNDS } from './config';
 import { recordPurchase } from './gameStats';
 import {
   boardTemplate,
+  iceStyles,
   iceTemplate,
+  type IceStyle,
   type Goal,
   type GoalKind,
   type Level,
@@ -53,9 +55,12 @@ export class LevelSession extends GameSession {
     chain: 0,
     item: 0,
     coal: 0,
+    gold: 0,
   };
-  /** Клетки, на которых ещё лежит лёд */
-  ice: boolean[][];
+  /** Сколько ударов ещё выдержит лёд в клетке (0 — льда нет) */
+  ice: number[][];
+  /** Вид льда по клеткам — не меняется за уровень: по нему рисуется картинка и считается золото */
+  readonly iceStyle: readonly (readonly (IceStyle | null)[])[];
   /** Сколько звёзд этажа потрачено в этой попытке */
   starsSpent = 0;
   /**
@@ -74,6 +79,7 @@ export class LevelSession extends GameSession {
   ) {
     super(seed, level.colors, boardTemplate(level), level.moves);
     this.ice = iceTemplate(level);
+    this.iceStyle = iceStyles(level);
     this.board.forEach((line, row) =>
       line.forEach((cell, col) => {
         if (cell?.kind === 'coal' && cell.top === row && cell.left === col) {
@@ -261,12 +267,17 @@ export class LevelSession extends GameSession {
   protected override onStep(step: ResolveStep): void {
     if (step.kind === 'clear') {
       const links = step.links ?? [];
+      // Удар по льду — каждая очищенная клетка и каждое снятое звено, одна клетка — раз за шаг
+      const hit = new Set<string>();
       for (const { row, col } of [...step.cells, ...links.map((link) => link.pos)]) {
         const line = this.ice[row];
-        if (line?.[col]) {
-          line[col] = false;
-          this.progress.ice++;
-        }
+        const key = `${row},${col}`;
+        if (!line?.[col] || hit.has(key)) continue;
+        hit.add(key);
+        line[col] = line[col]! - 1;
+        if (line[col]! > 0) continue;
+        this.progress.ice++;
+        if (this.iceStyle[row]?.[col] === 'gold') this.progress.gold++;
       }
       this.progress.chain += links.filter((link) => link.left === 0).length;
       this.progress.stone += step.stones ?? 0;

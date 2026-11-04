@@ -83,7 +83,9 @@ function goalValue(session: LevelSession, steps: ResolveStep[], after: Board): n
       if (need('coal')) value += (step.coal?.length ?? 0) * GOAL_STEP_VALUE;
       if (need('item')) value += (step.items ?? 0) * ITEM_VALUE;
       for (const { row, col } of step.cells) {
-        if (need('ice') && session.ice[row]?.[col]) broken.add(`${row},${col}`);
+        const iced = (session.ice[row]?.[col] ?? 0) > 0;
+        const gold = iced && session.iceStyle[row]?.[col] === 'gold';
+        if ((need('ice') && iced) || (need('gold') && gold)) broken.add(`${row},${col}`);
       }
     }
     if (step.kind === 'transform') {

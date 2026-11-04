@@ -113,9 +113,13 @@ function moveValue(
       // Удар по углю: слой снят; разбитая глыба — цель
       for (const hit of step.coal ?? []) value += need('coal') ? (hit.layers === 0 ? 400 : 70) : 5;
       for (const pos of step.cells) {
-        if (session.ice[pos.row]?.[pos.col] && !iced.has(posKey(pos))) {
+        const hits = session.ice[pos.row]?.[pos.col] ?? 0;
+        if (hits > 0 && !iced.has(posKey(pos))) {
           iced.add(posKey(pos));
-          value += need('ice') ? 60 : 0;
+          // Последний удар ломает льдину — он ценнее, чем снятый слой
+          const gold = session.iceStyle[pos.row]?.[pos.col] === 'gold';
+          const worth = (need('ice') ? 60 : 0) + (need('gold') && gold ? 80 : 0);
+          value += hits === 1 ? worth : worth / 2;
         }
       }
     }
@@ -140,7 +144,10 @@ function goalTargets(session: LevelSession): Position[] {
   return allPositions(session.board).filter((pos) => {
     const cell = getCell(session.board, pos);
     return (
-      (need('ice') && session.ice[pos.row]?.[pos.col] === true) ||
+      (need('ice') && (session.ice[pos.row]?.[pos.col] ?? 0) > 0) ||
+      (need('gold') &&
+        (session.ice[pos.row]?.[pos.col] ?? 0) > 0 &&
+        session.iceStyle[pos.row]?.[pos.col] === 'gold') ||
       (need('chain') && cell?.kind === 'tile' && (cell.chain ?? 0) > 0) ||
       (need('box') && cell?.kind === 'box') ||
       (need('stone') && cell?.kind === 'stone') ||

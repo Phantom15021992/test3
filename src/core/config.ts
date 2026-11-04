@@ -79,6 +79,9 @@ export const CAMPAIGN_LEVEL2_PIECES: Readonly<
 export const CAMPAIGN_LEVEL2_TILES = 2;
 
 /** Уголь: сторона глыбы и сколько у неё слоёв самое большее (у уровня можно меньше) */
+/** Сколько ударов держит лёд кампании: обычный, 1 уровня, 2 уровня, со слитками золота */
+export const ICE_HITS = { classic: 1, thin: 2, thick: 3, gold: 2 } as const;
+
 export const COAL_SIZE = 4;
 export const COAL_MAX_LAYERS = 9;
 

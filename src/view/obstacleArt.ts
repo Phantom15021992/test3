@@ -1,13 +1,45 @@
 import Phaser from 'phaser';
 import { COAL_MAX_LAYERS, COAL_SIZE } from '../core/config';
+import type { IceStyle } from '../core/level';
 
 // Препятствия и лёд рисуются картинками из public/assets/obstacles (грузятся в BootScene).
 
-export type ObstacleImage = 'stone' | 'box' | 'crown' | 'ice' | 'chain';
+export type ObstacleImage =
+  | 'stone'
+  | 'box'
+  | 'crown'
+  | 'ice'
+  | 'ice-thin'
+  | 'ice-thick'
+  | 'ice-cracked'
+  | 'ice-gold'
+  | 'ice-gold-cracked'
+  | 'chain';
 
 const textureKey = (name: ObstacleImage) => `obstacle-${name}`;
 
-const NAMES: readonly ObstacleImage[] = ['stone', 'box', 'crown', 'ice', 'chain'];
+const NAMES: readonly ObstacleImage[] = [
+  'stone',
+  'box',
+  'crown',
+  'ice',
+  'ice-thin',
+  'ice-thick',
+  'ice-cracked',
+  'ice-gold',
+  'ice-gold-cracked',
+  'chain',
+];
+
+/**
+ * Картинка льда по виду и оставшимся ударам: лёд 2 уровня после удара выглядит как 1 уровня,
+ * последний удар остаётся льду с трещинами
+ */
+export function iceImage(style: IceStyle, hits: number): ObstacleImage {
+  if (style === 'classic') return 'ice';
+  if (style === 'gold') return hits > 1 ? 'ice-gold' : 'ice-gold-cracked';
+  return hits >= 3 ? 'ice-thick' : hits === 2 ? 'ice-thin' : 'ice-cracked';
+}
 
 /** Уголь рисуется по стадиям 1–9: чем меньше осталось слоёв, тем дальше стадия и меньше глыба */
 const coalKey = (stage: number) => `obstacle-coal-${stage}`;

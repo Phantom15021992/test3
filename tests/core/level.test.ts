@@ -417,8 +417,8 @@ describe('партия на уровне', () => {
     expect(session.board[3]?.[3]).toMatchObject({ kind: 'tile', level: 1, chain: 3 });
     expect((session.board[3]?.[3] as { color: number }).color).toBeGreaterThanOrEqual(0);
     expect(session.board[2]?.[0]?.kind).toBe('tile');
-    expect(session.ice[2]?.[0]).toBe(true);
-    expect(session.ice[1]?.[0]).toBe(false);
+    expect(session.ice[2]?.[0]).toBe(1);
+    expect(session.ice[1]?.[0]).toBe(0);
   });
 
   it('лёд ломается, когда на клетке исчезает фишка, и остаётся на месте при падении', () => {
@@ -427,9 +427,9 @@ describe('партия на уровне', () => {
       level({ layout: ['....', 'i...', '.i..', '....'], goals: [{ kind: 'ice', count: 2 }] }),
     );
     session.ice = [
-      [true, false, false],
-      [false, false, false],
-      [false, true, false],
+      [1, 0, 0],
+      [0, 0, 0],
+      [0, 1, 0],
     ];
     swap(
       session,
@@ -440,8 +440,8 @@ describe('партия на уровне', () => {
     `,
     );
     expect(session.progress.ice).toBe(1);
-    expect(session.ice[0]?.[0]).toBe(false);
-    expect(session.ice[2]?.[1]).toBe(true);
+    expect(session.ice[0]?.[0]).toBe(0);
+    expect(session.ice[2]?.[1]).toBe(1);
   });
 
   it('цели и задачи на звёзды выполнены одним ходом — уровень кончается, три звезды', () => {
@@ -568,10 +568,10 @@ describe('партия на уровне', () => {
       Y1 R1 G1 B1
     `);
     session.ice = [
-      [false, false, false, false],
-      [false, false, false, false],
-      [false, true, true, false],
-      [false, false, false, false],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 1, 1, 0],
+      [0, 0, 0, 0],
     ];
     session.progress.ice = 0;
     session.moves = 1;
@@ -592,9 +592,9 @@ describe('партия на уровне', () => {
       R1 G1 R1 B1
     `);
     session.ice = [
-      [false, false, false, false],
-      [false, true, false, false],
-      [false, false, false, false],
+      [0, 0, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 0, 0],
     ];
     session.moves = 1;
     drain(session.campaignFinale());

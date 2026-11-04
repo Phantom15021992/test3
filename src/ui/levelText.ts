@@ -20,6 +20,7 @@ const GOAL_NAMES: Readonly<Record<GoalKind, string>> = {
   chain: 'Цепи',
   item: 'Короны',
   coal: 'Уголь',
+  gold: 'Золото',
 };
 
 /** Ячейка 3 уровня, собранная сразу из фишек, засчитывается как две ячейки 2 уровня */
@@ -86,6 +87,8 @@ function goalTaskText({ kind, count }: Goal): string {
       return `опусти на дно ${n} ${plural(count, 'корону', 'короны', 'корон')}`;
     case 'coal':
       return `разбей ${n} ${plural(count, 'глыбу', 'глыбы', 'глыб')} угля`;
+    case 'gold':
+      return `достань ${n} ${plural(count, 'слиток', 'слитка', 'слитков')} золота из льда`;
   }
 }
 

@@ -101,16 +101,16 @@ describe('подсказка самого сильного хода', () => {
       R1 B1 G1 B1
     `);
     level.ice = [
-      [false, false, false, false],
-      [false, false, false, false],
-      [true, false, false, false],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [1, 0, 0, 0],
     ];
     expect(strongestMove(level)?.cells).toEqual([p(0, 0), p(0, 1)]);
     // Тот же ход, когда лёд стоит только под взрывом, а не под комбинацией, — не подсказывается
     level.ice = [
-      [false, false, true, false],
-      [false, false, false, false],
-      [false, false, false, false],
+      [0, 0, 1, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
     ];
     expect(strongestMove(level)?.cells).not.toEqual([p(0, 0), p(0, 1)]);
   });
@@ -132,8 +132,8 @@ describe('подсказка самого сильного хода', () => {
       G1 B1 R1 Y1 G1 B2
     `);
     level.ice = [
-      [true, true, true, false, false, false],
-      [false, false, false, false, false, false],
+      [1, 1, 1, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0],
     ];
     expect(strongestMove(level)?.cells).toEqual([p(0, 2), p(1, 2)]);
   });

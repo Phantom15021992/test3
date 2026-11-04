@@ -242,7 +242,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private refreshIce(): void {
-    if (this.session instanceof LevelSession) this.view.setIce(this.session.ice);
+    if (this.session instanceof LevelSession) {
+      this.view.setIce(this.session.ice, this.session.iceStyle);
+    }
   }
 
   private refreshGoals(): void {

@@ -14,6 +14,7 @@ import {
 } from '../core/config';
 import type { Fall, Spawn } from '../core/gravity';
 import type { ChainLink, ComboHit, Placement } from '../core/resolve';
+import type { IceStyle } from '../core/level';
 import { comboTextureKey } from './comboLabel';
 import {
   BLOCKED_ALPHA,
@@ -24,7 +25,7 @@ import {
   SELECTION_COLOR,
   TILE_COLORS,
 } from './palette';
-import { CHAIN_NAME, chainImages, obstacleImage, setCoalArt } from './obstacleArt';
+import { CHAIN_NAME, chainImages, iceImage, obstacleImage, setCoalArt } from './obstacleArt';
 import { drawPiece } from './pieceArt';
 import { drawTileShape } from './tileArt';
 
@@ -101,13 +102,17 @@ export class BoardView {
   }
 
   /** Лёд рисуется под фишками: он лежит на клетке и не падает вместе с ними */
-  setIce(ice: readonly (readonly boolean[])[]): void {
+  setIce(
+    ice: readonly (readonly number[])[],
+    styles: readonly (readonly (IceStyle | null)[])[],
+  ): void {
     this.iceLayer.removeAll(true);
     ice.forEach((line, row) =>
-      line.forEach((frozen, col) => {
-        if (!frozen) return;
+      line.forEach((hits, col) => {
+        const style = styles[row]?.[col];
+        if (hits <= 0 || !style) return;
         const { x, y } = this.centerOf({ row, col });
-        this.iceLayer.add(obstacleImage(this.scene, 'ice', this.cellSize, x, y));
+        this.iceLayer.add(obstacleImage(this.scene, iceImage(style, hits), this.cellSize, x, y));
       }),
     );
   }
