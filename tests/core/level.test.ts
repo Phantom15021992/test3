@@ -601,6 +601,25 @@ describe('партия на уровне', () => {
     expect(session.goalsDone).toBe(true);
   });
 
+  it('финал: три звезды взяты досрочно — оставшаяся бомба всё равно срабатывает на очки', () => {
+    const session = new LevelSession(5, level({ moves: 10 }));
+    session.board = parseBoard(`
+      R1 G1 B1 Y1
+      G1 *  Y1 R1
+      B1 Y1 R1 G1
+      Y1 R1 G1 B1
+    `);
+    session.progress.level2 = 1;
+    session.score = 30;
+    expect(session.stars).toBe(3);
+    expect(session.isOver).toBe(true);
+    expect(session.movesLeft).toBe(10);
+    drain(session.campaignFinale());
+    expect(session.score).toBeGreaterThan(30);
+    expect(session.stars).toBe(3);
+    expect(session.board.flat().some((cell) => cell?.kind === 'piece')).toBe(false);
+  });
+
   it('финал: спецфишек нет — поле и итог не меняются', () => {
     const session = new LevelSession(5, level({ moves: 1 }));
     session.moves = 1;

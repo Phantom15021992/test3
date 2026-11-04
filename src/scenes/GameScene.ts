@@ -492,9 +492,14 @@ export class GameScene extends Phaser.Scene {
   /** Уровень окончен: цели выполнены или кончились ходы */
   private async finishLevel(session: LevelSession): Promise<void> {
     const { level } = session;
-    // Ходы кончились, а на поле остались спецфишки — они срабатывают на итог, и он подводится после
-    if (session.movesLeft === 0 && hasPieces(session.board)) {
-      this.hintText.setText('Ходы закончились — спецфишки срабатывают!');
+    // Уровень кончился — ходами или досрочно на трёх звёздах, — а на поле остались спецфишки: они
+    // срабатывают на лучший итог (при трёх звёздах — на очки), и итог подводится после
+    if (hasPieces(session.board)) {
+      this.hintText.setText(
+        session.movesLeft === 0
+          ? 'Ходы закончились — спецфишки срабатывают!'
+          : 'Три звезды! Оставшиеся спецфишки срабатывают',
+      );
       await this.animate(session.campaignFinale());
       this.hintText.setText('');
     }
