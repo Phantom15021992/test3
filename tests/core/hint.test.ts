@@ -56,7 +56,7 @@ describe('подсказка самого сильного хода', () => {
     expect(hint?.cells).toEqual([p(0, 5), p(1, 5)]);
   });
 
-  it('предпочитает ход бомбой слабому обмену', () => {
+  it('ради одних очков спецфишку не предлагает: подсказывает обычный обмен', () => {
     const hint = strongestMove(
       session(`
         R2 G2 B2 Y2
@@ -66,20 +66,63 @@ describe('подсказка самого сильного хода', () => {
         G1 B1 R1 Y2
       `),
     );
-    expect(hint?.cells).toContainEqual(p(1, 1));
+    expect(hint?.kind).toBe('swap');
+    expect(hint?.cells).not.toContainEqual(p(1, 1));
   });
 
-  it('у радуги показывает её и фишку самого частого цвета', () => {
+  it('радугу по цвету ради очков тоже не предлагает', () => {
     const hint = strongestMove(
       session(`
         @ R1 G1 R1
-        G1 R1 B1 R1
-        B1 Y1 G1 Y1
+        G1 B1 R1 B1
       `),
     );
-    expect(hint?.kind).toBe('rainbow');
-    expect(hint?.cells[0]).toEqual(p(0, 0));
-    expect(hint?.move).toMatchObject({ type: 'rainbow', color: 0 });
+    expect(hint?.kind).toBe('swap');
+    expect(hint?.cells).toEqual([p(0, 2), p(1, 2)]);
+  });
+
+  it('спецфишку предлагает, если комбинация сдвинутой фишки даёт такую же спецфишку', () => {
+    const hint = strongestMove(
+      session(`
+        -  B2 G1
+        B2 R1 Y1
+        B2 Y1 R1
+        B2 G1 Y1
+      `),
+    );
+    expect(hint?.cells).toEqual([p(0, 0), p(0, 1)]);
+  });
+
+  it('на уровне спецфишку предлагает, если её комбинация нужна для задания', () => {
+    const level = new LevelSession(5, iceLevel);
+    level.board = parseBoard(`
+      *  R1 G1 B1
+      R1 G1 B1 G1
+      R1 B1 G1 B1
+    `);
+    level.ice = [
+      [false, false, false, false],
+      [false, false, false, false],
+      [true, false, false, false],
+    ];
+    expect(strongestMove(level)?.cells).toEqual([p(0, 0), p(0, 1)]);
+    // Тот же ход, когда лёд стоит только под взрывом, а не под комбинацией, — не подсказывается
+    level.ice = [
+      [false, false, true, false],
+      [false, false, false, false],
+      [false, false, false, false],
+    ];
+    expect(strongestMove(level)?.cells).not.toEqual([p(0, 0), p(0, 1)]);
+  });
+
+  it('если обычных ходов нет, подсказывает и спецфишку', () => {
+    const hint = strongestMove(
+      session(`
+        * G1 B1
+        R1 Y1 G1
+      `),
+    );
+    expect(hint?.cells).toContainEqual(p(0, 0));
   });
 
   it('на уровне цель важнее очков: выбирает ход, ломающий лёд', () => {

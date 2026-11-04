@@ -1,10 +1,19 @@
-import { allPositions, getCell, isPiece, isTile, type Board, type Position } from './board';
+import {
+  allPositions,
+  getCell,
+  isPiece,
+  isTile,
+  posKey,
+  type Board,
+  type PieceType,
+  type Position,
+} from './board';
 import { LevelSession } from './levelSession';
 import { findPossibleMoves } from './moves';
 import { runMove, type ResolveStep } from './resolve';
 import { createRng } from './rng';
 import type { GameSession, PlayerMove } from './session';
-import { comboNeedsColor, mostFrequentColor } from './specials';
+import { activationSwapTarget, comboNeedsColor, isCombo, mostFrequentColor } from './specials';
 
 // Подсказка: самый сильный ход на текущем поле.
 // Ходы примеряются на копии поля и на своём ГСЧ: ГСЧ партии трогать нельзя, иначе журнал партии
@@ -89,35 +98,85 @@ function goalValue(session: LevelSession, steps: ResolveStep[], after: Board): n
   return value + broken.size * GOAL_STEP_VALUE;
 }
 
-/**
- * Считается только то, что ход делает сразу, до падения новых фишек: их цвета случайны,
- * и иначе подсказка выбирала бы не сильный ход, а удачный каскад.
- */
-function hintValue(session: GameSession, hint: Hint): number {
+/** Что ход делает сразу, до падения новых фишек: их цвета случайны, и иначе подсказка
+ * выбирала бы не сильный ход, а удачный каскад */
+function preview(session: GameSession, hint: Hint): { steps: ResolveStep[]; board: Board } {
   const { steps, board } = runMove(session.board, hint.move, {
     colorCount: session.colorCount,
     rng: createRng(PREVIEW_SEED),
     campaign: session.campaign,
   });
   const drop = steps.findIndex((step) => step.kind === 'drop');
-  const immediate = drop < 0 ? steps : steps.slice(0, drop);
-  const points = immediate.reduce(
-    (sum, step) => sum + (step.kind === 'clear' ? step.points : 0),
-    0,
+  return { steps: drop < 0 ? steps : steps.slice(0, drop), board };
+}
+
+function hintValue(session: GameSession, steps: ResolveStep[], board: Board): number {
+  const points = steps.reduce((sum, step) => sum + (step.kind === 'clear' ? step.points : 0), 0);
+  return session instanceof LevelSession ? points + goalValue(session, steps, board) : points;
+}
+
+/**
+ * Какую спецфишку ход тратит: срабатывание на месте, радуга по цвету, комбо двух спецфишек или сдвиг
+ * взрывной спецфишки. Радуга и манипулятор, сдвинутые в совпадение, просто переезжают — их ход не тратит
+ */
+function spentPiece(board: Board, hint: Hint): PieceType | null {
+  const { move } = hint;
+  if (move.type === 'fire' || move.type === 'rainbow') {
+    const cell = getCell(board, move.at);
+    return isPiece(cell) ? cell.type : null;
+  }
+  if (move.type !== 'swap') return null;
+  const fireAt = isCombo(board, move.from, move.to)
+    ? move.to
+    : activationSwapTarget(board, move.from, move.to);
+  if (!fireAt) return null;
+  const cell = getCell(board, posKey(fireAt) === posKey(move.to) ? move.from : move.to);
+  return isPiece(cell) ? cell.type : null;
+}
+
+/**
+ * Спецфишку ради одних очков подсказка не предлагает: только если цветная комбинация, которую
+ * собирает сдвинутая навстречу фишка, даёт такую же спецфишку или продвигает задание уровня.
+ * Срабатывание на месте, радуга по цвету и комбо двух спецфишек цветной комбинации не собирают
+ */
+function spendsWisely(session: GameSession, hint: Hint, steps: ResolveStep[]): boolean {
+  const spent = spentPiece(session.board, hint);
+  if (!spent) return true;
+  const { move } = hint;
+  if (move.type !== 'swap' || isCombo(session.board, move.from, move.to)) return false;
+  const fireAt = activationSwapTarget(session.board, move.from, move.to)!;
+  // Совпадение срабатывает раньше взрыва: его шаги — до первой очистки, задевшей спецфишку
+  const blast = steps.findIndex(
+    (step) => step.kind === 'clear' && step.cells.some((pos) => posKey(pos) === posKey(fireAt)),
   );
-  return session instanceof LevelSession ? points + goalValue(session, immediate, board) : points;
+  const match = steps.slice(0, blast < 0 ? steps.length : blast);
+  const sameAgain = match.some(
+    (step) =>
+      step.kind === 'transform' &&
+      step.placements.some(({ cell }) => isPiece(cell) && cell.type === spent),
+  );
+  if (sameAgain) return true;
+  return session instanceof LevelSession && goalValue(session, match, session.board) > 0;
 }
 
 /** Самый сильный ход; null — если ходов нет */
 export function strongestMove(session: GameSession): Hint | null {
   let best: Hint | null = null;
   let bestValue = -Infinity;
+  // Если без спецфишек ходов нет (так почти не бывает), лучше подсказать хоть что-то
+  let fallback: Hint | null = null;
+  let fallbackValue = -Infinity;
   for (const hint of candidates(session.board)) {
-    const value = hintValue(session, hint);
-    if (value > bestValue) {
+    const { steps, board } = preview(session, hint);
+    const value = hintValue(session, steps, board);
+    if (value > fallbackValue) {
+      fallbackValue = value;
+      fallback = hint;
+    }
+    if (value > bestValue && spendsWisely(session, hint, steps)) {
       bestValue = value;
       best = hint;
     }
   }
-  return best;
+  return best ?? fallback;
 }
