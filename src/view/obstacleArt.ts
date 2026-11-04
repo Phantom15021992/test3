@@ -12,7 +12,6 @@ export type ObstacleImage =
   | 'chest-treasure'
   | 'chest-empty'
   | 'crown'
-  | 'ice'
   | 'ice-thin'
   | 'ice-thick'
   | 'ice-cracked'
@@ -28,7 +27,6 @@ const NAMES: readonly ObstacleImage[] = [
   'chest-treasure',
   'chest-empty',
   'crown',
-  'ice',
   'ice-thin',
   'ice-thick',
   'ice-cracked',
@@ -42,7 +40,8 @@ const NAMES: readonly ObstacleImage[] = [
  * (iceCracks у уровня) последний удар остаётся льду с трещинами
  */
 export function iceImage(style: IceStyle, hits: number, cracks: boolean): ObstacleImage {
-  if (style === 'classic') return 'ice';
+  // Обычный лёд (1 удар) — это лёд 1 уровня: та же картинка, весь лёд в одном стиле
+  if (style === 'classic') return 'ice-thin';
   if (hits >= iceHits(style, cracks)) return 'ice-thick';
   const cracked = cracks && hits === 1;
   if (style === 'gold') return cracked ? 'ice-gold-cracked' : 'ice-gold';

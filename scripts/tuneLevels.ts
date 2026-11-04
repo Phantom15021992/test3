@@ -6,7 +6,9 @@
 // Размер целей подбирается так, чтобы на уровень с кривой уходило задуманное число ходов
 // (MOVES_CURVE): цели растут или уменьшаются, препятствий на поле — ровно по цели (levelLayout.ts).
 // Затем ходы выставляются под долю побед с кривой. Звёзды: вторая — за очки, третья — за ячейки
-// (2 уровня на нечётных местах этажа, 3 — на чётных; с коронами — за все короны поля);
+// (2 уровня на нечётных местах этажа, 3 — на чётных);
+// 10-е место: без покупок почти не проходится, а с двумя бомбами — в окне BOMB_WINS; размер целей
+// (у угля — слои) подбирается под это окно.
 // пороги берутся из тех же партий: сколько очков и ячеек было к концу партии.
 // С --keep-moves цели и ходы не трогаются: только условия звёзд.
 // С --only подгоняются только эти места этажа: остальные уровни могли быть поправлены вручную.
@@ -40,10 +42,15 @@ const SCALES = [0.6, 0.8, 1, 1.25, 1.5, 2, 2.5, 3, 4, 5];
 
 /**
  * Какую долю партий опытный бот без покупок проходит на каждом месте этажа и какую — на три звезды.
- * Кривая владельца (одна на все этажи): к 10-му месту поражений около 80%, на три звезды — 90–95%
+ * Кривая владельца (одна на все этажи): места 1–4 и 6–8 — около 10% поражений, 5 и 9 — 45–55%,
+ * 10 — 90–95% без покупок
  */
-const WIN_CURVE = [0.9, 0.9, 0.89, 0.88, 0.86, 0.83, 0.78, 0.7, 0.55, 0.2];
-const THREE_STARS_CURVE = [0.9, 0.89, 0.88, 0.86, 0.82, 0.77, 0.7, 0.55, 0.38, 0.07];
+const WIN_CURVE = [0.9, 0.9, 0.9, 0.9, 0.5, 0.9, 0.9, 0.9, 0.5, 0.075];
+const THREE_STARS_CURVE = [0.8, 0.8, 0.8, 0.8, 0.3, 0.8, 0.8, 0.8, 0.3, 0.04];
+/** 10-е место с покупкой до двух бомб: поражений 50–70%, то есть побед 30–50% */
+const BOMBS = 2;
+const BOMB_WINS = { min: 0.3, max: 0.5, target: 0.4 };
+const BOSS = FLOOR_SIZE - 1;
 /** Сколько ходов задумано на уровне: как на первом этаже, чуть длиннее к концу этажа */
 const MOVES_CURVE = [20, 22, 25, 25, 28, 28, 30, 30, 32, 35];
 
@@ -76,11 +83,9 @@ function threshold(values: readonly number[], share: number): number {
 /**
  * Вторая звезда — очки: её берут примерно (win + three) / 2 партий. Третья — ячейки: обе задачи
  * вместе — примерно three. Значения берутся на конец партии: ход, когда выполнены цели, а с коронами —
- * когда на дне все короны или кончились ходы. С коронами третья задача — все короны, и под three
- * подгоняются очки.
+ * когда на дне все короны или кончились ходы.
  */
 function starTasks(
-  layout: readonly string[],
   played: readonly GameResult[],
   goals: readonly Goal[],
   moves: number,
@@ -88,8 +93,7 @@ function starTasks(
   win: number,
   three: number,
 ): StarTask[] {
-  const crowns = layout.join('').split('o').length - 1;
-  const cells = cellsTask(layout, place);
+  const cells = cellsTask(place);
   const won = played.flatMap((game) => {
     const at = finishedAt(game, goals);
     if (at > moves) return [];
@@ -99,21 +103,6 @@ function starTasks(
   });
   const middle = (win + three) / 2;
   const round = (value: number) => Math.max(10, Math.floor(value / 10) * 10);
-  if (crowns > 0) {
-    const full = won.filter((game) => game.cells >= crowns);
-    const scores = full.length / games > three ? full : won;
-    const share = scores === full ? three / (full.length / games) : middle / win;
-    const score = round(
-      threshold(
-        scores.map((game) => game.score),
-        share,
-      ),
-    );
-    return [
-      { kind: 'score', count: score },
-      { kind: 'item', count: crowns },
-    ];
-  }
   const score = round(
     threshold(
       won.map((game) => game.score),
@@ -134,9 +123,8 @@ function starTasks(
   ];
 }
 
-/** Третья звезда: ячейки 2 уровня на нечётных местах этажа, 3 — на чётных, с коронами — все короны */
-function cellsTask(layout: readonly string[], place: number): StarTaskKind {
-  if (layout.join('').includes('o')) return 'item';
+/** Третья звезда: ячейки 2 уровня на нечётных местах этажа, 3 — на чётных */
+function cellsTask(place: number): StarTaskKind {
   return place % 2 === 0 ? 'level2' : 'level3';
 }
 
@@ -148,7 +136,7 @@ function playAll(level: Level, sized: SizedLevel, count: number): GameResult[] {
   const place = (level.id - 1) % FLOOR_SIZE;
   const stars: StarTask[] = [
     { kind: 'score', count: Infinity },
-    { kind: cellsTask(sized.layout, place), count: Infinity },
+    { kind: cellsTask(place), count: Infinity },
   ];
   const open: Level = { ...level, ...sized, stars, moves: NO_LIMIT };
   return Array.from({ length: count }, (_, i) => play(open, 7000 * level.id + i + 1, 'expert'));
@@ -165,10 +153,12 @@ const usedMoves = (played: readonly GameResult[], goals: readonly Goal[]) =>
 function chooseSize(level: Level, place: number): SizedLevel {
   const winShare = WIN_CURVE[place]!;
   const wanted = MOVES_CURVE[place]!;
-  if (level.layout.join('').includes('o')) return chooseCrownHeight(level, winShare, wanted);
+  if (place === BOSS) return chooseBossSize(level);
+  const onlyCrowns = level.goals.every((goal) => goal.kind === 'item');
+  if (onlyCrowns) return chooseCrownHeight(level, winShare, wanted);
   const tried: { scale: number; sized: SizedLevel; moves: number }[] = [];
   const attempt = (scale: number) => {
-    const sized = resizeLevel(level.layout, level.goals, scale);
+    const sized = resizeLevel(level.layout, level.goals, scale, level.coalLayers);
     // Тот же размер уже примеряли: на поле не осталось места для препятствий
     const known = tried.find((t) => JSON.stringify(t.sized) === JSON.stringify(sized));
     if (known) return null;
@@ -209,6 +199,36 @@ function chooseCrownHeight(level: Level, winShare: number, wanted: number): Size
   return { layout, goals };
 }
 
+/** Ходы под долю побед: не меньше MIN_MOVES и не больше NO_LIMIT */
+const movesFor = (used: readonly number[], share: number) =>
+  Math.min(NO_LIMIT, Math.max(MIN_MOVES, quantile(used, share)));
+
+/** Доля побед с покупкой до BOMBS бомб при лимите ходов */
+function bombWins(level: Level, sized: SizedLevel, moves: number, count: number): number {
+  const open: Level = { ...level, ...sized, moves };
+  const won = Array.from({ length: count }, (_, i) =>
+    play(open, 9000 * level.id + i + 1, 'expert', 0, BOMBS),
+  ).filter((game) => game.won).length;
+  return won / count;
+}
+
+/**
+ * 10-е место: ходы ставятся под 7,5% побед без покупок, а размер целей (у угля — слои) — так,
+ * чтобы с двумя бомбами побед было ближе всего к BOMB_WINS.target
+ */
+function chooseBossSize(level: Level): SizedLevel {
+  let best: { sized: SizedLevel; distance: number } | null = null;
+  for (const scale of [0.6, 0.8, 1, 1.25, 1.5, 2]) {
+    const sized = resizeLevel(level.layout, level.goals, scale, level.coalLayers);
+    const played = playAll(level, sized, SEARCH_GAMES);
+    const moves = movesFor(usedMoves(played, sized.goals), WIN_CURVE[BOSS]!);
+    const share = bombWins(level, sized, moves, SEARCH_GAMES);
+    const distance = Math.abs(share - BOMB_WINS.target);
+    if (!best || distance < best.distance) best = { sized, distance };
+  }
+  return best!.sized;
+}
+
 function tune(level: Level, place: number) {
   const winShare = WIN_CURVE[place]!;
   const sized = keepMoves
@@ -216,13 +236,12 @@ function tune(level: Level, place: number) {
     : chooseSize(level, place);
   const played = playAll(level, sized, games);
   const used = usedMoves(played, sized.goals);
-  const moves = keepMoves
-    ? level.moves
-    : Math.min(NO_LIMIT, Math.max(MIN_MOVES, quantile(used, winShare)));
+  const moves = keepMoves ? level.moves : movesFor(used, winShare);
   const win = used.filter((value) => value <= moves).length / games;
   const three = Math.min(THREE_STARS_CURVE[place]!, win);
-  const stars = starTasks(sized.layout, played, sized.goals, moves, place, win, three);
-  return { ...sized, moves, stars, win, target: winShare };
+  const stars = starTasks(played, sized.goals, moves, place, win, three);
+  const bombs = place === BOSS ? bombWins(level, sized, moves, games) : undefined;
+  return { ...sized, moves, stars, win, target: winShare, bombs };
 }
 
 const fs = require('node:fs');
@@ -230,18 +249,23 @@ for (const level of LEVELS) {
   if (floorOf(level.id) !== floor) continue;
   const place = (level.id - 1) % FLOOR_SIZE;
   if (only && !only.includes(place + 1)) continue;
-  const { layout, goals, moves, stars, win, target } = tune(level, place);
+  const { layout, goals, moves, stars, win, target, bombs, coalLayers } = tune(level, place);
   const name = String(place + 1).padStart(2, '0');
   const path = `src/levels/floor${String(floor).padStart(2, '0')}/${name}.json`;
   const file = JSON.parse(fs.readFileSync(path, 'utf8')) as Level;
   fs.writeFileSync(
     path,
-    `${JSON.stringify({ ...file, layout, goals, moves, stars }, null, 2)}
+    `${JSON.stringify({ ...file, layout, goals, moves, stars, ...(coalLayers !== undefined && { coalLayers }) }, null, 2)}
 `,
   );
   const text = goals.map((goal) => `${goal.kind} ${goal.count}`).join(', ');
-  const short = win < target - 0.05 ? ` — ниже кривой (${Math.round(target * 100)}%)` : '';
+  const short =
+    Math.abs(win - target) > 0.05 ? ` — мимо кривой (${Math.round(target * 100)}%)` : '';
+  const withBombs =
+    bombs === undefined
+      ? ''
+      : `; с бомбами ${Math.round(bombs * 100)}%${bombs < BOMB_WINS.min || bombs > BOMB_WINS.max ? ' — мимо окна 30–50%' : ''}`;
   console.log(
-    `${levelNumber(level)}: ${text}; ходов ${moves}; победы ${Math.round(win * 100)}%${short}`,
+    `${levelNumber(level)}: ${text}; ходов ${moves}; победы ${Math.round(win * 100)}%${short}${withBombs}`,
   );
 }

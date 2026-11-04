@@ -5,6 +5,7 @@
 // не ближе 3 клеток друг от друга и по одному в строке, сундуки — не на дне столбца, если там нужна корона.
 // Ставим снизу вверх, парами зеркальных клеток, чтобы поле осталось симметричным.
 
+import { COAL_MAX_LAYERS } from '../src/core/config';
 import type { Goal } from '../src/core/level';
 
 type Grid = string[][];
@@ -14,7 +15,8 @@ interface Cell {
   col: number;
 }
 
-const LAYERS: Partial<Record<Goal['kind'], string>> = { ice: 'i' };
+/** Весь лёд поля: обычный, 2 уровня, со слитками */
+const ICE = 'iJg';
 /** Все сундуки поля: простые, с сокровищами, в цепях */
 const CHESTS = 'bt123uvw';
 /** Сколько звеньев бывает на одной цепи */
@@ -23,6 +25,8 @@ const MAX_LINKS = 3;
 export interface SizedLevel {
   layout: string[];
   goals: Goal[];
+  /** Слои угля — рычаг сложности уровней с углём */
+  coalLayers?: number;
 }
 
 /** Цели в scale раз больше (меньше 1 — меньше); препятствий на поле — ровно по цели */
@@ -30,18 +34,30 @@ export function resizeLevel(
   layout: readonly string[],
   goals: readonly Goal[],
   scale: number,
+  coalLayers?: number,
 ): SizedLevel {
   const grid = layout.map((line) => [...line]);
   const sized = goals.map((goal): Goal => {
-    const layer = LAYERS[goal.kind];
-    if (layer) return { kind: goal.kind, count: resizeLayer(grid, layer, goal.count, scale) };
+    if (goal.kind === 'ice') return { kind: 'ice', count: resizeIce(grid, scale) };
     if (goal.kind === 'box') return { kind: 'box', count: resizeChests(grid, scale) };
     // Камни — помеха, короны и уголь меняются не числом: у короны — высота, у угля — слои;
     // золото лежит в выбранных вручную льдинах и сундуках
     if (['item', 'stone', 'coal', 'gold'].includes(goal.kind)) return goal;
-    return { kind: goal.kind, count: Math.max(1, Math.round(goal.count * scale)) };
+    return { ...goal, count: Math.max(1, Math.round(goal.count * scale)) };
   });
-  return { layout: grid.map((line) => line.join('')), goals: sized };
+  const result: SizedLevel = { layout: grid.map((line) => line.join('')), goals: sized };
+  if (coalLayers !== undefined && goals.some((goal) => goal.kind === 'coal')) {
+    result.coalLayers = Math.min(COAL_MAX_LAYERS, Math.max(1, Math.round(coalLayers * scale)));
+  }
+  return result;
+}
+
+/** Лёд: меняется лёд того вида, что уже на поле (2 уровня или обычный); цель — весь лёд */
+function resizeIce(grid: Grid, scale: number): number {
+  const symbol = cellsOf(grid, 'J').length > 0 ? 'J' : 'i';
+  const count = cellsOf(grid, symbol).length;
+  if (count > 0) resizeLayer(grid, symbol, count, scale);
+  return cellsOf(grid, ICE).length;
 }
 
 const cellsOf = (grid: Grid, symbols: string): Cell[] =>
@@ -90,7 +106,7 @@ function resizeLayer(grid: Grid, symbol: string, count: number, scale: number): 
   const target = Math.max(1, Math.round(count * scale));
   const floor = crownFloor(grid);
   const allowed = (cell: Cell) =>
-    symbol === 'i' ? thick(grid, cell) : !floor.has(`${cell.row},${cell.col}`);
+    symbol === 'i' || symbol === 'J' ? thick(grid, cell) : !floor.has(`${cell.row},${cell.col}`);
   let placed = cellsOf(grid, symbol).length;
   while (placed > target) {
     // Убираем сверху: снизу препятствия мешают сильнее, а ставим мы их тоже снизу
