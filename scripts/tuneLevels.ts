@@ -34,9 +34,9 @@ declare function require(name: 'node:fs'): {
 };
 
 const NO_LIMIT = 50;
-const MIN_MOVES = 15;
+const MIN_MOVES = 25;
 /** Партий на одну примерку размера целей: точная серия — только для выбранного */
-const SEARCH_GAMES = 60;
+const SEARCH_GAMES = 40;
 /** Во сколько раз меняются цели при поиске */
 const SCALES = [0.6, 0.8, 1, 1.25, 1.5, 2, 2.5, 3, 4, 5];
 
@@ -51,8 +51,8 @@ const THREE_STARS_CURVE = [0.8, 0.8, 0.8, 0.8, 0.3, 0.8, 0.8, 0.8, 0.3, 0.04];
 const BOMBS = 2;
 const BOMB_WINS = { min: 0.3, max: 0.5, target: 0.4 };
 const BOSS = FLOOR_SIZE - 1;
-/** Сколько ходов задумано на уровне: как на первом этаже, чуть длиннее к концу этажа */
-const MOVES_CURVE = [20, 22, 25, 25, 28, 28, 30, 30, 32, 35];
+/** Сколько ходов задумано на уровне: от 25 до 40, к концу этажа длиннее; ходов на уровне — 25–50 */
+const MOVES_CURVE = [25, 26, 27, 28, 32, 28, 29, 30, 35, 40];
 
 const games = Number(process.argv[2]) || 200;
 const floor = Number(process.argv[3]) || 1;

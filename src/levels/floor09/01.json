@@ -18,6 +18,10 @@
     {
       "kind": "coal",
       "count": 1
+    },
+    {
+      "kind": "level3",
+      "count": 6
     }
   ],
   "stars": [

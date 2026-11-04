@@ -12,7 +12,7 @@
     "...cccc...",
     "...cccc...",
     "...cccc...",
-    ".........."
+    "b.bbbbbb.b"
   ],
   "colors": 3,
   "moves": 30,
@@ -20,6 +20,10 @@
     {
       "kind": "coal",
       "count": 1
+    },
+    {
+      "kind": "box",
+      "count": 8
     }
   ],
   "stars": [
