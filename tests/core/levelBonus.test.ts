@@ -8,7 +8,7 @@ import type { GameSession } from '../../src/core/session';
 import { parseBoard } from '../helpers/parseBoard';
 
 const level: Level = {
-  id: 1,
+  id: 10,
   title: 'Тест',
   hint: '',
   layout: ['....', '....', '....', '....'],
@@ -180,5 +180,14 @@ describe('покупка спецфишек в кампании', () => {
     session.progress.level3 = 50;
     session.score = 2;
     expect(session.stars).toBe(3);
+  });
+});
+
+describe('магазин в кампании', () => {
+  it('спецфишки продаются только на 10-м уровне этажа', () => {
+    for (const id of [1, 9, 15, 99]) {
+      expect(new LevelSession(5, { ...level, id }, 100).canBuy('rocket')).toBe(false);
+    }
+    expect(new LevelSession(5, { ...level, id: 20 }, 100).canBuy('rocket')).toBe(true);
   });
 });

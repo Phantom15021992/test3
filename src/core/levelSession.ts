@@ -13,6 +13,7 @@ import { aimedPiece, bonusStars, isBonusTarget, type AimedBonus, type BonusType 
 import { CAMPAIGN_BONUS_LIMITS, FINALE_MAX_ROUNDS } from './config';
 import { recordPurchase } from './gameStats';
 import {
+  FLOOR_SIZE,
   boardTemplate,
   iceStyles,
   iceTemplate,
@@ -215,8 +216,14 @@ export class LevelSession extends GameSession {
     return null;
   }
 
-  /** Хватает ли звёзд и не исчерпан ли лимит покупок этой спецфишки на уровне */
+  /** Магазин спецфишек открыт только на последнем, 10-м уровне этажа */
+  get shopOpen(): boolean {
+    return this.level.id % FLOOR_SIZE === 0;
+  }
+
+  /** Открыт ли магазин, хватает ли звёзд и не исчерпан ли лимит покупок этой спецфишки на уровне */
   canBuy(type: BonusType): boolean {
+    if (!this.shopOpen) return false;
     const limit = this.limits[type];
     return (
       this.starsLeft >= bonusStars(type) && (limit === undefined || this.stats.bought[type] < limit)

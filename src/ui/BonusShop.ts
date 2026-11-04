@@ -77,6 +77,15 @@ export class BonusShop {
     this.update(0, true);
   }
 
+  /** Магазина нет: на уровнях кампании, кроме 10-го на этаже, спецфишки не продаются */
+  hide(): void {
+    for (const button of this.buttons) {
+      button.pulse?.stop();
+      button.container.setVisible(false);
+      button.costText.setVisible(false);
+    }
+  }
+
   /** allowed — не исчерпан ли лимит покупок этой спецфишки (в кампании бомба одна на уровень) */
   update(
     budget: number,

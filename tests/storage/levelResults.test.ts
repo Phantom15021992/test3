@@ -22,7 +22,7 @@ const result = (): LevelResult => ({
 });
 
 const level: Level = {
-  id: 1,
+  id: 10,
   title: 'Проба',
   hint: '',
   layout: ['....', '....', '....', '....'],

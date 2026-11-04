@@ -161,6 +161,7 @@ export class GameScene extends Phaser.Scene {
       (type) => this.takeBonus(type),
       this.level !== null,
     );
+    if (this.session instanceof LevelSession && !this.session.shopOpen) this.bonusShop.hide();
     this.walletText = this.level
       ? this.add
           .text(this.scale.width - 30, boxTop - 205, '', {
