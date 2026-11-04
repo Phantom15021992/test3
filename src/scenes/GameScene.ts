@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import {
   allPositions,
   getCell,
+  hasPieces,
   isChained,
   isFixed,
   isPiece,
@@ -491,6 +492,12 @@ export class GameScene extends Phaser.Scene {
   /** Уровень окончен: цели выполнены или кончились ходы */
   private async finishLevel(session: LevelSession): Promise<void> {
     const { level } = session;
+    // Ходы кончились, а на поле остались спецфишки — они срабатывают на итог, и он подводится после
+    if (session.movesLeft === 0 && hasPieces(session.board)) {
+      this.hintText.setText('Ходы закончились — спецфишки срабатывают!');
+      await this.animate(session.campaignFinale());
+      this.hintText.setText('');
+    }
     this.saveLevelResult(session);
     new LevelResultDialog(this).show(session, {
       onRetry: () => this.scene.restart({ level }),

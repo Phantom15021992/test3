@@ -335,6 +335,8 @@ export function play(level: Level, seed: number, bot: Bot, wallet = 0, bombs?: n
       }
     });
   }
+  // Ходы кончились — спецфишки на поле срабатывают в финале, итог считается после него, как в игре
+  if (session.movesLeft === 0) finish(session.campaignFinale());
   const shares = level.goals.map((goal) => session.goalValue(goal) / goal.count);
   return {
     won: session.goalsDone,

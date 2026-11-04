@@ -1,6 +1,16 @@
-import { cloneBoard, setCell, type Piece, type Position } from './board';
+import {
+  allPositions,
+  cloneBoard,
+  getCell,
+  hasPieces,
+  isPiece,
+  isTile,
+  setCell,
+  type Piece,
+  type Position,
+} from './board';
 import { aimedPiece, bonusStars, isBonusTarget, type AimedBonus, type BonusType } from './bonus';
-import { CAMPAIGN_BONUS_LIMITS } from './config';
+import { CAMPAIGN_BONUS_LIMITS, FINALE_MAX_ROUNDS } from './config';
 import { recordPurchase } from './gameStats';
 import {
   boardTemplate,
@@ -10,15 +20,26 @@ import {
   type Level,
   type StarTask,
 } from './level';
-import type { ResolveStep } from './resolve';
-import { GameSession } from './session';
+import { findPossibleMoves } from './moves';
+import type { Move, ResolveStep } from './resolve';
+import { createRng } from './rng';
+import { GameSession, type Steps } from './session';
 
 // Партия на уровне: те же ходы, что и в свободной игре, плюс лёд, цели и звёзды.
 // Спецфишки покупаются за звёзды этажа и применяются сразу: копить их нельзя. Списание сохраняет
-// сцена только при победе: на проигранном уровне потраченное возвращается. Уровень заканчивается сразу, как выполнены цели;
-// финала со спецфишками здесь нет.
+// сцена только при победе: на проигранном уровне потраченное возвращается. Когда кончились ходы,
+// спецфишки на поле срабатывают в финале (campaignFinale), и итог подводится уже после него.
 
 export type GoalProgress = Record<GoalKind, number>;
+
+/** Свой seed для примерки ходов финала: ГСЧ партии при примерке не трогается */
+const FINALE_PREVIEW_SEED = 20261104;
+
+/** Сравнение итогов по старшинству: больше — лучше */
+function compareRanks(a: readonly number[], b: readonly number[]): number {
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i]! - b[i]!;
+  return 0;
+}
 
 export class LevelSession extends GameSession {
   readonly progress: GoalProgress = {
@@ -61,6 +82,83 @@ export class LevelSession extends GameSession {
   get isOver(): boolean {
     if (super.isOver) return true;
     return this.goalsDone && this.stars === 1 + this.level.stars.length;
+  }
+
+  /**
+   * Финал кампании: ходы кончились, и все спецфишки на поле срабатывают по одной. Каждый раз — та,
+   * что сильнее всего улучшит итог: сначала задание (доломать лёд, коробки, собрать нужные ячейки…),
+   * потом звёзды, потом очки. Радуга выбирает лучший цвет, манипулятор — лучший обмен. Спецфишки
+   * из каскадов финала тоже идут в дело. Победа и звёзды считаются после финала
+   */
+  *campaignFinale(): Steps {
+    for (let round = 0; round < FINALE_MAX_ROUNDS && hasPieces(this.board); round++) {
+      let best: Move | null = null;
+      let bestRank: number[] = [];
+      for (const move of this.finaleOptions()) {
+        const rank = this.trial(move).finaleRank();
+        if (!best || compareRanks(rank, bestRank) > 0) {
+          best = move;
+          bestRank = rank;
+        }
+      }
+      if (!best) return;
+      yield* this.run(best);
+    }
+  }
+
+  /** Чем может сработать каждая спецфишка на поле */
+  private finaleOptions(): Move[] {
+    const { board } = this;
+    const colors = [
+      ...new Set(
+        allPositions(board).flatMap((pos) => {
+          const cell = getCell(board, pos);
+          return isTile(cell) ? [cell.color] : [];
+        }),
+      ),
+    ];
+    const swaps = findPossibleMoves(board).filter(
+      ({ from, to }) => isTile(getCell(board, from)) && isTile(getCell(board, to)),
+    );
+    return allPositions(board).flatMap((at): Move[] => {
+      const cell = getCell(board, at);
+      if (!isPiece(cell)) return [];
+      if (cell.type === 'rainbow') return colors.map((color) => ({ type: 'rainbow', at, color }));
+      if (cell.type === 'manipulator') {
+        // Без полезного обмена манипулятор просто уходит с поля
+        return swaps.length > 0
+          ? swaps.map(({ from, to }) => ({ type: 'manipulator', at, a: from, b: to }))
+          : [{ type: 'manipulator', at, a: at, b: at }];
+      }
+      return [{ type: 'fire', at }];
+    });
+  }
+
+  /** Копия партии, на которой ход финала примерен своим ГСЧ */
+  private trial(move: Move): LevelSession {
+    const copy = Object.assign(Object.create(LevelSession.prototype) as LevelSession, this, {
+      progress: { ...this.progress },
+      ice: this.ice.map((line) => [...line]),
+      stats: structuredClone(this.stats),
+      actions: [],
+    });
+    const steps = copy.run(move, createRng(FINALE_PREVIEW_SEED));
+    for (let next = steps.next(); !next.done; next = steps.next());
+    return copy;
+  }
+
+  /** Насколько хорош итог, по старшинству: задание выполнено, его доля, звёзды, доля задач, очки */
+  private finaleRank(): number[] {
+    const share = (value: number, count: number) => Math.min(value / count, 1);
+    const goals = this.level.goals.reduce(
+      (sum, goal) => sum + share(this.goalValue(goal), goal.count),
+      0,
+    );
+    const tasks = this.level.stars.reduce(
+      (sum, task) => sum + share(this.starTaskValue(task), task.count),
+      0,
+    );
+    return [Number(this.goalsDone), goals, this.stars, tasks, this.score];
   }
 
   /** Сколько корон на поле в начале уровня */

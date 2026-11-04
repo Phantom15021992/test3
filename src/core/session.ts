@@ -36,7 +36,7 @@ export type PlayerMove = Exclude<Move, { type: 'finale' }>;
 /** Всё, что меняет партию и должно попасть в журнал: ходы и покупки */
 export type GameAction = PlayerMove | { type: 'buy'; bonus: BonusType };
 
-type Steps = Generator<ResolveStep, void, ChoiceOption | undefined>;
+export type Steps = Generator<ResolveStep, void, ChoiceOption | undefined>;
 
 export class GameSession {
   board: Board;
@@ -74,10 +74,11 @@ export class GameSession {
     return this.run(move);
   }
 
-  private *run(move: Move): Steps {
+  /** rng — свой только для примерки хода на копии партии: ГСЧ партии при этом не трогается */
+  protected *run(move: Move, rng: Rng = this.rng): Steps {
     const steps = resolveMove(this.board, move, {
       colorCount: this.colorCount,
-      rng: this.rng,
+      rng,
       campaign: this.campaign,
     });
     let next = steps.next();

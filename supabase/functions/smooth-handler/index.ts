@@ -933,10 +933,11 @@ var GameSession = class {
     this.actions.push(move);
     return this.run(move);
   }
-  *run(move) {
+  /** rng — свой только для примерки хода на копии партии: ГСЧ партии при этом не трогается */
+  *run(move, rng = this.rng) {
     const steps = resolveMove(this.board, move, {
       colorCount: this.colorCount,
-      rng: this.rng,
+      rng,
       campaign: this.campaign
     });
     let next = steps.next();

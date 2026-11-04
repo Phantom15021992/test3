@@ -559,6 +559,57 @@ describe('партия на уровне', () => {
     expect(session.stars).toBeGreaterThan(0);
   });
 
+  it('финал: ходы кончились — бомба доламывает лёд, и итог уже победа', () => {
+    const session = new LevelSession(5, level({ moves: 1, goals: [{ kind: 'ice', count: 2 }] }));
+    session.board = parseBoard(`
+      R1 G1 B1 Y1
+      G1 *  Y1 R1
+      B1 Y1 R1 G1
+      Y1 R1 G1 B1
+    `);
+    session.ice = [
+      [false, false, false, false],
+      [false, false, false, false],
+      [false, true, true, false],
+      [false, false, false, false],
+    ];
+    session.progress.ice = 0;
+    session.moves = 1;
+    expect(session.isOver).toBe(true);
+    expect(session.goalsDone).toBe(false);
+    drain(session.campaignFinale());
+    expect(session.progress.ice).toBe(2);
+    expect(session.goalsDone).toBe(true);
+    expect(session.stars).toBeGreaterThan(0);
+    expect(session.board.flat().some((cell) => cell?.kind === 'piece')).toBe(false);
+  });
+
+  it('финал: радуга выбирает цвет, который даёт задание, а не самый частый', () => {
+    const session = new LevelSession(5, level({ moves: 1, goals: [{ kind: 'ice', count: 1 }] }));
+    session.board = parseBoard(`
+      R1 R1 G1 R1
+      @  B1 R1 G1
+      R1 G1 R1 B1
+    `);
+    session.ice = [
+      [false, false, false, false],
+      [false, true, false, false],
+      [false, false, false, false],
+    ];
+    session.moves = 1;
+    drain(session.campaignFinale());
+    expect(session.goalsDone).toBe(true);
+  });
+
+  it('финал: спецфишек нет — поле и итог не меняются', () => {
+    const session = new LevelSession(5, level({ moves: 1 }));
+    session.moves = 1;
+    const before = JSON.stringify(session.board);
+    drain(session.campaignFinale());
+    expect(JSON.stringify(session.board)).toBe(before);
+    expect(session.score).toBe(0);
+  });
+
   it('ходы кончились, цели не выполнены — ноль звёзд', () => {
     const session = new LevelSession(5, level({ moves: 1 }));
     session.moves = 1;
