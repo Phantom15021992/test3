@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { Board } from '../../src/core/board';
+import { hitBox, type Board } from '../../src/core/board';
 import { applyGravity, itemsOnBottom, refill } from '../../src/core/gravity';
-import { parseLevel, type Level } from '../../src/core/level';
+import { boardTemplate, parseLevel, type Level } from '../../src/core/level';
 import { LevelSession } from '../../src/core/levelSession';
 import { isValidSwap, shuffleBoard } from '../../src/core/moves';
 import { runMove, type ResolveStep } from '../../src/core/resolve';
@@ -150,17 +150,24 @@ describe('коробки', () => {
     expect(isValidSwap(b, p(0, 0), p(0, 1))).toBe(false);
   });
 
-  it('совпадение рядом ломает коробку, сама она очков не даёт', () => {
-    const b = parseBoard(`
-      R1 G1 R1 B1
-      G1 R1 Y1 Y1
-      B1 Y1 G1 R1
-    `);
-    b[1]![2] = BOX;
-    const { steps } = runMove(b, { type: 'swap', from: p(0, 1), to: p(1, 1) }, ctx());
-    const [first] = clears(steps);
-    expect(first?.boxes).toBe(1);
-    expect(first?.points).toBe(30);
+  it('совпадение рядом открывает закрытый сундук, а открытый ломает; очков сундук не даёт', () => {
+    const board = (box: Board[number][number]) => {
+      const b = parseBoard(`
+        R1 G1 R1 B1
+        G1 R1 Y1 Y1
+        B1 Y1 G1 R1
+      `);
+      b[1]![2] = box;
+      return b;
+    };
+    const move = { type: 'swap', from: p(0, 1), to: p(1, 1) } as const;
+    const [opened] = clears(runMove(board(BOX), move, ctx()).steps);
+    expect(opened?.boxes).toBeUndefined();
+    expect(opened?.chests).toEqual([{ pos: p(1, 2), cell: { kind: 'box', open: true } }]);
+    expect(opened?.points).toBe(30);
+    const [broken] = clears(runMove(board({ kind: 'box', open: true }), move, ctx()).steps);
+    expect(broken?.boxes).toBe(1);
+    expect(broken?.cells).toContainEqual(p(1, 2));
   });
 
   it('взрыв ломает коробку', () => {
@@ -184,112 +191,83 @@ describe('коробки', () => {
   });
 });
 
-describe('цепи', () => {
-  const chain = (b: Board, row: number, col: number, links: number) => {
-    const cell = b[row]?.[col];
-    if (cell?.kind === 'tile') cell.chain = links;
-  };
-  // Совпадение R1: левая фишка верхней строки под цепью
-  const matchBoard = (links: number) => {
+describe('сундуки', () => {
+  // Совпадение R1 в верхней строке; сундук под левой фишкой совпадения
+  const matchBoard = (box: Board[number][number]) => {
     const b = parseBoard(`
       R1 R1 G1
       B1 Y1 R1
       Y1 B1 G1
     `);
-    chain(b, 0, 0, links);
+    b[1]![0] = box;
     return b;
   };
   const move = { type: 'swap', from: p(0, 2), to: p(1, 2) } as const;
 
-  it('фишку под цепью нельзя сдвинуть даже в совпадение, и спецфишка с ней не меняется', () => {
-    const b = parseBoard(`
-      R1 G1 R1 R1
-      B1 Y1 B1 Y1
-    `);
-    chain(b, 0, 1, 1);
-    expect(isValidSwap(b, p(0, 0), p(0, 1))).toBe(false);
-    b[1]![1] = { kind: 'piece', type: 'bomb' };
-    expect(isValidSwap(b, p(1, 1), p(0, 1))).toBe(false);
-  });
-
-  it('фишка под цепью не падает, остальные пролетают сквозь неё', () => {
-    const b = parseBoard(`
-      R1
-      G1
-      .
-    `);
-    chain(b, 1, 0, 1);
-    const { board: fallen } = applyGravity(b);
-    expect(fallen[1]?.[0]).toMatchObject({ kind: 'tile', chain: 1 });
-    expect(fallen[2]?.[0]).toMatchObject({ kind: 'tile' });
-    expect(fallen[0]?.[0]).toBeNull();
-  });
-
-  it('совпадение снимает звено: фишка остаётся, свободные объединяются как обычно', () => {
-    const { steps, board: after } = runMove(matchBoard(2), move, ctx());
-    const [first] = clears(steps);
-    expect(first?.links).toEqual([{ pos: p(0, 0), left: 1 }]);
-    expect(first?.cells).not.toContainEqual(p(0, 0));
-    expect(after[0]?.[0]).toMatchObject({ kind: 'tile', level: 1, chain: 1 });
-    const placed = steps.find((step) => step.kind === 'transform');
-    expect(placed).toMatchObject({
-      placements: [{ pos: p(0, 2), cell: { kind: 'tile', level: 2 } }],
+  it('стадии: каждое звено цепи, потом открытие, потом сундук исчезает', () => {
+    expect(hitBox({ kind: 'box', links: 2 })).toEqual({ kind: 'box', links: 1 });
+    expect(hitBox({ kind: 'box', links: 1, treasure: true })).toEqual({
+      kind: 'box',
+      treasure: true,
     });
+    expect(hitBox({ kind: 'box' })).toEqual({ kind: 'box', open: true });
+    expect(hitBox({ kind: 'box', open: true })).toBeNull();
   });
 
-  it('последнее звено освобождает фишку: она снова обычная', () => {
-    const { board: after, steps } = runMove(matchBoard(1), move, ctx());
-    expect(clears(steps)[0]?.links).toEqual([{ pos: p(0, 0), left: 0 }]);
-    expect(after[0]?.[0]).not.toHaveProperty('chain');
-  });
-
-  it('награда не встаёт в клетку под цепью', () => {
+  it('сундук за шаг получает один удар, даже если его касается вся линия', () => {
     const b = parseBoard(`
       R1 R1 G1
-      B1 Y1 R1
-      Y1 B1 G1
+      .  .  R1
+      B1 Y1 G1
     `);
-    chain(b, 0, 1, 1);
+    b[1]![0] = { kind: 'box', links: 3 };
+    b[1]![1] = { kind: 'box', links: 3 };
     const { steps } = runMove(b, move, ctx());
-    const placed = steps.find((step) => step.kind === 'transform');
-    expect(placed).toMatchObject({ placements: [{ pos: p(0, 2) }] });
+    expect(clears(steps)[0]?.chests).toEqual([
+      { pos: p(1, 0), cell: { kind: 'box', links: 2 } },
+      { pos: p(1, 1), cell: { kind: 'box', links: 2 } },
+    ]);
   });
 
-  it('взрыв снимает звено, но фишку не уничтожает', () => {
+  it('взрыв снимает звено, но сундук стоит', () => {
     const b = parseBoard(`
       * G1
       B1 Y1
     `);
-    chain(b, 0, 1, 2);
+    b[0]![1] = { kind: 'box', links: 2 };
     const { steps, board: after } = runMove(b, { type: 'fire', at: p(0, 0) }, ctx());
-    expect(clears(steps)[0]?.links).toEqual([{ pos: p(0, 1), left: 1 }]);
-    expect(after[0]?.[1]).toMatchObject({ chain: 1 });
+    expect(clears(steps)[0]?.chests).toEqual([{ pos: p(0, 1), cell: { kind: 'box', links: 1 } }]);
+    expect(after[0]?.[1]).toEqual({ kind: 'box', links: 1 });
   });
 
-  it('перемешивание фишку под цепью не трогает', () => {
-    const b = parseBoard(`
-      R1 G1 B1 Y1
-      G1 B1 Y1 R1
-      B1 Y1 R1 G1
-      Y1 R1 G1 B1
-    `);
-    chain(b, 1, 1, 3);
-    expect(shuffleBoard(b, 4, createRng(3))[1]?.[1]).toEqual(b[1]?.[1]);
+  it('символы поля: b, t — сундуки, 1–3 и u–w — в цепях', () => {
+    const template = boardTemplate(level({ layout: ['bt2w', '....', '....', '....'] }));
+    expect(template[0]).toEqual([
+      { kind: 'box' },
+      { kind: 'box', treasure: true },
+      { kind: 'box', links: 2 },
+      { kind: 'box', links: 3, treasure: true },
+    ]);
   });
 
-  it('цель считает освобождённые фишки, а не снятые звенья', () => {
+  it('цель «сундуки» считает сломанные, сундук с сокровищами — ещё и в золото', () => {
     const session = new LevelSession(
       5,
-      level({ layout: ['2...', '....', '....', '....'], goals: [{ kind: 'chain', count: 1 }] }),
+      level({
+        layout: ['....', 't...', '....', '....'],
+        goals: [
+          { kind: 'box', count: 1 },
+          { kind: 'gold', count: 1 },
+        ],
+      }),
     );
-    expect(session.board[0]?.[0]).toMatchObject({ kind: 'tile', chain: 2 });
-    session.board = matchBoard(2);
+    session.board = matchBoard({ kind: 'box', treasure: true });
     drain(session.play(move));
-    expect(session.progress.chain).toBe(0);
-    const again = matchBoard(1);
-    session.board = again;
+    expect(session.progress.box).toBe(0);
+    session.board = matchBoard({ kind: 'box', treasure: true, open: true });
     drain(session.play(move));
-    expect(session.progress.chain).toBe(1);
+    expect(session.progress.box).toBe(1);
+    expect(session.progress.gold).toBe(1);
   });
 });
 
@@ -414,8 +392,7 @@ describe('партия на уровне', () => {
     expect(session.board[0]?.[1]).toEqual(STONE);
     expect(session.board[1]?.[1]).toEqual(ITEM);
     expect(session.board[1]?.[3]).toEqual(BOX);
-    expect(session.board[3]?.[3]).toMatchObject({ kind: 'tile', level: 1, chain: 3 });
-    expect((session.board[3]?.[3] as { color: number }).color).toBeGreaterThanOrEqual(0);
+    expect(session.board[3]?.[3]).toEqual({ kind: 'box', links: 3 });
     expect(session.board[2]?.[0]?.kind).toBe('tile');
     expect(session.ice[2]?.[0]).toBe(1);
     expect(session.ice[1]?.[0]).toBe(0);

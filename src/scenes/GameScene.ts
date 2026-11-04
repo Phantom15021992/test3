@@ -3,7 +3,6 @@ import {
   allPositions,
   getCell,
   hasPieces,
-  isChained,
   isFixed,
   isPiece,
   isTile,
@@ -449,7 +448,7 @@ export class GameScene extends Phaser.Scene {
           this.updateScore();
           this.refreshIce();
           this.refreshGoals();
-          this.view.loosen(step.links ?? []);
+          this.view.hitChests(step.chests ?? []);
           this.view.hitCoal(step.coal ?? []);
           this.view.showCombos(step.combos ?? []);
           await this.view.clear(step.cells);
@@ -690,7 +689,7 @@ function clientInfo() {
 
 /** Клетка, которую можно сдвинуть: остальные в обмене не участвуют */
 function isOnField(cell: Cell | undefined): boolean {
-  return cell != null && cell.kind !== 'stone' && !isFixed(cell) && !isChained(cell);
+  return cell != null && cell.kind !== 'stone' && !isFixed(cell);
 }
 
 const HINT_TEXTS: Readonly<Record<HintKind, string>> = {

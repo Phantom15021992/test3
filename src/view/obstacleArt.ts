@@ -1,26 +1,32 @@
 import Phaser from 'phaser';
 import { COAL_MAX_LAYERS, COAL_SIZE } from '../core/config';
+import type { Box } from '../core/board';
 import { iceHits, type IceStyle } from '../core/level';
 
 // Препятствия и лёд рисуются картинками из public/assets/obstacles (грузятся в BootScene).
 
 export type ObstacleImage =
   | 'stone'
-  | 'box'
+  | 'chest-chained'
+  | 'chest-closed'
+  | 'chest-treasure'
+  | 'chest-empty'
   | 'crown'
   | 'ice'
   | 'ice-thin'
   | 'ice-thick'
   | 'ice-cracked'
   | 'ice-gold'
-  | 'ice-gold-cracked'
-  | 'chain';
+  | 'ice-gold-cracked';
 
 const textureKey = (name: ObstacleImage) => `obstacle-${name}`;
 
 const NAMES: readonly ObstacleImage[] = [
   'stone',
-  'box',
+  'chest-chained',
+  'chest-closed',
+  'chest-treasure',
+  'chest-empty',
   'crown',
   'ice',
   'ice-thin',
@@ -28,7 +34,6 @@ const NAMES: readonly ObstacleImage[] = [
   'ice-cracked',
   'ice-gold',
   'ice-gold-cracked',
-  'chain',
 ];
 
 /**
@@ -76,12 +81,6 @@ export function setCoalArt(
 
 /** Часть клетки, которую занимает картинка: между соседними остаётся зазор */
 const CELL_FILL = 0.92;
-/** Отрезок цепи длиннее клетки, чтобы лечь по диагонали из угла в угол */
-const CHAIN_LENGTH = 1.3;
-/** Звенья лежат крест-накрест: сколько их, столько и полос */
-const CHAIN_ANGLES: readonly number[] = [45, -45, 0];
-export const CHAIN_NAME = 'chain';
-
 export function obstacleImage(
   scene: Phaser.Scene,
   name: ObstacleImage,
@@ -93,15 +92,34 @@ export function obstacleImage(
   return scene.add.image(x, y, textureKey(name)).setDisplaySize(size, size);
 }
 
-/** Цепь поверх фишки; по имени её находит вид, когда звено снято */
-export function chainImages(
+/** Картинка сундука по стадии: в цепях → закрытый → открытый (с сокровищами или пустой) */
+export function chestImage(box: Box): ObstacleImage {
+  if ((box.links ?? 0) > 0) return 'chest-chained';
+  if (!box.open) return 'chest-closed';
+  return box.treasure ? 'chest-treasure' : 'chest-empty';
+}
+
+/** Сколько звеньев цепи на сундуке — подпись в углу клетки, если звеньев больше одного */
+export function chestParts(
   scene: Phaser.Scene,
-  links: number,
+  box: Box,
   cellSize: number,
-): Phaser.GameObjects.Image[] {
-  return CHAIN_ANGLES.slice(0, links).map((angle) => {
-    const image = scene.add.image(0, 0, textureKey('chain'));
-    const scale = (cellSize * CHAIN_LENGTH) / image.height;
-    return image.setScale(scale).setAngle(angle).setName(CHAIN_NAME);
-  });
+): Phaser.GameObjects.GameObject[] {
+  const parts: Phaser.GameObjects.GameObject[] = [obstacleImage(scene, chestImage(box), cellSize)];
+  const links = box.links ?? 0;
+  if (links > 1) {
+    parts.push(
+      scene.add
+        .text(cellSize * 0.42, cellSize * 0.42, String(links), {
+          fontFamily: 'Arial, sans-serif',
+          fontSize: `${Math.round(cellSize * 0.32)}px`,
+          fontStyle: 'bold',
+          color: '#ffffff',
+          stroke: '#2b2f3a',
+          strokeThickness: Math.max(2, Math.round(cellSize * 0.06)),
+        })
+        .setOrigin(1, 1),
+    );
+  }
+  return parts;
 }

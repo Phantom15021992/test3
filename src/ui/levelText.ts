@@ -16,8 +16,7 @@ const GOAL_NAMES: Readonly<Record<GoalKind, string>> = {
   rainbow: 'Радуги',
   ice: 'Лёд',
   stone: 'Камни',
-  box: 'Коробки',
-  chain: 'Цепи',
+  box: 'Сундуки',
   item: 'Короны',
   coal: 'Уголь',
   gold: 'Золото',
@@ -80,15 +79,13 @@ function goalTaskText({ kind, count }: Goal): string {
     case 'stone':
       return `разбей взрывом ${n} ${plural(count, 'камень', 'камня', 'камней')}`;
     case 'box':
-      return `сломай ${n} ${plural(count, 'коробку', 'коробки', 'коробок')}`;
-    case 'chain':
-      return `освободи из цепей ${n} ${plural(count, 'фишку', 'фишки', 'фишек')}`;
+      return `открой и сломай ${n} ${plural(count, 'сундук', 'сундука', 'сундуков')}`;
     case 'item':
       return `опусти на дно ${n} ${plural(count, 'корону', 'короны', 'корон')}`;
     case 'coal':
       return `разбей ${n} ${plural(count, 'глыбу', 'глыбы', 'глыб')} угля`;
     case 'gold':
-      return `достань ${n} ${plural(count, 'слиток', 'слитка', 'слитков')} золота из льда`;
+      return `достань золото: ${n} (слитки во льду и сундуки с сокровищами)`;
   }
 }
 

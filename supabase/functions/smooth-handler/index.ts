@@ -63,7 +63,6 @@ var DIFFICULTIES = [
 ];
 
 // src/core/board.ts
-var UNCOLORED = -1;
 function getCell(board, pos) {
   return board[pos.row]?.[pos.col];
 }
@@ -73,11 +72,14 @@ function isTile(cell) {
 function isPiece(cell) {
   return cell != null && cell.kind === "piece";
 }
-function isChained(cell) {
-  return isTile(cell) && cell.chain !== void 0;
-}
 function isFixed(cell) {
-  return cell?.kind === "hole" || cell?.kind === "box" || cell?.kind === "coal" || isChained(cell);
+  return cell?.kind === "hole" || cell?.kind === "box" || cell?.kind === "coal";
+}
+function hitBox(box) {
+  const { links = 0, open = false } = box;
+  if (links > 1) return { ...box, links: links - 1 };
+  if (links === 1) return box.treasure ? { kind: "box", treasure: true } : { kind: "box" };
+  return open ? null : { ...box, open: true };
 }
 function isCoal(cell) {
   return cell?.kind === "coal";
@@ -129,7 +131,7 @@ function bonusPiece(type, rng) {
 function placeBonus(board, type, rng) {
   const candidates = allPositions(board).filter((pos2) => {
     const cell = getCell(board, pos2);
-    return cell?.kind === "tile" && cell.level === 1 && !isChained(cell);
+    return cell?.kind === "tile" && cell.level === 1;
   });
   if (candidates.length === 0) return null;
   const pos = candidates[rng.int(candidates.length)];
@@ -312,7 +314,7 @@ function tilesOfColor(board, color, onlyLevel1 = false) {
   return allPositions(board).filter((p) => {
     const cell = getCell(board, p);
     if (!isTile(cell) || cell.color !== color) return false;
-    return !onlyLevel1 || cell.level === 1 && !isChained(cell);
+    return !onlyLevel1 || cell.level === 1;
   });
 }
 function mostFrequentColor(board) {
@@ -362,7 +364,7 @@ function expandChain(board, initial, preActivated = /* @__PURE__ */ new Set(), s
   return [...destroyed.values()];
 }
 function hitPoints(cell) {
-  if (!isTile(cell) || isChained(cell)) return 0;
+  if (!isTile(cell)) return 0;
   if (cell.level === 2) return BASE_POINTS_PER_TILE * LEVEL2_SCORE_MULTIPLIER;
   if (cell.level === 3) return BASE_POINTS_PER_TILE * LEVEL3_HIT_MULTIPLIER;
   return BASE_POINTS_PER_TILE;
@@ -386,7 +388,7 @@ function activationSwapTarget(board, a, b) {
   return null;
 }
 function isSwappable(cell) {
-  return isTile(cell) && !isChained(cell) || isPiece(cell);
+  return isTile(cell) || isPiece(cell);
 }
 function comboNeedsColor(board, a, b) {
   const kinds = [comboKind(getCell(board, a)), comboKind(getCell(board, b))];
@@ -461,7 +463,6 @@ function isValidSwap(board, a, b) {
   return findMatches(swapCells(board, a, b)).length > 0;
 }
 function isMovable(cell) {
-  if (isChained(cell)) return false;
   if (isTile(cell) || cell?.kind === "item") return true;
   return isPiece(cell) && (cell.type === "manipulator" || cell.type === "rainbow");
 }
@@ -538,13 +539,12 @@ function fillOnce(template, colorCount, rng) {
   const board = cloneBoard(template);
   board.forEach(
     (row, r) => row.forEach((cell, c) => {
-      const uncolored = isTile(cell) && cell.color === UNCOLORED;
-      if (cell !== null && !uncolored) return;
+      if (cell !== null) return;
       const pos = { row: r, col: c };
       const allowed = range(colorCount).filter((color2) => !wouldMatch(board, pos, color2));
       const pool = allowed.length > 0 ? allowed : range(colorCount);
       const color = pool[rng.int(pool.length)];
-      row[c] = uncolored ? { ...cell, color } : { kind: "tile", color, level: 1 };
+      row[c] = { kind: "tile", color, level: 1 };
     })
   );
   return board;
@@ -621,16 +621,6 @@ function removeCells(board, cells) {
     if (kind === "tile" || kind === "piece" || kind === "stone" || kind === "box") {
       next[row][col] = null;
     }
-  }
-  return next;
-}
-function loosenChains(board, cells) {
-  const next = cloneBoard(board);
-  for (const { row, col } of cells) {
-    const cell = next[row]?.[col];
-    if (cell?.kind !== "tile" || !isChained(cell)) continue;
-    const left = cell.chain - 1;
-    next[row][col] = left > 0 ? { ...cell, chain: left } : { kind: "tile", color: cell.color, level: cell.level };
   }
   return next;
 }
@@ -734,8 +724,7 @@ function openFromTop(board) {
 }
 function canSlide(cell) {
   if (cell == null) return false;
-  if (isTile(cell)) return !isChained(cell);
-  return isPiece(cell) || cell.kind === "stone" || cell.kind === "item";
+  return isTile(cell) || isPiece(cell) || cell.kind === "stone" || cell.kind === "item";
 }
 function slideDiagonally(board) {
   const next = cloneBoard(board);
@@ -787,15 +776,26 @@ function* resolveMove(board, move, ctx) {
     const pieces = cells.filter((pos) => isPiece(getCell(current, pos))).length;
     const count = (kind) => cells.filter((pos) => getCell(current, pos)?.kind === kind);
     const stones = count("stone").length;
-    const boxes = count("box").length;
-    const held = cells.filter((pos) => isChained(getCell(current, pos)));
-    const gone = cells.filter((pos) => {
-      const cell = getCell(current, pos);
-      return !isChained(cell) && !isCoal(cell);
-    });
-    const links = held.map((pos) => ({ pos, left: chainOf(current, pos) - 1 }));
+    const chests = [];
+    let boxes = 0;
+    let treasures = 0;
+    for (const pos of count("box")) {
+      const box = getCell(current, pos);
+      const next = hitBox(box);
+      if (next) chests.push({ pos, cell: next });
+      else {
+        boxes++;
+        if (box.treasure) treasures++;
+      }
+    }
+    const kept = new Set(chests.map(({ pos }) => posKey(pos)));
+    const gone = cells.filter((pos) => !isCoal(getCell(current, pos)) && !kept.has(posKey(pos)));
     score += points;
-    current = loosenChains(removeCells(current, gone), held);
+    current = removeCells(current, gone);
+    if (chests.length > 0) {
+      current = cloneBoard(current);
+      for (const { pos, cell } of chests) setCell(current, pos, cell);
+    }
     const struck = hitCoal(current, blows);
     current = struck.board;
     yield {
@@ -805,7 +805,8 @@ function* resolveMove(board, move, ctx) {
       pieces,
       ...stones > 0 && { stones },
       ...boxes > 0 && { boxes },
-      ...links.length > 0 && { links },
+      ...treasures > 0 && { treasures },
+      ...chests.length > 0 && { chests },
       ...combos.length > 0 && { combos },
       ...struck.hits.length > 0 && { coal: struck.hits }
     };
@@ -823,7 +824,7 @@ function* resolveMove(board, move, ctx) {
     const combos = [];
     let direct3 = 0;
     for (const group of groups) {
-      const outcome = groupOutcome(group, current, landing, ctx.campaign ?? false);
+      const outcome = groupOutcome(group, landing, ctx.campaign ?? false);
       removal.push(...group.cells, ...boxesAround(current, group.cells));
       addBlows(matchBlows, coalAround(current, group.cells), group.level);
       const step = dropped ? Math.min(++comboSteps, COMBO_MAX_STEPS) : 0;
@@ -910,10 +911,6 @@ function* resolveMove(board, move, ctx) {
   }
   throw new Error(`\u041A\u0430\u0441\u043A\u0430\u0434 \u043D\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u043B\u0441\u044F \u0437\u0430 ${MAX_WAVES} \u0432\u043E\u043B\u043D`);
 }
-function chainOf(board, pos) {
-  const cell = getCell(board, pos);
-  return isTile(cell) ? cell.chain ?? 0 : 0;
-}
 function boxesAround(board, cells) {
   const offsets = [
     [0, 1],
@@ -926,22 +923,20 @@ function boxesAround(board, cells) {
 function hasEmpty(board) {
   return board.some((line) => line.includes(null));
 }
-function groupOutcome(group, board, landing, campaign) {
+function groupOutcome(group, landing, campaign) {
   const crossReward = group.level !== 3 && isSevenCross(group.cells) ? SEVEN_CROSS_REWARDS[group.level] : null;
   const points = crossReward ? group.level === 1 ? SEVEN_CROSS_LEVEL1_POINTS : matchPoints(3, 5) : matchPoints(group.level, group.cells.length);
-  const open = { ...group, cells: group.cells.filter((pos) => !isChained(getCell(board, pos))) };
-  if (campaign && group.level === 2 && group.cells.length >= 5) return bigLevel2(open, landing);
-  if (open.cells.length === 0) return { points, placements: [] };
-  const spot = pickSpot(open, landing);
+  if (campaign && group.level === 2 && group.cells.length >= 5) return bigLevel2(group, landing);
+  const spot = pickSpot(group, landing);
   const size = Math.min(group.cells.length, 5);
   const reward = crossReward ?? MATCH_REWARDS[group.level][size];
-  const cells = reward.count === 2 ? [spot, neighborInGroup(open, spot, [spot])] : [spot];
+  const cells = reward.count === 2 ? [spot, neighborInGroup(group, spot, [spot])] : [spot];
   const cell = reward.kind === "tiles" ? { kind: "tile", color: group.color, level: reward.level } : { kind: "piece", type: reward.type };
   const placements = cells.flatMap((pos) => pos ? [{ pos, cell }] : []);
   const direction = lineDirection(group);
   if (reward.kind === "tiles" && reward.lineRocket && direction) {
     const pos = neighborInGroup(
-      open,
+      group,
       spot,
       placements.map((placement) => placement.pos)
     );
@@ -949,7 +944,7 @@ function groupOutcome(group, board, landing, campaign) {
   }
   if (campaign && group.level === 2 && group.cells.length === 4 && !direction) {
     const pos = neighborInGroup(
-      open,
+      group,
       spot,
       placements.map((placement) => placement.pos)
     );
@@ -957,7 +952,7 @@ function groupOutcome(group, board, landing, campaign) {
   }
   if (campaign && group.level === 1 && group.cells.length >= CAMPAIGN_BOMB_GROUP) {
     const pos = neighborInGroup(
-      open,
+      group,
       spot,
       placements.map((placement) => placement.pos)
     );

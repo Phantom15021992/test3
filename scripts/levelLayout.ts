@@ -1,8 +1,8 @@
 // Размер целей уровня для подгонки сложности: цели растут или уменьшаются, а препятствия на поле
 // добавляются или убираются так, чтобы их было ровно столько, сколько требует цель.
 //
-// Новые препятствия ставятся по правилам кампании: лёд — только в толстых местах поля, цепи — не ближе
-// 3 клеток друг от друга и по одной в строке, коробки и цепи — не на дне столбца, если там нужна корона.
+// Новые препятствия ставятся по правилам кампании: лёд — только в толстых местах поля, сундуки в цепях —
+// не ближе 3 клеток друг от друга и по одному в строке, сундуки — не на дне столбца, если там нужна корона.
 // Ставим снизу вверх, парами зеркальных клеток, чтобы поле осталось симметричным.
 
 import type { Goal } from '../src/core/level';
@@ -14,7 +14,9 @@ interface Cell {
   col: number;
 }
 
-const LAYERS: Partial<Record<Goal['kind'], string>> = { ice: 'i', box: 'b' };
+const LAYERS: Partial<Record<Goal['kind'], string>> = { ice: 'i' };
+/** Все сундуки поля: простые, с сокровищами, в цепях */
+const CHESTS = 'bt123uvw';
 /** Сколько звеньев бывает на одной цепи */
 const MAX_LINKS = 3;
 
@@ -33,9 +35,10 @@ export function resizeLevel(
   const sized = goals.map((goal): Goal => {
     const layer = LAYERS[goal.kind];
     if (layer) return { kind: goal.kind, count: resizeLayer(grid, layer, goal.count, scale) };
-    if (goal.kind === 'chain') return { kind: 'chain', count: resizeChains(grid, scale) };
-    // Камни — помеха, короны и уголь меняются не числом: у короны — высота, у угля — слои
-    if (goal.kind === 'item' || goal.kind === 'stone' || goal.kind === 'coal') return goal;
+    if (goal.kind === 'box') return { kind: 'box', count: resizeChests(grid, scale) };
+    // Камни — помеха, короны и уголь меняются не числом: у короны — высота, у угля — слои;
+    // золото лежит в выбранных вручную льдинах и сундуках
+    if (['item', 'stone', 'coal', 'gold'].includes(goal.kind)) return goal;
     return { kind: goal.kind, count: Math.max(1, Math.round(goal.count * scale)) };
   });
   return { layout: grid.map((line) => line.join('')), goals: sized };
@@ -126,9 +129,17 @@ function resizeLayer(grid: Grid, symbol: string, count: number, scale: number): 
   return placed;
 }
 
+/** Сундуки: простые и в цепях меняются каждые в своей доле; цель — все сундуки на поле */
+function resizeChests(grid: Grid, scale: number): number {
+  const plain = cellsOf(grid, 'b').length;
+  if (plain > 0) resizeLayer(grid, 'b', plain, scale);
+  if (cellsOf(grid, '123').length > 0) resizeChains(grid, scale);
+  return cellsOf(grid, CHESTS).length;
+}
+
 /**
  * Цепи растут по звеньям: сначала новые цепи по одному звену, пока есть место, потом звенья на
- * уже стоящих (до трёх). Цель считает фишки под цепями, поэтому возвращается число цепей.
+ * уже стоящих (до трёх). Возвращается число сундуков в цепях.
  */
 function resizeChains(grid: Grid, scale: number): number {
   const links = () => cellsOf(grid, '123').reduce((sum, c) => sum + Number(grid[c.row]![c.col]), 0);

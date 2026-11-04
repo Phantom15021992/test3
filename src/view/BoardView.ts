@@ -13,7 +13,7 @@ import {
   SWAP_DURATION_MS,
 } from '../core/config';
 import type { Fall, Spawn } from '../core/gravity';
-import type { ChainLink, ComboHit, Placement } from '../core/resolve';
+import type { ChestHit, ComboHit, Placement } from '../core/resolve';
 import type { IceStyle } from '../core/level';
 import { comboTextureKey } from './comboLabel';
 import {
@@ -25,7 +25,7 @@ import {
   SELECTION_COLOR,
   TILE_COLORS,
 } from './palette';
-import { CHAIN_NAME, chainImages, iceImage, obstacleImage, setCoalArt } from './obstacleArt';
+import { chestParts, iceImage, obstacleImage, setCoalArt } from './obstacleArt';
 import { drawPiece } from './pieceArt';
 import { drawTileShape } from './tileArt';
 
@@ -120,13 +120,19 @@ export class BoardView {
     );
   }
 
-  /** С фишек снято по звену: фишка остаётся, цепь перерисовывается */
-  loosen(links: ChainLink[]): void {
-    for (const { pos, left } of links) {
+  /** Сундук получил удар, но остался: снято звено или он открылся — картинка меняется, вздрагивает */
+  hitChests(chests: readonly ChestHit[]): void {
+    for (const { pos, cell } of chests) {
       const sprite = this.spriteAt(pos);
       if (!sprite) continue;
-      sprite.getAll('name', CHAIN_NAME).forEach((image) => image.destroy());
-      sprite.add(chainImages(this.scene, left, this.cellSize));
+      sprite.removeAll(true);
+      sprite.add(chestParts(this.scene, cell, this.cellSize));
+      this.scene.tweens.add({
+        targets: sprite,
+        scale: 1.12,
+        duration: MATCH_PULSE_DURATION_MS,
+        yoyo: true,
+      });
     }
   }
 
@@ -341,13 +347,15 @@ export class BoardView {
   ): TileSprite {
     const { x, y } = this.centerOf(pos);
     let children: Phaser.GameObjects.GameObject[];
-    if (cell.kind === 'stone' || cell.kind === 'box' || cell.kind === 'item') {
+    if (cell.kind === 'box') {
+      children = chestParts(this.scene, cell, this.cellSize);
+    } else if (cell.kind === 'stone' || cell.kind === 'item') {
       const name = cell.kind === 'item' ? 'crown' : cell.kind;
       children = [obstacleImage(this.scene, name, this.cellSize)];
     } else if (cell.kind === 'tile') {
       const body = this.scene.add.graphics();
       this.drawTile(body, cell);
-      children = [body, ...chainImages(this.scene, cell.chain ?? 0, this.cellSize)];
+      children = [body];
     } else {
       children = [drawPiece(this.scene, cell, this.cellSize * 0.4)];
     }

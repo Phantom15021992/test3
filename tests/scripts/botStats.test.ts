@@ -9,7 +9,7 @@ const level: Level = {
   layout: ['....', '....'],
   colors: 4,
   moves: 27,
-  goals: [{ kind: 'chain', count: 5 }],
+  goals: [{ kind: 'box', count: 5 }],
   stars: [
     { kind: 'score', count: 1 },
     { kind: 'score', count: 6 },
@@ -44,9 +44,7 @@ describe('версия уровня', () => {
 
   it('любая правка уровня даёт новый хеш', () => {
     expect(levelHash({ ...level, moves: 28 })).not.toBe(levelHash(level));
-    expect(levelHash({ ...level, goals: [{ kind: 'chain', count: 6 }] })).not.toBe(
-      levelHash(level),
-    );
+    expect(levelHash({ ...level, goals: [{ kind: 'box', count: 6 }] })).not.toBe(levelHash(level));
   });
 });
 

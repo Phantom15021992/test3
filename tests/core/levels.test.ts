@@ -38,8 +38,8 @@ describe('кампания', () => {
     }
   });
 
-  it('льда, коробок и цепей на поле ровно столько, сколько в цели: лишних нет', () => {
-    const symbols = { ice: 'i', box: 'b', chain: '123' } as const;
+  it('льда и сундуков на поле ровно столько, сколько в цели: лишних нет', () => {
+    const symbols = { ice: 'i', box: 'bt123uvw' } as const;
     for (const { id, layout, goals } of LEVELS) {
       const all = layout.join('');
       for (const [kind, chars] of Object.entries(symbols)) {

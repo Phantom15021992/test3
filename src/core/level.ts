@@ -1,4 +1,4 @@
-import { UNCOLORED, createEmptyBoard, type Board } from './board';
+import { createEmptyBoard, type Board } from './board';
 import { COAL_MAX_LAYERS, COAL_SIZE, ICE_CRACKS_HITS, ICE_HITS } from './config';
 
 // Описание уровня и его проверка: уровни лежат в JSON, поэтому при загрузке им нельзя верить на слово.
@@ -11,23 +11,15 @@ import { COAL_MAX_LAYERS, COAL_SIZE, ICE_CRACKS_HITS, ICE_HITS } from './config'
 //   g  лёд 2 уровня со слитками золота: после первого удара видны слитки, дальше — как J;
 //      сломанный засчитывается в цель gold
 //   s  камень: падает, сдвинуть нельзя, разбить можно только взрывом
-//   b  коробка: стоит на месте, ломается взрывом и совпадением рядом
+//   b  сундук: стоит на месте, бьётся взрывом и совпадением рядом: закрытый → открытый → нет
+//   t  сундук с сокровищами: так же, сломанный засчитывается в цель gold
+//   1, 2, 3  сундук в цепи из стольких звеньев (каждый удар снимает звено, потом — как b)
+//   u, v, w  сундук с сокровищами в цепи из 1, 2, 3 звеньев
 //   o  корона: её нужно опустить на дно
-//   1, 2, 3  фишка под цепью из стольких звеньев
 //   c  уголь: глыба 4×4 из этих символов; слоёв у глыб уровня — coalLayers (по умолчанию 9)
 
 export type GoalKind =
-  | 'level2'
-  | 'level3'
-  | 'megaBomb'
-  | 'rainbow'
-  | 'ice'
-  | 'stone'
-  | 'box'
-  | 'chain'
-  | 'item'
-  | 'coal'
-  | 'gold';
+  'level2' | 'level3' | 'megaBomb' | 'rainbow' | 'ice' | 'stone' | 'box' | 'item' | 'coal' | 'gold';
 
 export interface Goal {
   kind: GoalKind;
@@ -69,7 +61,6 @@ const GOAL_KINDS: readonly GoalKind[] = [
   'ice',
   'stone',
   'box',
-  'chain',
   'item',
   'coal',
   'gold',
@@ -83,16 +74,26 @@ export function floorOf(levelId: number): number {
   return Math.ceil(levelId / FLOOR_SIZE);
 }
 
+/** Сундуки в поле: символ → звенья цепи и сокровища */
+const CHEST_SYMBOLS: Readonly<Record<string, { links?: number; treasure?: boolean }>> = {
+  b: {},
+  t: { treasure: true },
+  1: { links: 1 },
+  2: { links: 2 },
+  3: { links: 3 },
+  u: { links: 1, treasure: true },
+  v: { links: 2, treasure: true },
+  w: { links: 3, treasure: true },
+};
+
 export function boardTemplate(level: Level): Board {
   const board = createEmptyBoard(level.layout.length, level.layout[0]?.length ?? 0);
   level.layout.forEach((line, row) =>
     [...line].forEach((symbol, col) => {
       if (symbol === '#') board[row]![col] = { kind: 'hole' };
       if (symbol === 's') board[row]![col] = { kind: 'stone' };
-      if (symbol === 'b') board[row]![col] = { kind: 'box' };
-      if (/[123]/.test(symbol)) {
-        board[row]![col] = { kind: 'tile', color: UNCOLORED, level: 1, chain: Number(symbol) };
-      }
+      const chest = CHEST_SYMBOLS[symbol];
+      if (chest) board[row]![col] = { kind: 'box', ...chest };
       if (symbol === 'o') board[row]![col] = { kind: 'item' };
     }),
   );
@@ -180,7 +181,7 @@ export function parseLevel(value: unknown): Level {
   if (level.iceCracks !== undefined && typeof level.iceCracks !== 'boolean') {
     fail('iceCracks — true или false');
   }
-  if (level.layout.join('').replace(/[.#iJgsob123c]/g, '') !== '')
+  if (level.layout.join('').replace(/[.#iJgsobt123uvwc]/g, '') !== '')
     fail('неизвестный символ в поле');
   let coal = 0;
   try {
@@ -201,7 +202,7 @@ export function parseLevel(value: unknown): Level {
   for (const goal of level.goals) {
     if (!GOAL_KINDS.includes(goal.kind)) fail(`неизвестная цель ${goal.kind}`);
     if (!Number.isInteger(goal.count) || goal.count < 1) fail(`нет числа у цели ${goal.kind}`);
-    const symbols = { ice: 'iJg', gold: 'g', stone: 's', box: 'b', chain: '123', item: 'o' }[
+    const symbols = { ice: 'iJg', gold: 'gtuvw', stone: 's', box: 'bt123uvw', item: 'o' }[
       goal.kind as string
     ];
     const available =

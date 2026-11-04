@@ -12,12 +12,7 @@ export interface Tile {
   kind: 'tile';
   color: ColorId;
   level: CellLevel;
-  /** Сколько звеньев цепи на фишке: такую нельзя сдвинуть, и она не падает */
-  chain?: number;
 }
-
-/** Цвет цепной фишки в шаблоне уровня: настоящий выберет генератор стартового поля */
-export const UNCOLORED: ColorId = -1;
 
 /** Спецфишки. У всех нет цвета, в совпадениях они не участвуют */
 export type Piece =
@@ -36,9 +31,17 @@ export interface Stone {
   kind: 'stone';
 }
 
-/** Коробка: стоит на месте, фишки пролетают сквозь неё; ломается взрывом и совпадением рядом */
+/**
+ * Сундук: стоит на месте, фишки пролетают сквозь него. Удар — взрыв или совпадение рядом; каждый
+ * снимает одну стадию: звено цепи (links), потом сундук открывается (open), потом исчезает.
+ * Сундук с сокровищами (treasure) засчитывается в цель «золото»; что внутри, видно, только когда
+ * он открыт
+ */
 export interface Box {
   kind: 'box';
+  links?: number;
+  open?: boolean;
+  treasure?: boolean;
 }
 
 /** Корона: падает и меняется как фишка, в совпадениях не участвует, взрывы её не задевают */
@@ -80,14 +83,18 @@ export function isPiece(cell: Cell | undefined): cell is Piece {
   return cell != null && cell.kind === 'piece';
 }
 
-/** Фишка под цепью */
-export function isChained(cell: Cell | undefined): boolean {
-  return isTile(cell) && cell.chain !== undefined;
-}
-
 /** Клетка, которая не двигается и не падает. Сквозь неё фишки пролетают — кроме угля, его обтекают */
 export function isFixed(cell: Cell | undefined): boolean {
-  return cell?.kind === 'hole' || cell?.kind === 'box' || cell?.kind === 'coal' || isChained(cell);
+  return cell?.kind === 'hole' || cell?.kind === 'box' || cell?.kind === 'coal';
+}
+
+/** Удар по сундуку: снято звено цепи, сундук открылся или (null) исчез */
+export function hitBox(box: Box): Box | null {
+  const { links = 0, open = false } = box;
+  if (links > 1) return { ...box, links: links - 1 };
+  // В цепях сундук всегда закрыт: последнее звено снято — остаётся закрытый сундук
+  if (links === 1) return box.treasure ? { kind: 'box', treasure: true } : { kind: 'box' };
+  return open ? null : { ...box, open: true };
 }
 
 export function isCoal(cell: Cell | undefined): cell is Coal {

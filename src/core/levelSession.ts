@@ -52,7 +52,6 @@ export class LevelSession extends GameSession {
     ice: 0,
     stone: 0,
     box: 0,
-    chain: 0,
     item: 0,
     coal: 0,
     gold: 0,
@@ -113,7 +112,7 @@ export class LevelSession extends GameSession {
   /**
    * Финал кампании: уровень кончился (ходами или досрочно на трёх звёздах), и все спецфишки на поле
    * срабатывают по одной. Каждый раз — та,
-   * что сильнее всего улучшит итог: сначала задание (доломать лёд, коробки, собрать нужные ячейки…),
+   * что сильнее всего улучшит итог: сначала задание (доломать лёд, сундуки, собрать нужные ячейки…),
    * потом звёзды, потом очки. Радуга выбирает лучший цвет, манипулятор — лучший обмен. Спецфишки
    * из каскадов финала тоже идут в дело. Победа и звёзды считаются после финала
    */
@@ -266,10 +265,9 @@ export class LevelSession extends GameSession {
 
   protected override onStep(step: ResolveStep): void {
     if (step.kind === 'clear') {
-      const links = step.links ?? [];
-      // Удар по льду — каждая очищенная клетка и каждое снятое звено, одна клетка — раз за шаг
+      // Удар по льду — каждая очищенная клетка, одна клетка — раз за шаг
       const hit = new Set<string>();
-      for (const { row, col } of [...step.cells, ...links.map((link) => link.pos)]) {
+      for (const { row, col } of step.cells) {
         const line = this.ice[row];
         const key = `${row},${col}`;
         if (!line?.[col] || hit.has(key)) continue;
@@ -279,9 +277,9 @@ export class LevelSession extends GameSession {
         this.progress.ice++;
         if (this.iceStyle[row]?.[col] === 'gold') this.progress.gold++;
       }
-      this.progress.chain += links.filter((link) => link.left === 0).length;
       this.progress.stone += step.stones ?? 0;
       this.progress.box += step.boxes ?? 0;
+      this.progress.gold += step.treasures ?? 0;
       this.progress.item += step.items ?? 0;
       for (const { top, left, layers } of step.coal ?? []) {
         this.coal.set(`${top},${left}`, layers);

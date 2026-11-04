@@ -2,7 +2,7 @@ import {
   allPositions,
   cloneBoard,
   getCell,
-  isChained,
+  hitBox,
   isCoal,
   isPiece,
   isTile,
@@ -10,6 +10,7 @@ import {
   samePos,
   setCell,
   type Board,
+  type Box,
   type Cell,
   type ColorId,
   type Position,
@@ -29,7 +30,7 @@ import {
   MANIPULATOR_FINALE_POINTS,
 } from './config';
 import { addBlows, coalAround, coalIn, hitCoal, type CoalHit } from './coal';
-import { itemsOnBottom, loosenChains, removeCells, settle, type Fall, type Spawn } from './gravity';
+import { itemsOnBottom, removeCells, settle, type Fall, type Spawn } from './gravity';
 import { findMatches, isSevenCross, type MatchGroup } from './match';
 import { swapCells } from './moves';
 import type { Rng } from './rng';
@@ -64,9 +65,10 @@ export type Move =
 
 export type ChoiceOption = 'bomb' | 'rainbow' | 'merge' | 'score';
 
-export interface ChainLink {
+/** Сундук после удара: снято звено или он открылся (сундук исчез — его клетка среди cells) */
+export interface ChestHit {
   pos: Position;
-  left: number;
+  cell: Box;
 }
 
 /** Совпадение в комбо: где оно и какое по счёту (от 1 до COMBO_MAX_STEPS) */
@@ -86,8 +88,8 @@ export type ResolveStep =
    *  direct3 — сколько из новых ячеек 3 уровня собрано сразу из фишек 1 уровня (для задачи на звезду) */
   | { kind: 'transform'; placements: Placement[]; direct3?: number }
   /** pieces — сколько спецфишек среди убранных клеток (сработали) — для статистики партии;
-   *  stones, boxes и items — сколько камней и коробок сломано и корон дошло до дна, а links —
-   *  фишки, с которых снято звено цепи (они остаются на месте; left — сколько звеньев ещё держит) */
+   *  stones, boxes и items — сколько камней и сундуков сломано и корон дошло до дна; treasures —
+   *  сколько из сломанных сундуков было с сокровищами; chests — сундуки, которые удар не сломал */
   | {
       kind: 'clear';
       cells: Position[];
@@ -96,7 +98,8 @@ export type ResolveStep =
       stones?: number;
       boxes?: number;
       items?: number;
-      links?: ChainLink[];
+      treasures?: number;
+      chests?: ChestHit[];
       combos?: ComboHit[];
       /** Удары по углю: сколько слоёв у глыбы осталось (0 — разбита) */
       coal?: CoalHit[];
@@ -165,15 +168,27 @@ export function* resolveMove(
     const pieces = cells.filter((pos) => isPiece(getCell(current, pos))).length;
     const count = (kind: string) => cells.filter((pos) => getCell(current, pos)?.kind === kind);
     const stones = count('stone').length;
-    const boxes = count('box').length;
-    const held = cells.filter((pos) => isChained(getCell(current, pos)));
-    const gone = cells.filter((pos) => {
-      const cell = getCell(current, pos);
-      return !isChained(cell) && !isCoal(cell);
-    });
-    const links = held.map((pos) => ({ pos, left: chainOf(current, pos) - 1 }));
+    // Сундук за шаг получает один удар: снимает звено, открывается или исчезает
+    const chests: ChestHit[] = [];
+    let boxes = 0;
+    let treasures = 0;
+    for (const pos of count('box')) {
+      const box = getCell(current, pos) as Box;
+      const next = hitBox(box);
+      if (next) chests.push({ pos, cell: next });
+      else {
+        boxes++;
+        if (box.treasure) treasures++;
+      }
+    }
+    const kept = new Set(chests.map(({ pos }) => posKey(pos)));
+    const gone = cells.filter((pos) => !isCoal(getCell(current, pos)) && !kept.has(posKey(pos)));
     score += points;
-    current = loosenChains(removeCells(current, gone), held);
+    current = removeCells(current, gone);
+    if (chests.length > 0) {
+      current = cloneBoard(current);
+      for (const { pos, cell } of chests) setCell(current, pos, cell);
+    }
     const struck = hitCoal(current, blows);
     current = struck.board;
     yield {
@@ -183,7 +198,8 @@ export function* resolveMove(
       pieces,
       ...(stones > 0 && { stones }),
       ...(boxes > 0 && { boxes }),
-      ...(links.length > 0 && { links }),
+      ...(treasures > 0 && { treasures }),
+      ...(chests.length > 0 && { chests }),
       ...(combos.length > 0 && { combos }),
       ...(struck.hits.length > 0 && { coal: struck.hits }),
     };
@@ -212,7 +228,7 @@ export function* resolveMove(
     let direct3 = 0;
 
     for (const group of groups) {
-      const outcome = groupOutcome(group, current, landing, ctx.campaign ?? false);
+      const outcome = groupOutcome(group, landing, ctx.campaign ?? false);
       removal.push(...group.cells, ...boxesAround(current, group.cells));
       // Совпадение рядом с углём снимает столько слоёв, какого уровня его фишки
       addBlows(matchBlows, coalAround(current, group.cells), group.level);
@@ -312,12 +328,7 @@ export function* resolveMove(
   throw new Error(`Каскад не завершился за ${MAX_WAVES} волн`);
 }
 
-function chainOf(board: Board, pos: Position): number {
-  const cell = getCell(board, pos);
-  return isTile(cell) ? (cell.chain ?? 0) : 0;
-}
-
-/** Коробки рядом с совпадением ломаются вместе с ним */
+/** Сундуки рядом с совпадением получают удар вместе с ним */
 function boxesAround(board: Board, cells: Position[]): Position[] {
   const offsets = [
     [0, 1],
@@ -342,14 +353,7 @@ interface GroupOutcome {
 
 // Совпадение сразу превращается в награду из MATCH_REWARDS (объединённые ячейки или спецфишки),
 // и вся группа приносит очки. Вторая награда, если их две, встаёт в соседнюю клетку группы.
-// Фишки под цепью считаются в размере группы, но остаются на месте: награда встаёт только
-// в свободные клетки, и если их не хватает, лишняя награда пропадает.
-function groupOutcome(
-  group: MatchGroup,
-  board: Board,
-  landing: Position[],
-  campaign: boolean,
-): GroupOutcome {
+function groupOutcome(group: MatchGroup, landing: Position[], campaign: boolean): GroupOutcome {
   const crossReward =
     group.level !== 3 && isSevenCross(group.cells) ? SEVEN_CROSS_REWARDS[group.level] : null;
   const points = crossReward
@@ -357,13 +361,11 @@ function groupOutcome(
       ? SEVEN_CROSS_LEVEL1_POINTS
       : matchPoints(3, 5)
     : matchPoints(group.level, group.cells.length);
-  const open = { ...group, cells: group.cells.filter((pos) => !isChained(getCell(board, pos))) };
-  if (campaign && group.level === 2 && group.cells.length >= 5) return bigLevel2(open, landing);
-  if (open.cells.length === 0) return { points, placements: [] };
-  const spot = pickSpot(open, landing);
+  if (campaign && group.level === 2 && group.cells.length >= 5) return bigLevel2(group, landing);
+  const spot = pickSpot(group, landing);
   const size = Math.min(group.cells.length, 5) as 3 | 4 | 5;
   const reward = crossReward ?? MATCH_REWARDS[group.level][size];
-  const cells = reward.count === 2 ? [spot, neighborInGroup(open, spot, [spot])] : [spot];
+  const cells = reward.count === 2 ? [spot, neighborInGroup(group, spot, [spot])] : [spot];
   const cell: Cell =
     reward.kind === 'tiles'
       ? { kind: 'tile', color: group.color, level: reward.level }
@@ -373,7 +375,7 @@ function groupOutcome(
   const direction = lineDirection(group);
   if (reward.kind === 'tiles' && reward.lineRocket && direction) {
     const pos = neighborInGroup(
-      open,
+      group,
       spot,
       placements.map((placement) => placement.pos),
     );
@@ -382,7 +384,7 @@ function groupOutcome(
   // 4 ячейки 2 уровня не в линию — это квадрат 2×2: в кампании, как линия даёт ракету, он даёт бомбу
   if (campaign && group.level === 2 && group.cells.length === 4 && !direction) {
     const pos = neighborInGroup(
-      open,
+      group,
       spot,
       placements.map((placement) => placement.pos),
     );
@@ -391,7 +393,7 @@ function groupOutcome(
   // 6+ фишек 1 уровня (и фигура из 7 клеток): к ячейкам 3 уровня — маленькая бомба
   if (campaign && group.level === 1 && group.cells.length >= CAMPAIGN_BOMB_GROUP) {
     const pos = neighborInGroup(
-      open,
+      group,
       spot,
       placements.map((placement) => placement.pos),
     );

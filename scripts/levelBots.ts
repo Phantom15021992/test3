@@ -108,8 +108,10 @@ function moveValue(
     if (step.kind === 'clear') {
       value += step.points * (star('score') ? 0.5 : 0.05) + (step.items ?? 0) * 800;
       value += (step.stones ?? 0) * (need('stone') ? 120 : 15);
-      value += (step.boxes ?? 0) * (need('box') ? 70 : 5);
-      value += (step.links?.length ?? 0) * (need('chain') ? 70 : 5);
+      // Сундук: сломанный — цель, снятое звено или открытый — шаг к ней
+      value += (step.boxes ?? 0) * (need('box') ? 90 : 5);
+      value += (step.chests?.length ?? 0) * (need('box') ? 50 : 3);
+      value += (step.treasures ?? 0) * (need('gold') ? 120 : 0);
       // Удар по углю: слой снят; разбитая глыба — цель
       for (const hit of step.coal ?? []) value += need('coal') ? (hit.layers === 0 ? 400 : 70) : 5;
       for (const pos of step.cells) {
@@ -148,8 +150,8 @@ function goalTargets(session: LevelSession): Position[] {
       (need('gold') &&
         (session.ice[pos.row]?.[pos.col] ?? 0) > 0 &&
         session.iceStyle[pos.row]?.[pos.col] === 'gold') ||
-      (need('chain') && cell?.kind === 'tile' && (cell.chain ?? 0) > 0) ||
-      (need('box') && cell?.kind === 'box') ||
+      ((need('box') || (need('gold') && cell?.kind === 'box' && cell.treasure === true)) &&
+        cell?.kind === 'box') ||
       (need('stone') && cell?.kind === 'stone') ||
       (need('coal') && cell?.kind === 'coal')
     );

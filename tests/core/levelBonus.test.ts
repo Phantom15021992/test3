@@ -92,7 +92,7 @@ describe('покупка спецфишек в кампании', () => {
       G1 Y1 R1
       B1 .  #
     `);
-    setCell(cells, { row: 1, col: 1 }, { kind: 'tile', color: 0, level: 1, chain: 2 });
+    setCell(cells, { row: 1, col: 1 }, { kind: 'box', links: 2 });
     expect(isBonusTarget(cells, { row: 0, col: 0 })).toBe(true);
     expect(isBonusTarget(cells, { row: 0, col: 1 })).toBe(false);
     expect(isBonusTarget(cells, { row: 0, col: 2 })).toBe(false);

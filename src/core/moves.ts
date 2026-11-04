@@ -2,7 +2,6 @@ import {
   allPositions,
   cloneBoard,
   getCell,
-  isChained,
   isFixed,
   isPiece,
   isTile,
@@ -50,7 +49,6 @@ export function isValidSwap(board: Board, a: Position, b: Position): boolean {
 
 /** Что можно двигать обычным обменом: свободные фишки, короны, манипулятор и радугу */
 function isMovable(cell: Cell | undefined): boolean {
-  if (isChained(cell)) return false;
   if (isTile(cell) || cell?.kind === 'item') return true;
   return isPiece(cell) && (cell.type === 'manipulator' || cell.type === 'rainbow');
 }
@@ -87,7 +85,7 @@ const RECOLOR_ATTEMPTS = 500;
 
 /**
  * Перемешивает поле, когда ходов обычными фишками нет. Переставляются все фишки, ячейки
- * и спецфишки; препятствия (дыры, камни, коробки, короны, фишки под цепью) стоят на месте:
+ * и спецфишки; препятствия (дыры, камни, сундуки, короны) стоят на месте:
  * иначе перемешивание само опускало бы корону на дно. Лёд — слой клетки, он тоже остаётся.
  * Результат — без готовых совпадений и с ходом.
  * Если такую перестановку найти не удалось — отдельные фишки 1 уровня меняют цвет,

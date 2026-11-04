@@ -1,6 +1,5 @@
 import {
   cloneBoard,
-  isChained,
   isCoal,
   isFixed,
   isPiece,
@@ -38,19 +37,6 @@ export function removeCells(board: Board, cells: Position[]): Board {
     if (kind === 'tile' || kind === 'piece' || kind === 'stone' || kind === 'box') {
       next[row]![col] = null;
     }
-  }
-  return next;
-}
-
-/** Снимает по звену цепи с фишек; когда звеньев не осталось, фишка снова обычная */
-export function loosenChains(board: Board, cells: Position[]): Board {
-  const next = cloneBoard(board);
-  for (const { row, col } of cells) {
-    const cell = next[row]?.[col];
-    if (cell?.kind !== 'tile' || !isChained(cell)) continue;
-    const left = cell.chain! - 1;
-    next[row]![col] =
-      left > 0 ? { ...cell, chain: left } : { kind: 'tile', color: cell.color, level: cell.level };
   }
   return next;
 }
@@ -188,11 +174,10 @@ function openFromTop(board: Board): boolean[][] {
   return open;
 }
 
-/** Что может скатиться наискосок: всё, что падает (кроме фишек под цепью) */
+/** Что может скатиться наискосок: всё, что падает */
 function canSlide(cell: Cell | undefined): boolean {
   if (cell == null) return false;
-  if (isTile(cell)) return !isChained(cell);
-  return isPiece(cell) || cell.kind === 'stone' || cell.kind === 'item';
+  return isTile(cell) || isPiece(cell) || cell.kind === 'stone' || cell.kind === 'item';
 }
 
 /** Пустые клетки снизу вверх забирают фишку сверху слева, иначе сверху справа */

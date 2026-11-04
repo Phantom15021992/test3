@@ -13,8 +13,7 @@ describe('размер целей уровня', () => {
         const { layout, goals } = resizeLevel(level.layout, level.goals, scale);
         for (const [kind, symbols] of [
           ['ice', 'i'],
-          ['box', 'b'],
-          ['chain', '123'],
+          ['box', 'bt123uvw'],
         ] as const) {
           const goal = goals.find((g) => g.kind === kind)?.count ?? 0;
           expect(count(layout, symbols), `уровень ${level.id}, ${kind}, ×${scale}`).toBe(goal);
@@ -27,8 +26,8 @@ describe('размер целей уровня', () => {
     }
   });
 
-  it('цели растут, цепи — новыми цепями и звеньями, не ближе 3 клеток и по одной в строке', () => {
-    const level = LEVELS.find((l) => l.goals.some((g) => g.kind === 'chain'))!;
+  it('сундуки в цепях растут новыми цепями и звеньями, не ближе 3 клеток и по одному в строке', () => {
+    const level = LEVELS.find((l) => /[123]/.test(l.layout.join('')))!;
     const links = (layout: readonly string[]) =>
       [...layout.join('')].filter((s) => '123'.includes(s)).reduce((sum, s) => sum + Number(s), 0);
     const { layout } = resizeLevel(level.layout, level.goals, 3);

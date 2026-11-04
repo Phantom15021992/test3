@@ -2,7 +2,6 @@ import {
   allPositions,
   cloneBoard,
   getCell,
-  isChained,
   isPiece,
   setCell,
   type Board,
@@ -50,7 +49,7 @@ const SIDES = [
  */
 export function isBonusTarget(board: Board, pos: Position): boolean {
   const cell = getCell(board, pos);
-  if (cell?.kind !== 'tile' || cell.level !== 1 || isChained(cell)) return false;
+  if (cell?.kind !== 'tile' || cell.level !== 1) return false;
   return !SIDES.some(([dr, dc]) =>
     isPiece(getCell(board, { row: pos.row + dr, col: pos.col + dc })),
   );
@@ -78,7 +77,7 @@ export function placeBonus(
 ): { board: Board; pos: Position; piece: Piece } | null {
   const candidates = allPositions(board).filter((pos) => {
     const cell = getCell(board, pos);
-    return cell?.kind === 'tile' && cell.level === 1 && !isChained(cell);
+    return cell?.kind === 'tile' && cell.level === 1;
   });
   if (candidates.length === 0) return null;
   const pos = candidates[rng.int(candidates.length)]!;

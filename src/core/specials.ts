@@ -1,7 +1,6 @@
 import {
   allPositions,
   getCell,
-  isChained,
   isPiece,
   isTile,
   posKey,
@@ -55,7 +54,7 @@ export function tilesOfColor(board: Board, color: ColorId, onlyLevel1 = false): 
   return allPositions(board).filter((p) => {
     const cell = getCell(board, p);
     if (!isTile(cell) || cell.color !== color) return false;
-    return !onlyLevel1 || (cell.level === 1 && !isChained(cell));
+    return !onlyLevel1 || cell.level === 1;
   });
 }
 
@@ -131,7 +130,7 @@ export function expandChain(
 
 /** Очки за клетку, уничтоженную не в совпадении (взрывом, ракетой, радугой) */
 export function hitPoints(cell: Cell | undefined): number {
-  if (!isTile(cell) || isChained(cell)) return 0;
+  if (!isTile(cell)) return 0;
   if (cell.level === 2) return BASE_POINTS_PER_TILE * LEVEL2_SCORE_MULTIPLIER;
   if (cell.level === 3) return BASE_POINTS_PER_TILE * LEVEL3_HIT_MULTIPLIER;
   return BASE_POINTS_PER_TILE;
@@ -174,7 +173,7 @@ export function activationSwapTarget(board: Board, a: Position, b: Position): Po
 
 /** С чем спецфишку можно поменять, чтобы она сработала: только с тем, что само двигается */
 function isSwappable(cell: Cell | undefined): boolean {
-  return (isTile(cell) && !isChained(cell)) || isPiece(cell);
+  return isTile(cell) || isPiece(cell);
 }
 
 /** Нужен ли игроку выбор цвета для комбо (мега-бомба + радуга) */
