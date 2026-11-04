@@ -105,6 +105,7 @@ export class BoardView {
   setIce(
     ice: readonly (readonly number[])[],
     styles: readonly (readonly (IceStyle | null)[])[],
+    cracks: boolean,
   ): void {
     this.iceLayer.removeAll(true);
     ice.forEach((line, row) =>
@@ -112,7 +113,9 @@ export class BoardView {
         const style = styles[row]?.[col];
         if (hits <= 0 || !style) return;
         const { x, y } = this.centerOf({ row, col });
-        this.iceLayer.add(obstacleImage(this.scene, iceImage(style, hits), this.cellSize, x, y));
+        this.iceLayer.add(
+          obstacleImage(this.scene, iceImage(style, hits, cracks), this.cellSize, x, y),
+        );
       }),
     );
   }

@@ -78,9 +78,15 @@ export const CAMPAIGN_LEVEL2_PIECES: Readonly<
 > = { 5: ['megaBomb'], 6: ['rainbow'], 7: ['rainbow', 'rainbow'] };
 export const CAMPAIGN_LEVEL2_TILES = 2;
 
+/**
+ * Сколько ударов держит лёд кампании: обычный — 1; лёд 2 уровня (простой и со слитками
+ * золота) — 2: 2 уровень → 1 уровень → нет
+ */
+export const ICE_HITS = { classic: 1, plain: 2, gold: 2 } as const;
+/** Этап «лёд с трещинами» (iceCracks у уровня) — ещё один удар льду 2 уровня */
+export const ICE_CRACKS_HITS = 1;
+
 /** Уголь: сторона глыбы и сколько у неё слоёв самое большее (у уровня можно меньше) */
-/** Сколько ударов держит лёд кампании: обычный, 1 уровня, 2 уровня, со слитками золота */
-export const ICE_HITS = { classic: 1, thin: 2, thick: 3, gold: 2 } as const;
 
 export const COAL_SIZE = 4;
 export const COAL_MAX_LAYERS = 9;

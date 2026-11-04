@@ -1,5 +1,5 @@
 import { UNCOLORED, createEmptyBoard, type Board } from './board';
-import { COAL_MAX_LAYERS, COAL_SIZE, ICE_HITS } from './config';
+import { COAL_MAX_LAYERS, COAL_SIZE, ICE_CRACKS_HITS, ICE_HITS } from './config';
 
 // Описание уровня и его проверка: уровни лежат в JSON, поэтому при загрузке им нельзя верить на слово.
 //
@@ -7,9 +7,9 @@ import { COAL_MAX_LAYERS, COAL_SIZE, ICE_HITS } from './config';
 //   .  обычная клетка (заполнится случайной фишкой)
 //   #  дыра: клетки нет, фишки пролетают сквозь неё
 //   i  клетка со льдом (ломается с одного удара)
-//   j  лёд 1 уровня: 2 удара (второй — уже по льду с трещинами)
-//   J  лёд 2 уровня: 3 удара (2 уровень → 1 уровень → трещины → нет)
-//   g  лёд со слитками золота: 2 удара; сломанный засчитывается в цель gold
+//   J  лёд 2 уровня: 2 уровень → 1 уровень → нет; с iceCracks у уровня — ещё этап «с трещинами»
+//   g  лёд 2 уровня со слитками золота: после первого удара видны слитки, дальше — как J;
+//      сломанный засчитывается в цель gold
 //   s  камень: падает, сдвинуть нельзя, разбить можно только взрывом
 //   b  коробка: стоит на месте, ломается взрывом и совпадением рядом
 //   o  корона: её нужно опустить на дно
@@ -57,6 +57,8 @@ export interface Level {
   stars: readonly StarTask[];
   /** Сколько слоёв у каждой глыбы угля: подбирается под сложность уровня */
   coalLayers?: number;
+  /** Лёд 2 уровня получает ещё этап «с трещинами» — на удар больше: так уровень сложнее */
+  iceCracks?: boolean;
 }
 
 const GOAL_KINDS: readonly GoalKind[] = [
@@ -133,10 +135,14 @@ export type IceStyle = keyof typeof ICE_HITS;
 
 const ICE_SYMBOLS: Readonly<Record<string, IceStyle>> = {
   i: 'classic',
-  j: 'thin',
-  J: 'thick',
+  J: 'plain',
   g: 'gold',
 };
+
+/** Сколько ударов держит лёд этого вида на уровне */
+export function iceHits(style: IceStyle, cracks: boolean): number {
+  return ICE_HITS[style] + (cracks && style !== 'classic' ? ICE_CRACKS_HITS : 0);
+}
 
 /** Вид льда по клеткам; null — льда нет */
 export function iceStyles(level: Level): (IceStyle | null)[][] {
@@ -148,7 +154,8 @@ export function iceStyles(level: Level): (IceStyle | null)[][] {
  * Число в клетке — сколько ударов лёд ещё выдержит (0 — льда нет)
  */
 export function iceTemplate(level: Level): number[][] {
-  return iceStyles(level).map((line) => line.map((style) => (style ? ICE_HITS[style] : 0)));
+  const cracks = level.iceCracks === true;
+  return iceStyles(level).map((line) => line.map((style) => (style ? iceHits(style, cracks) : 0)));
 }
 
 function countSymbol(level: Level, symbol: string): number {
@@ -170,7 +177,10 @@ export function parseLevel(value: unknown): Level {
   if (!Array.isArray(level.layout) || level.layout.length === 0) fail('нет поля');
   const width = level.layout[0]?.length;
   if (level.layout.some((line) => line.length !== width)) fail('строки поля разной длины');
-  if (level.layout.join('').replace(/[.#ijJgsob123c]/g, '') !== '')
+  if (level.iceCracks !== undefined && typeof level.iceCracks !== 'boolean') {
+    fail('iceCracks — true или false');
+  }
+  if (level.layout.join('').replace(/[.#iJgsob123c]/g, '') !== '')
     fail('неизвестный символ в поле');
   let coal = 0;
   try {
@@ -191,7 +201,7 @@ export function parseLevel(value: unknown): Level {
   for (const goal of level.goals) {
     if (!GOAL_KINDS.includes(goal.kind)) fail(`неизвестная цель ${goal.kind}`);
     if (!Number.isInteger(goal.count) || goal.count < 1) fail(`нет числа у цели ${goal.kind}`);
-    const symbols = { ice: 'ijJg', gold: 'g', stone: 's', box: 'b', chain: '123', item: 'o' }[
+    const symbols = { ice: 'iJg', gold: 'g', stone: 's', box: 'b', chain: '123', item: 'o' }[
       goal.kind as string
     ];
     const available =
