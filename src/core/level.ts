@@ -1,4 +1,5 @@
 import { UNCOLORED, createEmptyBoard, type Board } from './board';
+import { COAL_MAX_LAYERS, COAL_SIZE } from './config';
 
 // Описание уровня и его проверка: уровни лежат в JSON, поэтому при загрузке им нельзя верить на слово.
 //
@@ -10,9 +11,19 @@ import { UNCOLORED, createEmptyBoard, type Board } from './board';
 //   b  коробка: стоит на месте, ломается взрывом и совпадением рядом
 //   o  корона: её нужно опустить на дно
 //   1, 2, 3  фишка под цепью из стольких звеньев
+//   c  уголь: глыба 4×4 из этих символов; слоёв у глыб уровня — coalLayers (по умолчанию 9)
 
 export type GoalKind =
-  'level2' | 'level3' | 'megaBomb' | 'rainbow' | 'ice' | 'stone' | 'box' | 'chain' | 'item';
+  | 'level2'
+  | 'level3'
+  | 'megaBomb'
+  | 'rainbow'
+  | 'ice'
+  | 'stone'
+  | 'box'
+  | 'chain'
+  | 'item'
+  | 'coal';
 
 export interface Goal {
   kind: GoalKind;
@@ -40,6 +51,8 @@ export interface Level {
   moves: number;
   goals: readonly Goal[];
   stars: readonly StarTask[];
+  /** Сколько слоёв у каждой глыбы угля: подбирается под сложность уровня */
+  coalLayers?: number;
 }
 
 const GOAL_KINDS: readonly GoalKind[] = [
@@ -52,6 +65,7 @@ const GOAL_KINDS: readonly GoalKind[] = [
   'box',
   'chain',
   'item',
+  'coal',
 ];
 const STAR_TASKS = 2;
 /** Уровней на этаже: номер уровня складывается из этажа и места на нём */
@@ -75,7 +89,38 @@ export function boardTemplate(level: Level): Board {
       if (symbol === 'o') board[row]![col] = { kind: 'item' };
     }),
   );
+  const layers = level.coalLayers ?? COAL_MAX_LAYERS;
+  for (const block of coalBlocks(level.layout)) {
+    for (let row = block.row; row < block.row + COAL_SIZE; row++) {
+      for (let col = block.col; col < block.col + COAL_SIZE; col++) {
+        board[row]![col] = { kind: 'coal', top: block.row, left: block.col, layers };
+      }
+    }
+  }
   return board;
+}
+
+/**
+ * Глыбы угля в поле (левые верхние углы); если символы угля не складываются
+ * в отдельные квадраты 4×4 — исключение
+ */
+export function coalBlocks(layout: readonly string[]): { row: number; col: number }[] {
+  const taken = layout.map((line) => [...line].map(() => false));
+  const blocks: { row: number; col: number }[] = [];
+  layout.forEach((line, row) =>
+    [...line].forEach((symbol, col) => {
+      if (symbol !== 'c' || taken[row]![col]) return;
+      for (let r = row; r < row + COAL_SIZE; r++) {
+        for (let c = col; c < col + COAL_SIZE; c++) {
+          if (layout[r]?.[c] !== 'c' || taken[r]![c])
+            throw new Error('уголь — только квадраты 4×4');
+          taken[r]![c] = true;
+        }
+      }
+      blocks.push({ row, col });
+    }),
+  );
+  return blocks;
 }
 
 /** Лёд — отдельный слой под фишками: он остаётся на месте, когда фишки падают и меняются */
@@ -102,7 +147,21 @@ export function parseLevel(value: unknown): Level {
   if (!Array.isArray(level.layout) || level.layout.length === 0) fail('нет поля');
   const width = level.layout[0]?.length;
   if (level.layout.some((line) => line.length !== width)) fail('строки поля разной длины');
-  if (level.layout.join('').replace(/[.#isob123]/g, '') !== '') fail('неизвестный символ в поле');
+  if (level.layout.join('').replace(/[.#isob123c]/g, '') !== '') fail('неизвестный символ в поле');
+  let coal = 0;
+  try {
+    coal = coalBlocks(level.layout).length;
+  } catch {
+    fail('уголь — только квадраты 4×4');
+  }
+  if (
+    level.coalLayers !== undefined &&
+    (!Number.isInteger(level.coalLayers) ||
+      level.coalLayers < 1 ||
+      level.coalLayers > COAL_MAX_LAYERS)
+  ) {
+    fail(`слоёв угля 1–${COAL_MAX_LAYERS}`);
+  }
 
   if (!Array.isArray(level.goals) || level.goals.length === 0) fail('нет целей');
   for (const goal of level.goals) {
@@ -111,8 +170,11 @@ export function parseLevel(value: unknown): Level {
     const symbols = { ice: 'i', stone: 's', box: 'b', chain: '123', item: 'o' }[
       goal.kind as string
     ];
-    const available = [...(symbols ?? '')].reduce((sum, s) => sum + countSymbol(level, s), 0);
-    if (symbols && available < goal.count) {
+    const available =
+      goal.kind === 'coal'
+        ? coal
+        : [...(symbols ?? '')].reduce((sum, s) => sum + countSymbol(level, s), 0);
+    if ((symbols || goal.kind === 'coal') && available < goal.count) {
       fail(`цель ${goal.kind} больше, чем есть на поле`);
     }
   }

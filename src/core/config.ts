@@ -78,6 +78,10 @@ export const CAMPAIGN_LEVEL2_PIECES: Readonly<
 > = { 5: ['megaBomb'], 6: ['rainbow'], 7: ['rainbow', 'rainbow'] };
 export const CAMPAIGN_LEVEL2_TILES = 2;
 
+/** Уголь: сторона глыбы и сколько у неё слоёв самое большее (у уровня можно меньше) */
+export const COAL_SIZE = 4;
+export const COAL_MAX_LAYERS = 9;
+
 /** Сколько раз за попытку уровня кампании можно купить спецфишку; нет в списке — без ограничения */
 export const CAMPAIGN_BONUS_LIMITS: Readonly<
   Partial<Record<'bomb' | 'rocket' | 'manipulator' | 'rainbow', number>>

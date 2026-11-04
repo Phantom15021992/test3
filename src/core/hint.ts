@@ -80,6 +80,7 @@ function goalValue(session: LevelSession, steps: ResolveStep[], after: Board): n
       if (need('stone')) value += (step.stones ?? 0) * GOAL_STEP_VALUE;
       if (need('box')) value += (step.boxes ?? 0) * GOAL_STEP_VALUE;
       if (need('chain')) value += (step.links?.length ?? 0) * GOAL_STEP_VALUE;
+      if (need('coal')) value += (step.coal?.length ?? 0) * GOAL_STEP_VALUE;
       if (need('item')) value += (step.items ?? 0) * ITEM_VALUE;
       for (const { row, col } of step.cells) {
         if (need('ice') && session.ice[row]?.[col]) broken.add(`${row},${col}`);

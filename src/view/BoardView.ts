@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
-import type { Board, Cell, Position, Tile } from '../core/board';
+import { isCoal, type Board, type Cell, type Position, type Tile } from '../core/board';
+import type { CoalHit } from '../core/coal';
 import {
   CLEAR_DURATION_MS,
+  COAL_SIZE,
   COMBO_LABEL_DURATION_MS,
   FALL_DURATION_PER_CELL_MS,
   HINT_PULSE_MS,
@@ -22,7 +24,7 @@ import {
   SELECTION_COLOR,
   TILE_COLORS,
 } from './palette';
-import { CHAIN_NAME, chainImages, obstacleImage } from './obstacleArt';
+import { CHAIN_NAME, chainImages, obstacleImage, setCoalArt } from './obstacleArt';
 import { drawPiece } from './pieceArt';
 import { drawTileShape } from './tileArt';
 
@@ -44,6 +46,8 @@ export class BoardView {
   private readonly maskShape: Phaser.GameObjects.Graphics;
   private readonly mask: Phaser.Display.Masks.GeometryMask;
   private sprites: (TileSprite | null)[][] = [];
+  /** Глыбы угля — по картинке на глыбу 4×4, ключ — её левый верхний угол */
+  private coal = new Map<string, Phaser.GameObjects.Image>();
   private rows = 0;
   private cols = 0;
 
@@ -65,6 +69,8 @@ export class BoardView {
 
   render(board: Board): void {
     this.sprites.flat().forEach((sprite) => sprite?.destroy());
+    this.coal.forEach((image) => image.destroy());
+    this.coal.clear();
     this.rows = board.length;
     this.cols = board[0]?.length ?? 0;
 
@@ -85,6 +91,10 @@ export class BoardView {
         const y = this.originY + r * this.cellSize;
         this.background.fillStyle((r + c) % 2 === 0 ? BOARD_CELL_DARK : BOARD_CELL_LIGHT);
         this.background.fillRect(x, y, this.cellSize, this.cellSize);
+        if (isCoal(cell)) {
+          if (cell.top === r && cell.left === c) this.addCoal(cell.top, cell.left, cell.layers);
+          return null;
+        }
         return cell ? this.createSprite(cell, { row: r, col: c }) : null;
       }),
     );
@@ -110,6 +120,47 @@ export class BoardView {
       sprite.getAll('name', CHAIN_NAME).forEach((image) => image.destroy());
       sprite.add(chainImages(this.scene, left, this.cellSize));
     }
+  }
+
+  /** Удары по углю: глыба вздрагивает и уменьшается, разбитая — исчезает */
+  hitCoal(hits: readonly CoalHit[]): void {
+    for (const { top, left, layers } of hits) {
+      const key = `${top},${left}`;
+      const image = this.coal.get(key);
+      if (!image) continue;
+      if (layers === 0) {
+        this.coal.delete(key);
+        this.scene.tweens.add({
+          targets: image,
+          scale: 0,
+          alpha: 0,
+          duration: CLEAR_DURATION_MS * 2,
+          onComplete: () => image.destroy(),
+        });
+        continue;
+      }
+      setCoalArt(image, layers, this.cellSize);
+      const scale = image.scaleX;
+      this.scene.tweens.add({
+        targets: image,
+        scale: scale * 1.08,
+        duration: MATCH_PULSE_DURATION_MS,
+        yoyo: true,
+      });
+    }
+  }
+
+  private addCoal(top: number, left: number, layers: number): void {
+    const half = (COAL_SIZE * this.cellSize) / 2;
+    const image = this.scene.add
+      .image(
+        this.originX + left * this.cellSize + half,
+        this.originY + top * this.cellSize + half,
+        '',
+      )
+      .setMask(this.mask);
+    setCoalArt(image, layers, this.cellSize);
+    this.coal.set(`${top},${left}`, image);
   }
 
   /** Надписи комбо всплывают над совпадениями и не задерживают ход */
@@ -208,7 +259,8 @@ export class BoardView {
   async place(placements: Placement[]): Promise<void> {
     const created = placements.map(({ pos, cell }) => {
       this.spriteAt(pos)?.destroy();
-      const sprite = cell && cell.kind !== 'hole' ? this.createSprite(cell, pos) : null;
+      const sprite =
+        cell && cell.kind !== 'hole' && cell.kind !== 'coal' ? this.createSprite(cell, pos) : null;
       this.sprites[pos.row]![pos.col] = sprite;
       return sprite?.setScale(0);
     });
@@ -244,23 +296,41 @@ export class BoardView {
     for (const { sprite, fall } of moving) this.sprites[fall.to.row]![fall.to.col] = sprite;
 
     // Новые фишки столбца выстраиваются стопкой над полем и падают вместе
+    // Под углём, куда скатиться нечему, новые фишки «выпрыгивают» на месте
     const spawnsPerColumn = new Map<number, number>();
-    for (const { to } of spawns)
-      spawnsPerColumn.set(to.col, (spawnsPerColumn.get(to.col) ?? 0) + 1);
-    const created = spawns.map(({ to, tile }) => {
-      const start = { row: to.row - (spawnsPerColumn.get(to.col) ?? 0), col: to.col };
+    for (const { to, inPlace } of spawns) {
+      if (!inPlace) spawnsPerColumn.set(to.col, (spawnsPerColumn.get(to.col) ?? 0) + 1);
+    }
+    const created = spawns.map(({ to, tile, inPlace }) => {
+      const start = inPlace
+        ? to
+        : { row: to.row - (spawnsPerColumn.get(to.col) ?? 0), col: to.col };
       const sprite = this.createSprite(tile, start);
       this.sprites[to.row]![to.col] = sprite;
-      return { sprite, from: start, to };
+      return { sprite, from: start, to, inPlace };
     });
+    const popped = created.filter((c) => c.inPlace).map((c) => c.sprite.setScale(0));
 
     await Promise.all([
       ...moving.map(({ sprite, fall }) => this.fallTo(sprite, fall.from, fall.to)),
-      ...created.map(({ sprite, from, to }) => this.fallTo(sprite, from, to)),
+      ...created
+        .filter((c) => !c.inPlace)
+        .map(({ sprite, from, to }) => this.fallTo(sprite, from, to)),
+      popped.length > 0
+        ? this.tween({
+            targets: popped,
+            scale: 1,
+            duration: PLACE_DURATION_MS,
+            ease: 'Back.easeOut',
+          })
+        : Promise.resolve(),
     ]);
   }
 
-  private createSprite(cell: Exclude<Cell, null | { kind: 'hole' }>, pos: Position): TileSprite {
+  private createSprite(
+    cell: Exclude<Cell, null | { kind: 'hole' } | { kind: 'coal' }>,
+    pos: Position,
+  ): TileSprite {
     const { x, y } = this.centerOf(pos);
     let children: Phaser.GameObjects.GameObject[];
     if (cell.kind === 'stone' || cell.kind === 'box' || cell.kind === 'item') {
@@ -325,7 +395,8 @@ export class BoardView {
     if (!sprite) return Promise.resolve();
     return this.tween({
       targets: sprite,
-      y: this.centerOf(to).y,
+      // Под углём фишки скатываются наискосок — тогда меняется и x
+      ...this.centerOf(to),
       duration: FALL_DURATION_PER_CELL_MS * Math.max(1, to.row - from.row),
       ease: 'Quad.easeIn',
     });

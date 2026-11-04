@@ -34,7 +34,8 @@ export function resizeLevel(
     const layer = LAYERS[goal.kind];
     if (layer) return { kind: goal.kind, count: resizeLayer(grid, layer, goal.count, scale) };
     if (goal.kind === 'chain') return { kind: 'chain', count: resizeChains(grid, scale) };
-    if (goal.kind === 'item' || goal.kind === 'stone') return goal;
+    // Камни — помеха, короны и уголь меняются не числом: у короны — высота, у угля — слои
+    if (goal.kind === 'item' || goal.kind === 'stone' || goal.kind === 'coal') return goal;
     return { kind: goal.kind, count: Math.max(1, Math.round(goal.count * scale)) };
   });
   return { layout: grid.map((line) => line.join('')), goals: sized };

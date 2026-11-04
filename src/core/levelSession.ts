@@ -52,11 +52,17 @@ export class LevelSession extends GameSession {
     box: 0,
     chain: 0,
     item: 0,
+    coal: 0,
   };
   /** Клетки, на которых ещё лежит лёд */
   ice: boolean[][];
   /** Сколько звёзд этажа потрачено в этой попытке */
   starsSpent = 0;
+  /**
+   * Слои глыб угля (ключ — левый верхний угол) — по шагам хода: поле партии обновляется
+   * только в конце хода, а прогресс виден сразу
+   */
+  coal = new Map<string, number>();
 
   constructor(
     seed: number,
@@ -68,6 +74,20 @@ export class LevelSession extends GameSession {
   ) {
     super(seed, level.colors, boardTemplate(level), level.moves);
     this.ice = iceTemplate(level);
+    this.board.forEach((line, row) =>
+      line.forEach((cell, col) => {
+        if (cell?.kind === 'coal' && cell.top === row && cell.left === col) {
+          this.coal.set(`${row},${col}`, cell.layers);
+        }
+      }),
+    );
+  }
+
+  /** Сколько слоёв угля осталось на поле */
+  get coalLeft(): number {
+    let sum = 0;
+    for (const layers of this.coal.values()) sum += layers;
+    return sum;
   }
 
   get goalsDone(): boolean {
@@ -140,6 +160,7 @@ export class LevelSession extends GameSession {
     const copy = Object.assign(Object.create(LevelSession.prototype) as LevelSession, this, {
       progress: { ...this.progress },
       ice: this.ice.map((line) => [...line]),
+      coal: new Map(this.coal),
       stats: structuredClone(this.stats),
       actions: [],
     });
@@ -251,6 +272,10 @@ export class LevelSession extends GameSession {
       this.progress.stone += step.stones ?? 0;
       this.progress.box += step.boxes ?? 0;
       this.progress.item += step.items ?? 0;
+      for (const { top, left, layers } of step.coal ?? []) {
+        this.coal.set(`${top},${left}`, layers);
+        if (layers === 0) this.progress.coal++;
+      }
     }
     if (step.kind === 'transform') {
       // Ячейка 3 уровня сразу из фишек 1 уровня (в обход 2 уровня) идёт в ячейки 2 уровня за две

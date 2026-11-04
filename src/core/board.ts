@@ -46,8 +46,20 @@ export interface Item {
   kind: 'item';
 }
 
+/**
+ * Уголь — глыба 4×4. Стоит на месте, фишки сквозь неё не пролетают, а обтекают; бьётся совпадениями
+ * рядом и взрывами, пока не кончатся слои. Каждая клетка глыбы хранит её левый верхний угол
+ * (по нему глыба узнаётся целиком) и сколько слоёв осталось
+ */
+export interface Coal {
+  kind: 'coal';
+  top: number;
+  left: number;
+  layers: number;
+}
+
 /** null — пустая клетка, которую нужно заполнить */
-export type Cell = Tile | Piece | Hole | Stone | Box | Item | null;
+export type Cell = Tile | Piece | Hole | Stone | Box | Item | Coal | null;
 
 export type Board = Cell[][];
 
@@ -73,9 +85,13 @@ export function isChained(cell: Cell | undefined): boolean {
   return isTile(cell) && cell.chain !== undefined;
 }
 
-/** Клетка, которая не двигается и не падает: сквозь неё фишки пролетают */
+/** Клетка, которая не двигается и не падает. Сквозь неё фишки пролетают — кроме угля, его обтекают */
 export function isFixed(cell: Cell | undefined): boolean {
-  return cell?.kind === 'hole' || cell?.kind === 'box' || isChained(cell);
+  return cell?.kind === 'hole' || cell?.kind === 'box' || cell?.kind === 'coal' || isChained(cell);
+}
+
+export function isCoal(cell: Cell | undefined): cell is Coal {
+  return cell?.kind === 'coal';
 }
 
 /** Совпадают ли фишки: одинаковый цвет и одинаковый уровень */

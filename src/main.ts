@@ -25,3 +25,6 @@ const game = new Phaser.Game({
 // и оставляет поле в старом масштабе — пересчитываем сами при любом изменении контейнера.
 const container = document.getElementById('app');
 if (container) new ResizeObserver(() => game.scale.refresh()).observe(container);
+
+// Для ручной проверки из консоли в dev-режиме: window.game — сама игра (сцены, шаг кадра)
+if (import.meta.env.DEV) (window as unknown as { game: Phaser.Game }).game = game;

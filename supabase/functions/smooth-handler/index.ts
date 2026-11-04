@@ -39,6 +39,7 @@ var MEGA_BOMB_ROCKET_WIDTH = 5;
 var CAMPAIGN_BOMB_GROUP = 6;
 var CAMPAIGN_LEVEL2_PIECES = { 5: ["megaBomb"], 6: ["rainbow"], 7: ["rainbow", "rainbow"] };
 var CAMPAIGN_LEVEL2_TILES = 2;
+var COAL_SIZE = 4;
 var BONUS_TIERS = [
   { cost: 150, stars: 3, type: "bomb" },
   { cost: 300, stars: 5, type: "rocket" },
@@ -76,7 +77,10 @@ function isChained(cell) {
   return isTile(cell) && cell.chain !== void 0;
 }
 function isFixed(cell) {
-  return cell?.kind === "hole" || cell?.kind === "box" || isChained(cell);
+  return cell?.kind === "hole" || cell?.kind === "box" || cell?.kind === "coal" || isChained(cell);
+}
+function isCoal(cell) {
+  return cell?.kind === "coal";
 }
 function sameKind(a, b) {
   return isTile(a) && isTile(b) && a.color === b.color && a.level === b.level;
@@ -556,6 +560,59 @@ function range(n) {
   return Array.from({ length: n }, (_, i) => i);
 }
 
+// src/core/coal.ts
+var SIDES = [
+  [0, 1],
+  [0, -1],
+  [1, 0],
+  [-1, 0]
+];
+function blockOf(board, pos) {
+  const cell = getCell(board, pos);
+  return isCoal(cell) ? { row: cell.top, col: cell.left } : null;
+}
+function coalAround(board, cells) {
+  return coalIn(
+    board,
+    cells.flatMap(({ row, col }) => SIDES.map(([dr, dc]) => ({ row: row + dr, col: col + dc })))
+  );
+}
+function coalIn(board, cells) {
+  const found = /* @__PURE__ */ new Map();
+  for (const pos of cells) {
+    const block = blockOf(board, pos);
+    if (block) found.set(posKey(block), block);
+  }
+  return [...found.values()];
+}
+function hitCoal(board, blows) {
+  if (blows.size === 0) return { board, hits: [] };
+  const next = cloneBoard(board);
+  const hits = [];
+  for (const { block, layers } of blows.values()) {
+    const cell = getCell(next, block);
+    if (!isCoal(cell)) continue;
+    const left = Math.max(0, cell.layers - layers);
+    for (let row = block.row; row < block.row + COAL_SIZE; row++) {
+      for (let col = block.col; col < block.col + COAL_SIZE; col++) {
+        next[row][col] = left > 0 ? { ...cell, layers: left } : null;
+      }
+    }
+    hits.push({ top: block.row, left: block.col, layers: left });
+  }
+  return { board: next, hits };
+}
+function addBlows(blows, blocks, layers) {
+  for (const block of blocks) {
+    const key = posKey(block);
+    const prev = blows.get(key);
+    blows.set(key, { block, layers: (prev?.layers ?? 0) + layers });
+  }
+}
+function hasCoal(board) {
+  return board.some((line) => line.some(isCoal));
+}
+
 // src/core/gravity.ts
 function removeCells(board, cells) {
   const next = cloneBoard(board);
@@ -582,21 +639,27 @@ function applyGravity(board) {
   const falls = [];
   const cols = next[0]?.length ?? 0;
   for (let col = 0; col < cols; col++) {
-    const slots = [];
-    for (let row = next.length - 1; row >= 0; row--) {
-      if (!isFixed(next[row]?.[col])) slots.push(row);
-    }
-    let target = 0;
-    for (const row of slots) {
-      const cell = next[row][col];
-      if (cell === null) continue;
-      const toRow = slots[target++];
-      if (toRow !== row) {
-        next[toRow][col] = cell;
-        next[row][col] = null;
-        falls.push({ from: { row, col }, to: { row: toRow, col } });
+    let slots = [];
+    const settleSlots = () => {
+      let target = 0;
+      for (const row of slots) {
+        const cell = next[row][col];
+        if (cell === null) continue;
+        const toRow = slots[target++];
+        if (toRow !== row) {
+          next[toRow][col] = cell;
+          next[row][col] = null;
+          falls.push({ from: { row, col }, to: { row: toRow, col } });
+        }
       }
+      slots = [];
+    };
+    for (let row = next.length - 1; row >= 0; row--) {
+      const cell = next[row]?.[col];
+      if (isCoal(cell)) settleSlots();
+      else if (!isFixed(cell)) slots.push(row);
     }
+    settleSlots();
   }
   return { board: next, falls };
 }
@@ -613,18 +676,87 @@ function itemsOnBottom(board) {
   }
   return arrived;
 }
-function refill(board, colorCount, rng) {
+function refill(board, colorCount, rng, only, inPlace = false) {
   const next = cloneBoard(board);
   const spawns = [];
   next.forEach(
     (row, r) => row.forEach((cell, c) => {
-      if (cell !== null) return;
+      if (cell !== null || only && !only({ row: r, col: c })) return;
       const tile = { kind: "tile", color: rng.int(colorCount), level: 1 };
       row[c] = tile;
-      spawns.push({ to: { row: r, col: c }, tile });
+      spawns.push(
+        inPlace ? { to: { row: r, col: c }, tile, inPlace } : { to: { row: r, col: c }, tile }
+      );
     })
   );
   return { board: next, spawns };
+}
+var MAX_SETTLE_ROUNDS = 200;
+function settle(board, colorCount, rng) {
+  if (!hasCoal(board)) {
+    const fallen = applyGravity(board);
+    const filled = refill(fallen.board, colorCount, rng);
+    return { board: filled.board, drops: [{ falls: fallen.falls, spawns: filled.spawns }] };
+  }
+  let current = board;
+  const drops = [];
+  for (let round = 0; round < MAX_SETTLE_ROUNDS; round++) {
+    const fallen = applyGravity(current);
+    const open = openFromTop(fallen.board);
+    const filled = refill(fallen.board, colorCount, rng, ({ row, col }) => open[row][col]);
+    current = filled.board;
+    if (fallen.falls.length > 0 || filled.spawns.length > 0) {
+      drops.push({ falls: fallen.falls, spawns: filled.spawns });
+    }
+    if (!current.some((line) => line.includes(null))) break;
+    const slid = slideDiagonally(current);
+    if (slid.falls.length > 0) {
+      current = slid.board;
+      drops.push({ falls: slid.falls, spawns: [] });
+      continue;
+    }
+    const placed = refill(current, colorCount, rng, void 0, true);
+    current = placed.board;
+    drops.push({ falls: [], spawns: placed.spawns });
+    break;
+  }
+  return { board: current, drops };
+}
+function openFromTop(board) {
+  const open = board.map((line) => line.map(() => false));
+  const cols = board[0]?.length ?? 0;
+  for (let col = 0; col < cols; col++) {
+    for (let row = 0; row < board.length && !isCoal(board[row][col]); row++) {
+      open[row][col] = true;
+    }
+  }
+  return open;
+}
+function canSlide(cell) {
+  if (cell == null) return false;
+  if (isTile(cell)) return !isChained(cell);
+  return isPiece(cell) || cell.kind === "stone" || cell.kind === "item";
+}
+function slideDiagonally(board) {
+  const next = cloneBoard(board);
+  const falls = [];
+  const moved = /* @__PURE__ */ new Set();
+  for (let row = next.length - 1; row > 0; row--) {
+    next[row].forEach((cell, col) => {
+      if (cell !== null) return;
+      for (const dc of [-1, 1]) {
+        const from = { row: row - 1, col: col + dc };
+        const key = `${from.row},${from.col}`;
+        if (moved.has(key) || !canSlide(next[from.row][from.col])) continue;
+        next[row][col] = next[from.row][from.col];
+        next[from.row][from.col] = null;
+        moved.add(`${row},${col}`);
+        falls.push({ from, to: { row, col } });
+        return;
+      }
+    });
+  }
+  return { board: next, falls };
 }
 
 // src/core/resolve.ts
@@ -635,9 +767,19 @@ function* resolveMove(board, move, ctx) {
   let landing = [];
   let dropped = false;
   let comboSteps = 0;
+  let matchBlows = /* @__PURE__ */ new Map();
   function* destroy(initial, preActivated, pointsOverride, combos = [], spared) {
     const cells = expandChain(current, initial, preActivated, spared);
-    if (cells.length === 0) return;
+    const blows = matchBlows;
+    matchBlows = /* @__PURE__ */ new Map();
+    if (cells.length === 0 && blows.size === 0) return;
+    addBlows(blows, coalIn(current, initial), 1);
+    for (const pos of cells) {
+      const cell = getCell(current, pos);
+      if (isPiece(cell) && !preActivated?.has(posKey(pos))) {
+        addBlows(blows, coalIn(current, activationArea(current, pos, cell)), 1);
+      }
+    }
     const points = cells.reduce(
       (sum, pos) => sum + (pointsOverride?.get(posKey(pos)) ?? hitPoints(getCell(current, pos))),
       0
@@ -647,10 +789,15 @@ function* resolveMove(board, move, ctx) {
     const stones = count("stone").length;
     const boxes = count("box").length;
     const held = cells.filter((pos) => isChained(getCell(current, pos)));
-    const gone = held.length > 0 ? cells.filter((pos) => !isChained(getCell(current, pos))) : cells;
+    const gone = cells.filter((pos) => {
+      const cell = getCell(current, pos);
+      return !isChained(cell) && !isCoal(cell);
+    });
     const links = held.map((pos) => ({ pos, left: chainOf(current, pos) - 1 }));
     score += points;
     current = loosenChains(removeCells(current, gone), held);
+    const struck = hitCoal(current, blows);
+    current = struck.board;
     yield {
       kind: "clear",
       cells: gone,
@@ -659,7 +806,8 @@ function* resolveMove(board, move, ctx) {
       ...stones > 0 && { stones },
       ...boxes > 0 && { boxes },
       ...links.length > 0 && { links },
-      ...combos.length > 0 && { combos }
+      ...combos.length > 0 && { combos },
+      ...struck.hits.length > 0 && { coal: struck.hits }
     };
   }
   function* place(placements, direct3 = 0) {
@@ -677,6 +825,7 @@ function* resolveMove(board, move, ctx) {
     for (const group of groups) {
       const outcome = groupOutcome(group, current, landing, ctx.campaign ?? false);
       removal.push(...group.cells, ...boxesAround(current, group.cells));
+      addBlows(matchBlows, coalAround(current, group.cells), group.level);
       const step = dropped ? Math.min(++comboSteps, COMBO_MAX_STEPS) : 0;
       if (step > 0) combos.push({ at: pickSpot(group, []), step });
       spreadPoints(group.cells, Math.round(outcome.points * comboMultiplier(step)), points);
@@ -755,10 +904,9 @@ function* resolveMove(board, move, ctx) {
     }
     landing = [];
     dropped = true;
-    const fallen = applyGravity(current);
-    const filled = refill(fallen.board, ctx.colorCount, ctx.rng);
-    current = filled.board;
-    yield { kind: "drop", falls: fallen.falls, spawns: filled.spawns };
+    const settled = settle(current, ctx.colorCount, ctx.rng);
+    current = settled.board;
+    for (const drop of settled.drops) yield { kind: "drop", ...drop };
   }
   throw new Error(`\u041A\u0430\u0441\u043A\u0430\u0434 \u043D\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u043B\u0441\u044F \u0437\u0430 ${MAX_WAVES} \u0432\u043E\u043B\u043D`);
 }

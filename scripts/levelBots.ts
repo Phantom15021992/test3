@@ -110,6 +110,8 @@ function moveValue(
       value += (step.stones ?? 0) * (need('stone') ? 120 : 15);
       value += (step.boxes ?? 0) * (need('box') ? 70 : 5);
       value += (step.links?.length ?? 0) * (need('chain') ? 70 : 5);
+      // Удар по углю: слой снят; разбитая глыба — цель
+      for (const hit of step.coal ?? []) value += need('coal') ? (hit.layers === 0 ? 400 : 70) : 5;
       for (const pos of step.cells) {
         if (session.ice[pos.row]?.[pos.col] && !iced.has(posKey(pos))) {
           iced.add(posKey(pos));
@@ -141,7 +143,8 @@ function goalTargets(session: LevelSession): Position[] {
       (need('ice') && session.ice[pos.row]?.[pos.col] === true) ||
       (need('chain') && cell?.kind === 'tile' && (cell.chain ?? 0) > 0) ||
       (need('box') && cell?.kind === 'box') ||
-      (need('stone') && cell?.kind === 'stone')
+      (need('stone') && cell?.kind === 'stone') ||
+      (need('coal') && cell?.kind === 'coal')
     );
   });
 }

@@ -447,6 +447,7 @@ export class GameScene extends Phaser.Scene {
           this.refreshIce();
           this.refreshGoals();
           this.view.loosen(step.links ?? []);
+          this.view.hitCoal(step.coal ?? []);
           this.view.showCombos(step.combos ?? []);
           await this.view.clear(step.cells);
           break;

@@ -79,7 +79,7 @@ export function mostFrequentColor(board: Board): ColorId | null {
 }
 
 /** Что задевает спецфишка, когда срабатывает (в том числе когда её задело) */
-function activationArea(board: Board, pos: Position, cell: Cell): Position[] {
+export function activationArea(board: Board, pos: Position, cell: Cell): Position[] {
   if (!isPiece(cell)) return [];
   switch (cell.type) {
     case 'rocket': {

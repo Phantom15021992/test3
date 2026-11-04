@@ -3,6 +3,7 @@ import {
   cloneBoard,
   getCell,
   isChained,
+  isCoal,
   isPiece,
   isTile,
   posKey,
@@ -27,19 +28,13 @@ import {
   LEVEL3_SCORE_MULTIPLIER_BY_MATCH_SIZE,
   MANIPULATOR_FINALE_POINTS,
 } from './config';
-import {
-  applyGravity,
-  itemsOnBottom,
-  loosenChains,
-  refill,
-  removeCells,
-  type Fall,
-  type Spawn,
-} from './gravity';
+import { addBlows, coalAround, coalIn, hitCoal, type CoalHit } from './coal';
+import { itemsOnBottom, loosenChains, removeCells, settle, type Fall, type Spawn } from './gravity';
 import { findMatches, isSevenCross, type MatchGroup } from './match';
 import { swapCells } from './moves';
 import type { Rng } from './rng';
 import {
+  activationArea,
   activationSwapTarget,
   comboEffect,
   expandChain,
@@ -103,6 +98,8 @@ export type ResolveStep =
       items?: number;
       links?: ChainLink[];
       combos?: ComboHit[];
+      /** Удары по углю: сколько слоёв у глыбы осталось (0 — разбита) */
+      coal?: CoalHit[];
     }
   | { kind: 'drop'; falls: Fall[]; spawns: Spawn[] }
   | { kind: 'choice'; group: MatchGroup; options: readonly [ChoiceOption, ChoiceOption] };
@@ -135,6 +132,8 @@ export function* resolveMove(
   // Комбо считает только совпадения, собравшиеся сами: то, что собрал игрок, идёт без множителя
   let dropped = false;
   let comboSteps = 0;
+  // Слои угля, которые снимут совпадения ближайшей волны (вместе с её очисткой)
+  let matchBlows = new Map<string, { block: Position; layers: number }>();
 
   /**
    * Уничтожает клетки с цепной реакцией; pointsOverride — очки клеток из совпадений,
@@ -148,7 +147,17 @@ export function* resolveMove(
     spared?: ReadonlySet<string>,
   ): Generator<ResolveStep, void, ChoiceOption | undefined> {
     const cells = expandChain(current, initial, preActivated, spared);
-    if (cells.length === 0) return;
+    const blows = matchBlows;
+    matchBlows = new Map();
+    if (cells.length === 0 && blows.size === 0) return;
+    // Каждый взрыв снимает с задетой глыбы угля один слой: и сработавшая спецфишка, и зона комбо
+    addBlows(blows, coalIn(current, initial), 1);
+    for (const pos of cells) {
+      const cell = getCell(current, pos);
+      if (isPiece(cell) && !preActivated?.has(posKey(pos))) {
+        addBlows(blows, coalIn(current, activationArea(current, pos, cell)), 1);
+      }
+    }
     const points = cells.reduce(
       (sum, pos) => sum + (pointsOverride?.get(posKey(pos)) ?? hitPoints(getCell(current, pos))),
       0,
@@ -158,10 +167,15 @@ export function* resolveMove(
     const stones = count('stone').length;
     const boxes = count('box').length;
     const held = cells.filter((pos) => isChained(getCell(current, pos)));
-    const gone = held.length > 0 ? cells.filter((pos) => !isChained(getCell(current, pos))) : cells;
+    const gone = cells.filter((pos) => {
+      const cell = getCell(current, pos);
+      return !isChained(cell) && !isCoal(cell);
+    });
     const links = held.map((pos) => ({ pos, left: chainOf(current, pos) - 1 }));
     score += points;
     current = loosenChains(removeCells(current, gone), held);
+    const struck = hitCoal(current, blows);
+    current = struck.board;
     yield {
       kind: 'clear',
       cells: gone,
@@ -171,6 +185,7 @@ export function* resolveMove(
       ...(boxes > 0 && { boxes }),
       ...(links.length > 0 && { links }),
       ...(combos.length > 0 && { combos }),
+      ...(struck.hits.length > 0 && { coal: struck.hits }),
     };
   }
 
@@ -199,6 +214,8 @@ export function* resolveMove(
     for (const group of groups) {
       const outcome = groupOutcome(group, current, landing, ctx.campaign ?? false);
       removal.push(...group.cells, ...boxesAround(current, group.cells));
+      // Совпадение рядом с углём снимает столько слоёв, какого уровня его фишки
+      addBlows(matchBlows, coalAround(current, group.cells), group.level);
       const step = dropped ? Math.min(++comboSteps, COMBO_MAX_STEPS) : 0;
       if (step > 0) combos.push({ at: pickSpot(group, []), step });
       spreadPoints(group.cells, Math.round(outcome.points * comboMultiplier(step)), points);
@@ -287,10 +304,9 @@ export function* resolveMove(
 
     landing = [];
     dropped = true;
-    const fallen = applyGravity(current);
-    const filled = refill(fallen.board, ctx.colorCount, ctx.rng);
-    current = filled.board;
-    yield { kind: 'drop', falls: fallen.falls, spawns: filled.spawns };
+    const settled = settle(current, ctx.colorCount, ctx.rng);
+    current = settled.board;
+    for (const drop of settled.drops) yield { kind: 'drop', ...drop };
   }
 
   throw new Error(`Каскад не завершился за ${MAX_WAVES} волн`);

@@ -19,6 +19,7 @@ const GOAL_NAMES: Readonly<Record<GoalKind, string>> = {
   box: 'Коробки',
   chain: 'Цепи',
   item: 'Короны',
+  coal: 'Уголь',
 };
 
 /** Ячейка 3 уровня, собранная сразу из фишек, засчитывается как две ячейки 2 уровня */
@@ -30,11 +31,15 @@ const DIRECT3_NOTE = ' (3 ур. из фишек — за две)';
  */
 export function goalsText(session: LevelSession): string {
   return session.level.goals
-    .map((goal) =>
-      goal.kind === 'item'
-        ? `${GOAL_NAMES.item} ${Math.min(session.progress.item, session.crowns)}/${session.crowns}`
-        : `${GOAL_NAMES[goal.kind]} ${session.goalValue(goal)}/${goal.count}`,
-    )
+    .map((goal) => {
+      if (goal.kind === 'item') {
+        return `${GOAL_NAMES.item} ${Math.min(session.progress.item, session.crowns)}/${session.crowns}`;
+      }
+      const text = `${GOAL_NAMES[goal.kind]} ${session.goalValue(goal)}/${goal.count}`;
+      // У угля виден и остаток слоёв: иначе удары по глыбе не видны в прогрессе
+      const layers = session.coalLeft;
+      return goal.kind === 'coal' && layers > 0 ? `${text} (слоёв ${layers})` : text;
+    })
     .join('  ·  ');
 }
 
@@ -79,6 +84,8 @@ function goalTaskText({ kind, count }: Goal): string {
       return `освободи из цепей ${n} ${plural(count, 'фишку', 'фишки', 'фишек')}`;
     case 'item':
       return `опусти на дно ${n} ${plural(count, 'корону', 'короны', 'корон')}`;
+    case 'coal':
+      return `разбей ${n} ${plural(count, 'глыбу', 'глыбы', 'глыб')} угля`;
   }
 }
 
