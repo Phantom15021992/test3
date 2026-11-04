@@ -10,12 +10,12 @@
     "...cccc...",
     "...cccc...",
     "..........",
-    "....ii....",
-    "ii......ii",
-    "ii.i..i.ii"
+    "..........",
+    "..........",
+    "...i..i.i."
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 25,
   "goals": [
     {
       "kind": "coal",
@@ -23,18 +23,18 @@
     },
     {
       "kind": "ice",
-      "count": 12
+      "count": 3
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 1000
+      "count": 7160
     },
     {
       "kind": "level3",
-      "count": 10
+      "count": 25
     }
   ],
-  "coalLayers": 4
+  "coalLayers": 1
 }

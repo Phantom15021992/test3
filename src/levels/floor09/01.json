@@ -13,7 +13,7 @@
     "........"
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 26,
   "goals": [
     {
       "kind": "coal",
@@ -21,17 +21,17 @@
     },
     {
       "kind": "level3",
-      "count": 6
+      "count": 14
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 1000
+      "count": 4230
     },
     {
       "kind": "level2",
-      "count": 10
+      "count": 65
     }
   ],
   "coalLayers": 9

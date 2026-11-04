@@ -17,6 +17,8 @@ interface Cell {
 
 /** Весь лёд поля: обычный, 2 уровня, со слитками */
 const ICE = 'iJg';
+/** Всё золото: слитки во льду и сундуки с сокровищами */
+const GOLD = 'gtuvw';
 /** Все сундуки поля: простые, с сокровищами, в цепях */
 const CHESTS = 'bt123uvw';
 /** Сколько звеньев бывает на одной цепи */
@@ -37,12 +39,17 @@ export function resizeLevel(
   coalLayers?: number,
 ): SizedLevel {
   const grid = layout.map((line) => [...line]);
+  const has = (kind: Goal['kind']) => goals.some((goal) => goal.kind === kind);
+  // Сначала меняется поле, потом считаются цели: лёд и сундуки со слитками входят в две цели сразу
+  if (has('gold')) resizeGold(grid, scale);
+  if (has('ice')) resizeIce(grid, scale);
+  if (has('box')) resizeChests(grid, scale);
   const sized = goals.map((goal): Goal => {
-    if (goal.kind === 'ice') return { kind: 'ice', count: resizeIce(grid, scale) };
-    if (goal.kind === 'box') return { kind: 'box', count: resizeChests(grid, scale) };
-    // Камни — помеха, короны и уголь меняются не числом: у короны — высота, у угля — слои;
-    // золото лежит в выбранных вручную льдинах и сундуках
-    if (['item', 'stone', 'coal', 'gold'].includes(goal.kind)) return goal;
+    if (goal.kind === 'ice') return { kind: 'ice', count: cellsOf(grid, ICE).length };
+    if (goal.kind === 'box') return { kind: 'box', count: cellsOf(grid, CHESTS).length };
+    if (goal.kind === 'gold') return { kind: 'gold', count: cellsOf(grid, GOLD).length };
+    // Камни — помеха, короны и уголь меняются не числом: у короны — высота, у угля — слои
+    if (['item', 'stone', 'coal'].includes(goal.kind)) return goal;
     return { ...goal, count: Math.max(1, Math.round(goal.count * scale)) };
   });
   const result: SizedLevel = { layout: grid.map((line) => line.join('')), goals: sized };
@@ -52,12 +59,19 @@ export function resizeLevel(
   return result;
 }
 
-/** Лёд: меняется лёд того вида, что уже на поле (2 уровня или обычный); цель — весь лёд */
-function resizeIce(grid: Grid, scale: number): number {
+/** Лёд: меняется лёд того вида, что уже на поле (2 уровня или обычный) */
+function resizeIce(grid: Grid, scale: number): void {
   const symbol = cellsOf(grid, 'J').length > 0 ? 'J' : 'i';
   const count = cellsOf(grid, symbol).length;
   if (count > 0) resizeLayer(grid, symbol, count, scale);
-  return cellsOf(grid, ICE).length;
+}
+
+/** Золото: слитки во льду и сундуки с сокровищами (без цепей) меняются каждые в своей доле */
+function resizeGold(grid: Grid, scale: number): void {
+  for (const symbol of ['g', 't']) {
+    const count = cellsOf(grid, symbol).length;
+    if (count > 0) resizeLayer(grid, symbol, count, scale);
+  }
 }
 
 const cellsOf = (grid: Grid, symbols: string): Cell[] =>
@@ -89,6 +103,17 @@ function thick(grid: Grid, { row, col }: Cell): boolean {
   return offsets.some((i) => offsets.some((j) => solid(row - i, col - j)));
 }
 
+/** Клетка не на краю поля: со всех четырёх сторон клетки. В углу и у края совпадений мало, лёд там не добить */
+function inner(grid: Grid, { row, col }: Cell): boolean {
+  const sides = [
+    [0, 1],
+    [0, -1],
+    [1, 0],
+    [-1, 0],
+  ] as const;
+  return sides.every(([dr, dc]) => (grid[row + dr]?.[col + dc] ?? '#') !== '#');
+}
+
 /** Свободные клетки снизу вверх, в строке — от середины к краям */
 function freeCells(grid: Grid, allowed: (cell: Cell) => boolean): Cell[] {
   const width = grid[0]!.length;
@@ -106,7 +131,9 @@ function resizeLayer(grid: Grid, symbol: string, count: number, scale: number): 
   const target = Math.max(1, Math.round(count * scale));
   const floor = crownFloor(grid);
   const allowed = (cell: Cell) =>
-    symbol === 'i' || symbol === 'J' ? thick(grid, cell) : !floor.has(`${cell.row},${cell.col}`);
+    'iJg'.includes(symbol)
+      ? thick(grid, cell) && inner(grid, cell)
+      : !floor.has(`${cell.row},${cell.col}`);
   let placed = cellsOf(grid, symbol).length;
   while (placed > target) {
     // Убираем сверху: снизу препятствия мешают сильнее, а ставим мы их тоже снизу
@@ -145,12 +172,11 @@ function resizeLayer(grid: Grid, symbol: string, count: number, scale: number): 
   return placed;
 }
 
-/** Сундуки: простые и в цепях меняются каждые в своей доле; цель — все сундуки на поле */
-function resizeChests(grid: Grid, scale: number): number {
+/** Сундуки: простые и в цепях меняются каждые в своей доле */
+function resizeChests(grid: Grid, scale: number): void {
   const plain = cellsOf(grid, 'b').length;
   if (plain > 0) resizeLayer(grid, 'b', plain, scale);
   if (cellsOf(grid, '123').length > 0) resizeChains(grid, scale);
-  return cellsOf(grid, CHESTS).length;
 }
 
 /**

@@ -23,18 +23,18 @@
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 5,
       "color": 1
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 1000
+      "count": 7250
     },
     {
       "kind": "level2",
-      "count": 10
+      "count": 102
     }
   ]
 }

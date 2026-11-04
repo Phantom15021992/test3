@@ -38,7 +38,7 @@ const MIN_MOVES = 25;
 /** Партий на одну примерку размера целей: точная серия — только для выбранного */
 const SEARCH_GAMES = 40;
 /** Во сколько раз меняются цели при поиске */
-const SCALES = [0.6, 0.8, 1, 1.25, 1.5, 2, 2.5, 3, 4, 5];
+const SCALES = [0.25, 0.35, 0.45, 0.6, 0.8, 1, 1.25, 1.5, 2, 2.5, 3, 4, 5];
 
 /**
  * Какую долю партий опытный бот без покупок проходит на каждом месте этажа и какую — на три звезды.
@@ -150,12 +150,17 @@ const usedMoves = (played: readonly GameResult[], goals: readonly Goal[]) =>
  * больше или меньше по шкале SCALES, а между двумя соседними размерами по разные стороны от
  * задуманного — ещё и середину
  */
-function chooseSize(level: Level, place: number): SizedLevel {
+function chooseSize(source: Level, place: number): SizedLevel {
+  let level = source;
   const winShare = WIN_CURVE[place]!;
   const wanted = MOVES_CURVE[place]!;
   if (place === BOSS) return chooseBossSize(level);
   const onlyCrowns = level.goals.every((goal) => goal.kind === 'item');
   if (onlyCrowns) return chooseCrownHeight(level, winShare, wanted);
+  // Короны вместе с другими целями: сначала опускаем короны, потом подбираем размер остальных целей
+  if (level.layout.join('').includes('o')) {
+    level = { ...level, layout: chooseCrownHeight(level, winShare, wanted).layout };
+  }
   const tried: { scale: number; sized: SizedLevel; moves: number }[] = [];
   const attempt = (scale: number) => {
     const sized = resizeLevel(level.layout, level.goals, scale, level.coalLayers);
@@ -163,7 +168,11 @@ function chooseSize(level: Level, place: number): SizedLevel {
     const known = tried.find((t) => JSON.stringify(t.sized) === JSON.stringify(sized));
     if (known) return null;
     const played = playAll(level, sized, SEARCH_GAMES);
-    const moves = quantile(usedMoves(played, sized.goals), winShare);
+    const used = usedMoves(played, sized.goals);
+    // Не уложились в лимит: чем больше партий всё же прошли, тем ближе размер к нужному
+    const finished = used.filter((value) => value <= NO_LIMIT).length / used.length;
+    const reached = quantile(used, winShare);
+    const moves = reached === Infinity ? NO_LIMIT * 2 + Math.round((1 - finished) * 100) : reached;
     tried.push({ scale, sized, moves });
     return moves;
   };
@@ -177,7 +186,7 @@ function chooseSize(level: Level, place: number): SizedLevel {
   if (before && (last.moves - wanted) * (before.moves - wanted) < 0) {
     attempt((last.scale + before.scale) / 2);
   }
-  const distance = (moves: number) => Math.abs(Math.min(moves, NO_LIMIT * 2) - wanted);
+  const distance = (moves: number) => Math.abs(moves - wanted);
   return tried.reduce((best, t) => (distance(t.moves) < distance(best.moves) ? t : best)).sized;
 }
 
@@ -218,7 +227,7 @@ function bombWins(level: Level, sized: SizedLevel, moves: number, count: number)
  */
 function chooseBossSize(level: Level): SizedLevel {
   let best: { sized: SizedLevel; distance: number } | null = null;
-  for (const scale of [0.6, 0.8, 1, 1.25, 1.5, 2]) {
+  for (const scale of [0.35, 0.5, 0.7, 1, 1.4, 2]) {
     const sized = resizeLevel(level.layout, level.goals, scale, level.coalLayers);
     const played = playAll(level, sized, SEARCH_GAMES);
     const moves = movesFor(usedMoves(played, sized.goals), WIN_CURVE[BOSS]!);

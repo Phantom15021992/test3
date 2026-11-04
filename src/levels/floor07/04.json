@@ -9,10 +9,10 @@
     "....##....",
     "....##....",
     "...cccc...",
-    "...cccc...",
-    "...cccc...",
     ".JJccccJJ.",
-    "JJJ.JJ.JJJ"
+    ".JJccccJJ.",
+    ".JJccccJJ.",
+    ".........."
   ],
   "colors": 3,
   "moves": 30,
