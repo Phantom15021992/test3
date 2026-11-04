@@ -103,7 +103,10 @@ function thick(grid: Grid, { row, col }: Cell): boolean {
   return offsets.some((i) => offsets.some((j) => solid(row - i, col - j)));
 }
 
-/** Клетка не на краю поля: со всех четырёх сторон клетки. В углу и у края совпадений мало, лёд там не добить */
+/**
+ * Клетка не на краю поля: со всех четырёх сторон клетки. В углу и у края совпадений мало: лёд и сундук
+ * там почти не добить
+ */
 function inner(grid: Grid, { row, col }: Cell): boolean {
   const sides = [
     [0, 1],
@@ -131,9 +134,8 @@ function resizeLayer(grid: Grid, symbol: string, count: number, scale: number): 
   const target = Math.max(1, Math.round(count * scale));
   const floor = crownFloor(grid);
   const allowed = (cell: Cell) =>
-    'iJg'.includes(symbol)
-      ? thick(grid, cell) && inner(grid, cell)
-      : !floor.has(`${cell.row},${cell.col}`);
+    inner(grid, cell) &&
+    ('iJg'.includes(symbol) ? thick(grid, cell) : !floor.has(`${cell.row},${cell.col}`));
   let placed = cellsOf(grid, symbol).length;
   while (placed > target) {
     // Убираем сверху: снизу препятствия мешают сильнее, а ставим мы их тоже снизу
@@ -200,6 +202,7 @@ function resizeChains(grid: Grid, scale: number): number {
       grid,
       (cell) =>
         !floor.has(`${cell.row},${cell.col}`) &&
+        inner(grid, cell) &&
         chains.every(
           (c) =>
             c.row !== cell.row &&

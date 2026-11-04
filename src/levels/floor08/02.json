@@ -11,25 +11,25 @@
     "..........",
     "######....",
     "..........",
-    ".gg.gg.gg.",
+    "....gg....",
     ".........."
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 42,
   "goals": [
     {
       "kind": "gold",
-      "count": 6
+      "count": 2
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 1000
+      "count": 7360
     },
     {
       "kind": "level3",
-      "count": 10
+      "count": 25
     }
   ],
   "iceCracks": true
