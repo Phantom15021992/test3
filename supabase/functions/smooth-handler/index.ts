@@ -37,6 +37,8 @@ var MEGA_BOMB_BOMB_SIZE = 7;
 var ROCKET_BOMB_WIDTH = 3;
 var MEGA_BOMB_ROCKET_WIDTH = 5;
 var CAMPAIGN_BOMB_GROUP = 6;
+var CAMPAIGN_LEVEL2_PIECES = { 5: ["megaBomb"], 6: ["rainbow"], 7: ["rainbow", "rainbow"] };
+var CAMPAIGN_LEVEL2_TILES = 2;
 var BONUS_TIERS = [
   { cost: 150, stars: 3, type: "bomb" },
   { cost: 300, stars: 5, type: "rocket" },
@@ -780,6 +782,7 @@ function groupOutcome(group, board, landing, campaign) {
   const crossReward = group.level !== 3 && isSevenCross(group.cells) ? SEVEN_CROSS_REWARDS[group.level] : null;
   const points = crossReward ? group.level === 1 ? SEVEN_CROSS_LEVEL1_POINTS : matchPoints(3, 5) : matchPoints(group.level, group.cells.length);
   const open = { ...group, cells: group.cells.filter((pos) => !isChained(getCell(board, pos))) };
+  if (campaign && group.level === 2 && group.cells.length >= 5) return bigLevel2(open, landing);
   if (open.cells.length === 0) return { points, placements: [] };
   const spot = pickSpot(open, landing);
   const size = Math.min(group.cells.length, 5);
@@ -813,6 +816,31 @@ function groupOutcome(group, board, landing, campaign) {
     if (pos) placements.push({ pos, cell: { kind: "piece", type: "bomb" } });
   }
   return { points, placements };
+}
+function bigLevel2(group, landing) {
+  const size = Math.min(group.cells.length, 7);
+  const cells = [
+    ...CAMPAIGN_LEVEL2_PIECES[size].map((type) => ({ kind: "piece", type })),
+    ...Array.from({ length: CAMPAIGN_LEVEL2_TILES }, () => ({
+      kind: "tile",
+      color: group.color,
+      level: 3
+    }))
+  ];
+  const spot = pickSpot(group, landing);
+  const placements = [];
+  for (const cell of cells) {
+    const pos = placements.length === 0 ? spot : neighborInGroup(
+      group,
+      spot,
+      placements.map((p) => p.pos)
+    );
+    if (pos) placements.push({ pos, cell });
+  }
+  return {
+    points: group.cells.length * BASE_POINTS_PER_TILE * LEVEL2_SCORE_MULTIPLIER,
+    placements
+  };
 }
 function matchPoints(level, cells) {
   const size = Math.min(cells, 5);

@@ -69,6 +69,14 @@ export const MEGA_BOMB_ROCKET_WIDTH = 5;
 // Спецфишки, которые можно купить: за очки счёта в свободной игре, за звёзды этажа в кампании
 /** С какого размера группа фишек 1 уровня в кампании даёт ещё и бомбу */
 export const CAMPAIGN_BOMB_GROUP = 6;
+/**
+ * Кампания: группа из 5+ ячеек 2 уровня — спецфишки по размеру группы (7 и больше — как 7) и ещё
+ * ячейки 3 уровня; очки — 50 за клетку, без надбавки свободной игры за 5+
+ */
+export const CAMPAIGN_LEVEL2_PIECES: Readonly<
+  Record<5 | 6 | 7, readonly ('megaBomb' | 'rainbow')[]>
+> = { 5: ['megaBomb'], 6: ['rainbow'], 7: ['rainbow', 'rainbow'] };
+export const CAMPAIGN_LEVEL2_TILES = 2;
 
 /** Сколько раз за попытку уровня кампании можно купить спецфишку; нет в списке — без ограничения */
 export const CAMPAIGN_BONUS_LIMITS: Readonly<

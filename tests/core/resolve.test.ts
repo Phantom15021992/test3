@@ -210,6 +210,76 @@ describe('resolveMove: ячейки 2–3 уровня', () => {
     ]);
   });
 
+  describe('в кампании 5+ ячеек 2 уровня — спецфишки и ещё 2 ячейки 3 уровня, 50 очков за клетку', () => {
+    const outcome = (board: string, from: Position, to: Position, campaign = true) => {
+      const { steps } = runMove(
+        parseBoard(board),
+        { type: 'swap', from, to },
+        { ...ctx(), campaign },
+      );
+      return {
+        points: stepsOf(steps, 'clear')[0]!.points,
+        rewards: stepsOf(steps, 'transform')[0]!.placements.map(({ cell }) =>
+          cell?.kind === 'piece' ? cell.type : `${cell?.kind === 'tile' ? cell.level : '?'} ур.`,
+        ),
+        placements: stepsOf(steps, 'transform')[0]!.placements,
+      };
+    };
+    const five = `
+      B2 B2 G1 B2 B2
+      R1 G1 B2 R1 G1
+    `;
+
+    it('5 — мега-бомба и 2 ячейки 3 уровня, 250 очков; в свободной игре по-прежнему 450', () => {
+      expect(outcome(five, p(1, 2), p(0, 2))).toMatchObject({
+        points: 250,
+        rewards: ['megaBomb', '3 ур.', '3 ур.'],
+      });
+      expect(outcome(five, p(1, 2), p(0, 2), false)).toMatchObject({
+        points: 450,
+        rewards: ['megaBomb'],
+      });
+    });
+
+    it('6 — радуга и 2 ячейки 3 уровня, 300 очков', () => {
+      const board = `
+        B2 B2 G1 B2 B2 B2
+        R1 G1 B2 R1 G1 R1
+      `;
+      expect(outcome(board, p(1, 2), p(0, 2))).toMatchObject({
+        points: 300,
+        rewards: ['rainbow', '3 ур.', '3 ур.'],
+      });
+    });
+
+    it('7 любой формы — 2 радуги рядом и 2 ячейки 3 уровня, 350 очков', () => {
+      const board = `
+        B2 B2 G1 B2 B2 B2 B2
+        R1 G1 B2 R1 G1 R1 G1
+      `;
+      const result = outcome(board, p(1, 2), p(0, 2));
+      expect(result).toMatchObject({
+        points: 350,
+        rewards: ['rainbow', 'rainbow', '3 ур.', '3 ур.'],
+      });
+      const [a, b] = result.placements.map(({ pos }) => pos);
+      expect(Math.abs(a!.row - b!.row) + Math.abs(a!.col - b!.col)).toBe(1);
+    });
+
+    it('фигура из 7 в кампании — как любые 7: 350 очков, а не 1250', () => {
+      const board = `
+        G1 Y1 B2 Y1 G1
+        B2 B2 B2 B2 G1
+        R1 G1 B2 R1 B2
+        Y1 R1 G1 G1 Y1
+      `;
+      expect(outcome(board, p(2, 4), p(1, 4))).toMatchObject({
+        points: 350,
+        rewards: ['rainbow', 'rainbow', '3 ур.', '3 ур.'],
+      });
+    });
+  });
+
   it('в кампании линия из 4 ячеек 2 уровня бомбу не даёт, только ракету', () => {
     const board = parseBoard(`
       B2 B2 G1 B2

@@ -16,6 +16,8 @@ import {
 import {
   BASE_POINTS_PER_TILE,
   CAMPAIGN_BOMB_GROUP,
+  CAMPAIGN_LEVEL2_PIECES,
+  CAMPAIGN_LEVEL2_TILES,
   COMBO_MAX_STEPS,
   LEVEL2_SCORE_MULTIPLIER,
   LEVEL2_BIG_MATCH_POINTS,
@@ -340,6 +342,7 @@ function groupOutcome(
       : matchPoints(3, 5)
     : matchPoints(group.level, group.cells.length);
   const open = { ...group, cells: group.cells.filter((pos) => !isChained(getCell(board, pos))) };
+  if (campaign && group.level === 2 && group.cells.length >= 5) return bigLevel2(open, landing);
   if (open.cells.length === 0) return { points, placements: [] };
   const spot = pickSpot(open, landing);
   const size = Math.min(group.cells.length, 5) as 3 | 4 | 5;
@@ -379,6 +382,40 @@ function groupOutcome(
     if (pos) placements.push({ pos, cell: { kind: 'piece', type: 'bomb' } });
   }
   return { points, placements };
+}
+
+/**
+ * Кампания: 5+ ячеек 2 уровня — спецфишки по размеру группы и ещё 2 ячейки 3 уровня, 50 очков
+ * за клетку. Спецфишка встаёт на место награды, остальное — в соседние клетки группы: две радуги
+ * так оказываются рядом, и их можно сразу поменять между собой
+ */
+function bigLevel2(group: MatchGroup, landing: Position[]): GroupOutcome {
+  const size = Math.min(group.cells.length, 7) as 5 | 6 | 7;
+  const cells: Cell[] = [
+    ...CAMPAIGN_LEVEL2_PIECES[size].map((type): Cell => ({ kind: 'piece', type })),
+    ...Array.from({ length: CAMPAIGN_LEVEL2_TILES }, (): Cell => ({
+      kind: 'tile',
+      color: group.color,
+      level: 3,
+    })),
+  ];
+  const spot = pickSpot(group, landing);
+  const placements: Placement[] = [];
+  for (const cell of cells) {
+    const pos =
+      placements.length === 0
+        ? spot
+        : neighborInGroup(
+            group,
+            spot,
+            placements.map((p) => p.pos),
+          );
+    if (pos) placements.push({ pos, cell });
+  }
+  return {
+    points: group.cells.length * BASE_POINTS_PER_TILE * LEVEL2_SCORE_MULTIPLIER,
+    placements,
+  };
 }
 
 /** Очки за совпадение: группа ячеек этого уровня из cells клеток (6+ считаются как 5) */
