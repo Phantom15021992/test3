@@ -91,6 +91,15 @@ function goalValue(session: LevelSession, steps: ResolveStep[], after: Board): n
     }
     if (step.kind === 'transform') {
       for (const { cell } of step.placements) {
+        const colored = session.level.goals.some(
+          (goal) =>
+            goal.kind === 'level3color' &&
+            session.goalValue(goal) < goal.count &&
+            cell?.kind === 'tile' &&
+            cell.level === 3 &&
+            cell.color === goal.color,
+        );
+        if (colored) value += GOAL_STEP_VALUE;
         const reached =
           cell?.kind === 'tile'
             ? (`level${cell.level}` as const)

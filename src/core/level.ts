@@ -19,11 +19,23 @@ import { COAL_MAX_LAYERS, COAL_SIZE, ICE_CRACKS_HITS, ICE_HITS } from './config'
 //   c  уголь: глыба 4×4 из этих символов; слоёв у глыб уровня — coalLayers (по умолчанию 9)
 
 export type GoalKind =
-  'level2' | 'level3' | 'megaBomb' | 'rainbow' | 'ice' | 'stone' | 'box' | 'item' | 'coal' | 'gold';
+  | 'level2'
+  | 'level3'
+  | 'megaBomb'
+  | 'rainbow'
+  | 'ice'
+  | 'stone'
+  | 'box'
+  | 'item'
+  | 'coal'
+  | 'gold'
+  | 'level3color';
 
 export interface Goal {
   kind: GoalKind;
   count: number;
+  /** Для level3color — какого цвета ячейки 3 уровня нужны (индекс в палитре уровня) */
+  color?: number;
 }
 
 /** Дополнительные задачи: каждая выполненная даёт ещё одну звезду. score — очки за уровень;
@@ -64,6 +76,7 @@ const GOAL_KINDS: readonly GoalKind[] = [
   'item',
   'coal',
   'gold',
+  'level3color',
 ];
 const STAR_TASKS = 2;
 /** Уровней на этаже: номер уровня складывается из этажа и места на нём */
@@ -202,6 +215,14 @@ export function parseLevel(value: unknown): Level {
   for (const goal of level.goals) {
     if (!GOAL_KINDS.includes(goal.kind)) fail(`неизвестная цель ${goal.kind}`);
     if (!Number.isInteger(goal.count) || goal.count < 1) fail(`нет числа у цели ${goal.kind}`);
+    const colored = goal.kind === 'level3color';
+    if (colored !== (goal.color !== undefined)) fail(`цвет — только у цели level3color`);
+    if (
+      colored &&
+      (!Number.isInteger(goal.color) || goal.color! < 0 || goal.color! >= level.colors)
+    ) {
+      fail(`цвет цели вне палитры уровня`);
+    }
     const symbols = { ice: 'iJg', gold: 'gtuvw', stone: 's', box: 'bt123uvw', item: 'o' }[
       goal.kind as string
     ];

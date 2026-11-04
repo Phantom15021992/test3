@@ -20,7 +20,29 @@ const GOAL_NAMES: Readonly<Record<GoalKind, string>> = {
   item: 'Короны',
   coal: 'Уголь',
   gold: 'Золото',
+  level3color: 'Звёзды',
 };
+
+/**
+ * Цвета палитры (порядок — как в игре) в формах для цели level3color:
+ * «синие звёзды», «собери 1 синюю / 2 синие / 5 синих звёзд»
+ */
+const COLOR_FORMS: readonly (readonly [string, string, string])[] = [
+  ['синюю', 'синие', 'синих'],
+  ['жёлтую', 'жёлтые', 'жёлтых'],
+  ['красную', 'красные', 'красных'],
+  ['зелёную', 'зелёные', 'зелёных'],
+  ['фиолетовую', 'фиолетовые', 'фиолетовых'],
+  ['оранжевую', 'оранжевые', 'оранжевых'],
+  ['голубую', 'голубые', 'голубых'],
+];
+
+/** Название цели в строке прогресса: у цели по цвету — «Синие звёзды» */
+function goalName(goal: Goal): string {
+  if (goal.kind !== 'level3color') return GOAL_NAMES[goal.kind];
+  const few = COLOR_FORMS[goal.color ?? 0]?.[1] ?? '';
+  return `${few.charAt(0).toUpperCase()}${few.slice(1)} звёзды`;
+}
 
 /** Ячейка 3 уровня, собранная сразу из фишек, засчитывается как две ячейки 2 уровня */
 const DIRECT3_NOTE = ' (3 ур. из фишек — за две)';
@@ -35,7 +57,7 @@ export function goalsText(session: LevelSession): string {
       if (goal.kind === 'item') {
         return `${GOAL_NAMES.item} ${Math.min(session.progress.item, session.crowns)}/${session.crowns}`;
       }
-      const text = `${GOAL_NAMES[goal.kind]} ${session.goalValue(goal)}/${goal.count}`;
+      const text = `${goalName(goal)} ${session.goalValue(goal)}/${goal.count}`;
       // У угля виден и остаток слоёв: иначе удары по глыбе не видны в прогрессе
       const layers = session.coalLeft;
       return goal.kind === 'coal' && layers > 0 ? `${text} (слоёв ${layers})` : text;
@@ -63,7 +85,7 @@ function plural(count: number, one: string, few: string, many: string): string {
   return units >= 2 && units <= 4 ? few : many;
 }
 
-function goalTaskText({ kind, count }: Goal): string {
+function goalTaskText({ kind, count, color }: Goal): string {
   const n = String(count);
   switch (kind) {
     case 'level2':
@@ -84,6 +106,10 @@ function goalTaskText({ kind, count }: Goal): string {
       return `опусти на дно ${n} ${plural(count, 'корону', 'короны', 'корон')}`;
     case 'coal':
       return `разбей ${n} ${plural(count, 'глыбу', 'глыбы', 'глыб')} угля`;
+    case 'level3color': {
+      const [one, few, many] = COLOR_FORMS[color ?? 0] ?? ['', '', ''];
+      return `собери ${n} ${plural(count, `${one} звезду`, `${few} звезды`, `${many} звёзд`)} (ячейки 3 уровня)`;
+    }
     case 'gold':
       return `достань золото: ${n} (слитки во льду и сундуки с сокровищами)`;
   }

@@ -100,7 +100,16 @@ function moveValue(
     );
   // Камни бьются только взрывом, а взрывы дают объединения высоких уровней
   const wantsHighLevels =
-    need('level3') || need('megaBomb') || need('rainbow') || need('stone') || star('level3');
+    need('level3') ||
+    need('level3color') ||
+    need('megaBomb') ||
+    need('rainbow') ||
+    need('stone') ||
+    star('level3');
+  // Нужный цвет звёзд: ячейки 3 уровня этого цвета — цель
+  const colors = session.level.goals.flatMap((goal) =>
+    goal.kind === 'level3color' && session.goalValue(goal) < goal.count ? [goal.color] : [],
+  );
   const iced = new Set<string>();
   let value = (itemRows(board) - itemRows(session.board)) * 40;
 
@@ -130,7 +139,9 @@ function moveValue(
       if (cell?.kind === 'tile' && cell.level === 2) {
         value += need('level2') || star('level2') ? 70 : wantsHighLevels ? 20 : 2;
       }
-      if (cell?.kind === 'tile' && cell.level === 3) value += wantsHighLevels ? 90 : 4;
+      if (cell?.kind === 'tile' && cell.level === 3) {
+        value += colors.includes(cell.color) ? 160 : wantsHighLevels ? 90 : 4;
+      }
       if (cell?.kind === 'piece' && cell.type === 'megaBomb') value += need('megaBomb') ? 400 : 50;
       if (cell?.kind === 'piece' && cell.type === 'rainbow') value += need('rainbow') ? 400 : 50;
     }
@@ -342,7 +353,7 @@ export function play(level: Level, seed: number, bot: Bot, wallet = 0, bombs?: n
     track.item.push(session.progress.item);
     level.goals.forEach((goal, i) => {
       const line = reached[i]!;
-      while (line.length < Math.min(session.progress[goal.kind], goal.count)) {
+      while (line.length < Math.min(session.goalCount(goal), goal.count)) {
         line.push(session.moves);
       }
     });

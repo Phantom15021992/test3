@@ -56,7 +56,10 @@ export class LevelSession extends GameSession {
     item: 0,
     coal: 0,
     gold: 0,
+    level3color: 0,
   };
+  /** Ячейки 3 уровня по цветам — для цели level3color */
+  readonly level3ByColor: number[] = [];
   /** Сколько ударов ещё выдержит лёд в клетке (0 — льда нет) */
   ice: number[][];
   /** Вид льда по клеткам — не меняется за уровень: по нему рисуется картинка и считается золото */
@@ -165,6 +168,7 @@ export class LevelSession extends GameSession {
   private trial(move: Move): LevelSession {
     const copy = Object.assign(Object.create(LevelSession.prototype) as LevelSession, this, {
       progress: { ...this.progress },
+      level3ByColor: [...this.level3ByColor],
       ice: this.ice.map((line) => [...line]),
       coal: new Map(this.coal),
       stats: structuredClone(this.stats),
@@ -204,7 +208,13 @@ export class LevelSession extends GameSession {
 
   /** Сколько цели уже выполнено; больше нужного не показываем */
   goalValue(goal: Goal): number {
-    return Math.min(this.progress[goal.kind], goal.count);
+    return Math.min(this.goalCount(goal), goal.count);
+  }
+
+  /** Сколько единиц цели набрано, без ограничения сверху */
+  goalCount(goal: Goal): number {
+    if (goal.kind === 'level3color') return this.level3ByColor[goal.color ?? 0] ?? 0;
+    return this.progress[goal.kind];
   }
 
   get starsLeft(): number {
@@ -298,7 +308,10 @@ export class LevelSession extends GameSession {
       this.progress.level2 += (step.direct3 ?? 0) * 2;
       for (const { cell } of step.placements) {
         if (cell?.kind === 'tile' && cell.level === 2) this.progress.level2++;
-        if (cell?.kind === 'tile' && cell.level === 3) this.progress.level3++;
+        if (cell?.kind === 'tile' && cell.level === 3) {
+          this.progress.level3++;
+          this.level3ByColor[cell.color] = (this.level3ByColor[cell.color] ?? 0) + 1;
+        }
         if (cell?.kind === 'piece' && cell.type === 'megaBomb') this.progress.megaBomb++;
         if (cell?.kind === 'piece' && cell.type === 'rainbow') this.progress.rainbow++;
       }
