@@ -48,6 +48,14 @@ export function resetCampaignProgress(): void {
   }
 }
 
+/**
+ * Звёзды на попытку уровня: кошелёк этажа плюс траты прошлой победы на этом уровне — повторная
+ * попытка начинается с тем, что было до первой; новое списание сохранится только при победе
+ */
+export function attemptWallet(levelId: number): number {
+  return floorWallet(Math.ceil(levelId / FLOOR_SIZE)) + (loadRecord(LEVEL_SPENT_KEY)[levelId] ?? 0);
+}
+
 /** Уровни открываются строго по порядку: нужен пройденный предыдущий */
 export function isLevelOpen(levelId: number, stars: LevelStars): boolean {
   return levelId === 1 || (stars[levelId - 1] ?? 0) > 0;

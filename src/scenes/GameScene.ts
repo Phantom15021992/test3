@@ -35,7 +35,7 @@ import { GameOverDialog } from '../ui/GameOverDialog';
 import { LevelResultDialog } from '../ui/LevelResultDialog';
 import { sendGameResult } from '../storage/gameResults';
 import { sendLevelResult, type LevelOutcome } from '../storage/levelResults';
-import { floorWallet, saveLevelSpending, saveLevelStars } from '../storage/progress';
+import { attemptWallet, saveLevelSpending, saveLevelStars } from '../storage/progress';
 import { remoteConfig, type GameTicket } from '../storage/remoteLeaderboard';
 import {
   GOALS_SEPARATOR,
@@ -121,7 +121,7 @@ export class GameScene extends Phaser.Scene {
     // каждом запуске (для отладки; в общую таблицу такая партия не попадает, см. startGame)
     const seed = debugSeed() ?? this.ticket?.seed ?? Date.now() >>> 0;
     this.session = this.level
-      ? new LevelSession(seed, this.level, floorWallet(floorOf(this.level.id)))
+      ? new LevelSession(seed, this.level, attemptWallet(this.level.id))
       : new GameSession(seed, this.difficulty.colors);
     if (import.meta.env.DEV) {
       // Доступ к сцене из консоли браузера для ручной проверки

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  attemptWallet,
   floorWallet,
   isLevelOpen,
   loadLevelStars,
@@ -104,5 +105,17 @@ describe('сброс прогресса кампании', () => {
     expect(isLevelOpen(1, stars)).toBe(true);
     expect(isLevelOpen(2, stars)).toBe(false);
     expect(floorWallet(1)).toBe(0);
+  });
+});
+
+describe('повторная попытка уровня', () => {
+  it('начинается со звёздами, какие были до первой попытки: траты прошлой победы вернулись', () => {
+    saveLevelStars(10, 3);
+    saveLevelStars(9, 3);
+    saveLevelSpending(10, 3);
+    expect(floorWallet(1)).toBe(3);
+    expect(attemptWallet(10)).toBe(6);
+    // На другом уровне этажа возврата нет: там траты прошлой победы на 10-м остаются
+    expect(attemptWallet(9)).toBe(3);
   });
 });
