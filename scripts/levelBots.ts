@@ -51,6 +51,8 @@ export interface GameResult {
   track: { score: number[]; level2: number[]; level3: number[]; item: number[] };
   /** Сколько спецфишек куплено */
   bought: number;
+  /** Покупки по видам спецфишек */
+  boughtBy: Record<string, number>;
 }
 
 function candidates(session: LevelSession): PlayerMove[] {
@@ -370,5 +372,6 @@ export function play(level: Level, seed: number, bot: Bot, wallet = 0, bombs?: n
     done: shares.reduce((sum, share) => sum + share, 0) / shares.length,
     track,
     bought,
+    boughtBy: { ...session.stats.bought },
   };
 }
