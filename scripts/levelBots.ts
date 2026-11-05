@@ -1,8 +1,9 @@
 // Боты для оценки сложности уровней (npm run levels и npm run levels:tune).
 //
-// Новичок ходит случайно — это нижняя граница. Опытный на каждом ходу пробует доступные ходы
-// и выбирает самый полезный для целей уровня; будущие фишки он не подглядывает (оценка идёт на
-// отдельном ГСЧ), но и наперёд не планирует, поэтому внимательный человек играет не хуже него.
+// Новичок ходит случайно — это нижняя граница. Опытный видит, как человек, на один ход вперёд:
+// примеряет свой ход целиком, с каскадами, и лучший следующий ход после него. Будущие фишки он
+// не подглядывает (примерка идёт на отдельном ГСЧ), а где спрятано золото, не знает, пока лёд
+// или сундук его не покажет.
 
 import {
   allPositions,
@@ -16,7 +17,7 @@ import {
   type Position,
 } from '../src/core/board';
 import { aimedPiece, isBonusTarget, type AimedBonus } from '../src/core/bonus';
-import type { Level, StarTaskKind } from '../src/core/level';
+import { iceHits, type Level, type StarTaskKind } from '../src/core/level';
 import { LevelSession } from '../src/core/levelSession';
 import { findPossibleMoves } from '../src/core/moves';
 import { runMove, type ResolveStep } from '../src/core/resolve';
@@ -31,11 +32,12 @@ export const BOTS: readonly Bot[] = ['novice', 'expert', 'buyer'];
 const MAX_CANDIDATES = 40;
 /** Сколько клеток примерять для покупной бомбы */
 const MAX_AIM_CELLS = 30;
-/** Ценность хода, который продвигает цель: всё ниже — только очки и объединения */
-const GOAL_PROGRESS = 50;
-/** Наперёд на два хода бот думает, когда препятствий цели осталось не больше стольких */
-const LOOKAHEAD_TARGETS = 3;
-const LOOKAHEAD_MOVES = 10;
+/** Сколько лучших ходов примерять вместе со следующим ходом */
+const TOP_FIRST = 6;
+/** Сколько следующих ходов смотреть после каждого из них */
+const MAX_NEXT = 15;
+/** Следующий ход ещё не сделан и поле после него угадано лишь отчасти — он весит меньше */
+const NEXT_WEIGHT = 0.5;
 
 export interface GameResult {
   won: boolean;
@@ -72,6 +74,41 @@ function candidates(session: LevelSession): PlayerMove[] {
     if (cell.type === 'rainbow') moves.push({ type: 'rainbow', at, color });
   }
   return moves;
+}
+
+/** Лёд, под которым может быть золото, пока его не ударили: снаружи 2 уровень, внутри неизвестно */
+function unrevealedIce(session: LevelSession, pos: Position): boolean {
+  const style = session.iceStyle[pos.row]?.[pos.col];
+  if (style !== 'plain' && style !== 'gold') return false;
+  return (
+    (session.ice[pos.row]?.[pos.col] ?? 0) === iceHits(style, session.level.iceCracks === true)
+  );
+}
+
+/** Закрытый сундук: есть ли в нём сокровища, не видно */
+function closedChest(board: Board, pos: Position): boolean {
+  const cell = getCell(board, pos);
+  return cell?.kind === 'box' && cell.open !== true;
+}
+
+/**
+ * Какова надежда найти золото в нераскрытом месте: сколько его ещё спрятано на сколько мест.
+ * Человек видит число на цели и поле, но не знает, где именно слитки
+ */
+function goldOdds(session: LevelSession): number {
+  let spots = 0;
+  let gold = 0;
+  for (const pos of allPositions(session.board)) {
+    const cell = getCell(session.board, pos);
+    if (unrevealedIce(session, pos)) {
+      spots++;
+      if (session.iceStyle[pos.row]?.[pos.col] === 'gold') gold++;
+    } else if (closedChest(session.board, pos)) {
+      spots++;
+      if (cell?.kind === 'box' && cell.treasure) gold++;
+    }
+  }
+  return spots > 0 ? gold / spots : 0;
 }
 
 function itemRows(board: Board): number {
@@ -113,6 +150,7 @@ function moveValue(
     goal.kind === 'level3color' && session.goalValue(goal) < goal.count ? [goal.color] : [],
   );
   const iced = new Set<string>();
+  const odds = need('gold') ? goldOdds(session) : 0;
   let value = (itemRows(board) - itemRows(session.board)) * 40;
 
   const scoreStep = (step: ResolveStep) => {
@@ -121,7 +159,7 @@ function moveValue(
       value += (step.stones ?? 0) * (need('stone') ? 120 : 15);
       // Сундук: сломанный — цель, снятое звено или открытый — шаг к ней
       value += (step.boxes ?? 0) * (need('box') ? 90 : 5);
-      value += (step.chests?.length ?? 0) * (need('box') ? 50 : 3);
+      value += (step.chests?.length ?? 0) * (need('box') ? 50 : 3 + 60 * odds);
       value += (step.treasures ?? 0) * (need('gold') ? 120 : 0);
       // Удар по углю: слой снят; разбитая глыба — цель
       for (const hit of step.coal ?? []) value += need('coal') ? (hit.layers === 0 ? 400 : 70) : 5;
@@ -130,8 +168,13 @@ function moveValue(
         if (hits > 0 && !iced.has(posKey(pos))) {
           iced.add(posKey(pos));
           // Последний удар ломает льдину — он ценнее, чем снятый слой
-          const gold = session.iceStyle[pos.row]?.[pos.col] === 'gold';
-          const worth = (need('ice') ? 60 : 0) + (need('gold') && gold ? 80 : 0);
+          // Золото видно после первого удара; до него — только надежда, что оно здесь
+          const gold = unrevealedIce(session, pos)
+            ? odds
+            : session.iceStyle[pos.row]?.[pos.col] === 'gold'
+              ? 1
+              : 0;
+          const worth = (need('ice') ? 60 : 0) + (need('gold') ? 80 * gold : 0);
           value += hits === 1 ? worth : worth / 2;
         }
       }
@@ -162,8 +205,10 @@ function goalTargets(session: LevelSession): Position[] {
       (need('ice') && (session.ice[pos.row]?.[pos.col] ?? 0) > 0) ||
       (need('gold') &&
         (session.ice[pos.row]?.[pos.col] ?? 0) > 0 &&
-        session.iceStyle[pos.row]?.[pos.col] === 'gold') ||
-      ((need('box') || (need('gold') && cell?.kind === 'box' && cell.treasure === true)) &&
+        (session.iceStyle[pos.row]?.[pos.col] === 'gold' || unrevealedIce(session, pos))) ||
+      ((need('box') ||
+        (need('gold') &&
+          (closedChest(session.board, pos) || (cell?.kind === 'box' && cell.treasure === true)))) &&
         cell?.kind === 'box') ||
       (need('stone') && cell?.kind === 'stone') ||
       (need('coal') && cell?.kind === 'coal')
@@ -184,14 +229,12 @@ interface Pick {
   value: number;
 }
 
-export function pickMove(session: LevelSession, bot: Bot, rng: Rng): Pick | null {
-  const moves = candidates(session);
-  if (moves.length === 0) return null;
-  if (bot === 'novice') return { move: moves[rng.int(moves.length)]!, value: 0 };
+/** Ходы по порядку перебора: сначала рядом с коронами и оставшимися препятствиями цели */
+function ordered(session: LevelSession, rng: Rng): PlayerMove[] {
   // Перемешиваем, чтобы отбор не предпочитал верх поля
-  shuffled(moves, rng);
-  // Ходы рядом с короной и с оставшимися препятствиями цели перебираем первыми: иначе отбор мог
-  // выбросить как раз их, и последняя цепь в углу ждала бы десятки ходов, а человек бьёт в неё сразу
+  const moves = shuffled(candidates(session), rng);
+  // Иначе отбор мог выбросить как раз их, и последняя цепь в углу ждала бы десятки ходов,
+  // а человек бьёт в неё сразу
   const crowns = allPositions(session.board).filter(
     (pos) => getCell(session.board, pos)?.kind === 'item',
   );
@@ -212,46 +255,44 @@ export function pickMove(session: LevelSession, bot: Bot, rng: Rng): Pick | null
     );
   };
   const order = new Map(moves.map((move) => [move, distance(move)]));
-  moves.sort((x, y) => order.get(x)! - order.get(y)!);
-  let best = moves[0]!;
-  let bestValue = -Infinity;
-  for (const move of moves.slice(0, MAX_CANDIDATES)) {
-    const value = moveValue(session, move, createRng(rng.int(2 ** 31)));
-    if (value > bestValue) {
-      bestValue = value;
-      best = move;
-    }
-  }
-  // Ни один ход не продвигает цель, а препятствий осталось мало (последняя цепь в углу): человек
-  // готовит её за два хода. Ходы рядом с препятствиями примеряются вместе с лучшим следующим
-  if (bestValue < GOAL_PROGRESS && targets.length > 0 && targets.length <= LOOKAHEAD_TARGETS) {
-    for (const move of moves.slice(0, LOOKAHEAD_MOVES)) {
-      const value = lookahead(session, move, targets, createRng(rng.int(2 ** 31)));
-      if (value > bestValue) {
-        bestValue = value;
-        best = move;
-      }
-    }
-  }
-  return { move: best, value: bestValue };
+  return moves.sort((x, y) => order.get(x)! - order.get(y)!);
 }
 
-/** Ход и лучший за ним ход рядом с препятствиями цели; второй ход — со скидкой, он ещё не сделан */
-function lookahead(session: LevelSession, move: PlayerMove, targets: Position[], rng: Rng): number {
-  const first = runMove(session.board, move, {
-    colorCount: session.level.colors,
-    rng,
-    campaign: true,
-  });
-  const near = (pos: Position) =>
-    targets.some((target) => Math.abs(target.row - pos.row) + Math.abs(target.col - pos.col) <= 1);
-  let next = 0;
-  for (const { from, to } of findPossibleMoves(first.board)) {
-    if (!near(from) && !near(to)) continue;
-    const swap: PlayerMove = { type: 'swap', from, to };
-    next = Math.max(next, moveValue(session, swap, rng, first.board));
+/** Лучший ход на поле партии (уже после примеренного хода) — без следующего за ним */
+function bestNext(session: LevelSession, rng: Rng): number {
+  if (session.isOver) return 0;
+  let best = 0;
+  for (const move of ordered(session, rng).slice(0, MAX_NEXT)) {
+    best = Math.max(best, moveValue(session, move, createRng(rng.int(2 ** 31))));
   }
-  return moveValue(session, move, rng) + next * 0.5;
+  return best;
+}
+
+export function pickMove(session: LevelSession, bot: Bot, rng: Rng): Pick | null {
+  if (bot === 'novice') {
+    const moves = candidates(session);
+    return moves.length > 0 ? { move: moves[rng.int(moves.length)]!, value: 0 } : null;
+  }
+  const moves = ordered(session, rng);
+  if (moves.length === 0) return null;
+  const first = moves
+    .slice(0, MAX_CANDIDATES)
+    .map((move) => ({ move, value: moveValue(session, move, createRng(rng.int(2 ** 31))) }))
+    .sort((a, b) => b.value - a.value);
+  // На ход вперёд: лучшие ходы примеряются целиком, с каскадами, и к каждому — лучший следующий.
+  // Дальше бот не смотрит, как и человек
+  let best = first[0]!;
+  let bestTotal = -Infinity;
+  for (const pick of first.slice(0, TOP_FIRST)) {
+    const after = session.trial(pick.move, createRng(rng.int(2 ** 31)));
+    const total = pick.value + NEXT_WEIGHT * bestNext(after, createRng(rng.int(2 ** 31)));
+    if (total > bestTotal) {
+      bestTotal = total;
+      best = pick;
+    }
+  }
+  // Ценность — самого хода: с ней сравнивается покупка, а она тоже примеряется без следующего
+  return best;
 }
 
 type Purchase =
@@ -328,7 +369,13 @@ export function play(level: Level, seed: number, bot: Bot, wallet = 0, bombs?: n
   const session =
     bombs === undefined
       ? new LevelSession(seed, level, wallet)
-      : new LevelSession(seed, level, 1000, { bomb: bombs, rocket: 0, manipulator: 0, rainbow: 0 });
+      : new LevelSession(
+          seed,
+          level,
+          1000,
+          { bomb: bombs, rocket: 0, manipulator: 0, rainbow: 0 },
+          true,
+        );
   const rng = createRng(seed ^ 0x5bd1e995);
   const reached = level.goals.map((): number[] => []);
   const track: GameResult['track'] = { score: [], level2: [], level3: [], item: [] };

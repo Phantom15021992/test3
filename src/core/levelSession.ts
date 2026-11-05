@@ -26,7 +26,7 @@ import {
 } from './level';
 import { findPossibleMoves } from './moves';
 import type { Move, ResolveStep } from './resolve';
-import { createRng } from './rng';
+import { createRng, type Rng } from './rng';
 import { GameSession, type Steps } from './session';
 
 // Партия на уровне: те же ходы, что и в свободной игре, плюс лёд, цели и звёзды.
@@ -80,6 +80,8 @@ export class LevelSession extends GameSession {
     private readonly wallet = 0,
     /** Лимиты покупок; другие — только для замеров бота (например, сколько бомб нужно на уровень) */
     private readonly limits: Partial<Record<BonusType, number>> = CAMPAIGN_BONUS_LIMITS,
+    /** Магазин открыт на любом уровне — только для замеров бота (бомба на 5-м и 9-м месте) */
+    private readonly anyShop = false,
   ) {
     super(seed, level.colors, boardTemplate(level), level.moves);
     this.ice = iceTemplate(level);
@@ -168,8 +170,8 @@ export class LevelSession extends GameSession {
     });
   }
 
-  /** Копия партии, на которой ход финала примерен своим ГСЧ */
-  private trial(move: Move): LevelSession {
+  /** Копия партии, на которой ход примерен своим ГСЧ (финал и боты): сама партия не меняется */
+  trial(move: Move, rng: Rng = createRng(FINALE_PREVIEW_SEED)): LevelSession {
     const copy = Object.assign(Object.create(LevelSession.prototype) as LevelSession, this, {
       progress: { ...this.progress },
       level3ByColor: [...this.level3ByColor],
@@ -178,7 +180,7 @@ export class LevelSession extends GameSession {
       stats: structuredClone(this.stats),
       actions: [],
     });
-    const steps = copy.run(move, createRng(FINALE_PREVIEW_SEED));
+    const steps = copy.run(move, rng);
     for (let next = steps.next(); !next.done; next = steps.next());
     return copy;
   }
@@ -232,7 +234,7 @@ export class LevelSession extends GameSession {
 
   /** Магазин спецфишек открыт только на последнем, 10-м уровне этажа */
   get shopOpen(): boolean {
-    return this.level.id % FLOOR_SIZE === 0;
+    return this.anyShop || this.level.id % FLOOR_SIZE === 0;
   }
 
   /** Открыт ли магазин, хватает ли звёзд и не исчерпан ли лимит покупок этой спецфишки на уровне */
