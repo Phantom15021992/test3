@@ -9,13 +9,13 @@
     "cccc..cccc",
     "cccc..cccc",
     "cccc..cccc",
-    ".t.t..t.t.",
-    "..........",
+    "...tttt...",
+    ".tttttttt.",
     "#..tttt..#",
     "###....###"
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 50,
   "goals": [
     {
       "kind": "coal",
@@ -27,17 +27,17 @@
     },
     {
       "kind": "gold",
-      "count": 8
+      "count": 16
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 1000
+      "count": 14280
     },
     {
       "kind": "level3",
-      "count": 10
+      "count": 38
     }
   ],
   "coalLayers": 9,

@@ -10,16 +10,16 @@
     ".....#####",
     ".....#####",
     "..........",
-    "...g..g...",
-    ".g..gg..g.",
+    "..........",
+    "....gg....",
     ".........."
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 36,
   "goals": [
     {
       "kind": "gold",
-      "count": 6
+      "count": 2
     },
     {
       "kind": "coal",
@@ -29,13 +29,13 @@
   "stars": [
     {
       "kind": "score",
-      "count": 1000
+      "count": 7450
     },
     {
       "kind": "level2",
-      "count": 10
+      "count": 106
     }
   ],
-  "coalLayers": 6,
+  "coalLayers": 2,
   "iceCracks": true
 }

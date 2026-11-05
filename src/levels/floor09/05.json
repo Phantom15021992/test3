@@ -4,7 +4,7 @@
   "hint": "Совпадения рядом с углём откалывают слои: звёзды — по три",
   "layout": [
     "...cccc...",
-    "...cccc3..",
+    "...cccc2..",
     "...cccc...",
     ".3.cccc...",
     "....##..1.",
@@ -15,7 +15,7 @@
     ".........."
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 31,
   "goals": [
     {
       "kind": "coal",
@@ -29,12 +29,12 @@
   "stars": [
     {
       "kind": "score",
-      "count": 1000
+      "count": 6470
     },
     {
       "kind": "level2",
-      "count": 10
+      "count": 100
     }
   ],
-  "coalLayers": 9
+  "coalLayers": 8
 }

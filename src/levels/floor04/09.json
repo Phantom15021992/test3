@@ -7,14 +7,14 @@
     ".........",
     "..cccc...",
     "..cccc...",
-    "..cccc...",
-    "..cccc...",
-    "..g.g.g..",
-    "..gg.gg..",
+    ".gcccc.g.",
+    ".gcccc.g.",
+    ".ggggggg.",
+    ".ggggggg.",
     "........."
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 25,
   "goals": [
     {
       "kind": "coal",
@@ -22,18 +22,18 @@
     },
     {
       "kind": "gold",
-      "count": 7
+      "count": 18
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 1000
+      "count": 6650
     },
     {
       "kind": "level2",
-      "count": 10
+      "count": 101
     }
   ],
-  "coalLayers": 6
+  "coalLayers": 9
 }

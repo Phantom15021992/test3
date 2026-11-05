@@ -8,18 +8,18 @@
     "##.cccc.##",
     "#..cccc..#",
     "...cccc...",
-    "..JccccJ..",
-    "#..JJJJ..#",
+    "...cccc...",
+    "#....J...#",
     "##.JJJJ.##",
     "###.JJ.###",
     "####..####"
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 50,
   "goals": [
     {
       "kind": "ice",
-      "count": 12
+      "count": 7
     },
     {
       "kind": "coal",
@@ -29,13 +29,13 @@
   "stars": [
     {
       "kind": "score",
-      "count": 1000
+      "count": 10410
     },
     {
       "kind": "level3",
-      "count": 10
+      "count": 31
     }
   ],
-  "coalLayers": 9,
+  "coalLayers": 5,
   "iceCracks": true
 }

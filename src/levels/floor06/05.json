@@ -5,33 +5,33 @@
   "layout": [
     "##......##",
     "#..1.....#",
-    "...t..t...",
-    ".tt...2t..",
-    "#.1bbb...#",
+    "..........",
+    ".tt...1t..",
+    "#.1.bb...#",
     "##.bttb.##",
-    "###..2.###",
+    "###..1.###",
     "####..####"
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 35,
   "goals": [
     {
       "kind": "box",
-      "count": 16
+      "count": 13
     },
     {
       "kind": "gold",
-      "count": 7
+      "count": 5
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 1000
+      "count": 6450
     },
     {
       "kind": "level2",
-      "count": 10
+      "count": 81
     }
   ]
 }

@@ -8,32 +8,32 @@
     "....##....",
     "..........",
     "..........",
-    ".tt....tt.",
-    ".tJ.##.J..",
+    "..t....tt.",
+    ".t..##.J..",
     ".JtJ..JtJ.",
     ".JJJJJJJJ.",
     ".........."
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 31,
   "goals": [
     {
       "kind": "ice",
-      "count": 14
+      "count": 13
     },
     {
       "kind": "gold",
-      "count": 7
+      "count": 6
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 1000
+      "count": 8200
     },
     {
       "kind": "level2",
-      "count": 10
+      "count": 113
     }
   ]
 }

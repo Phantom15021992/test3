@@ -9,31 +9,31 @@
     "..........",
     "#...##...#",
     "#...##...#",
-    ".bg....bb.",
+    ".......bb.",
     ".gg.gg.gg.",
     ".bbb..bbb.",
     "#...##...#"
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 32,
   "goals": [
     {
       "kind": "box",
-      "count": 9
+      "count": 8
     },
     {
       "kind": "gold",
-      "count": 7
+      "count": 6
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 1000
+      "count": 5990
     },
     {
       "kind": "level2",
-      "count": 10
+      "count": 94
     }
   ]
 }

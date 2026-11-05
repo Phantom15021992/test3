@@ -6,14 +6,14 @@
     "##..o...##",
     "#........#",
     "..........",
-    "..........",
+    ".bbbbbbbb.",
     "#.bbbbbb.#",
-    "##..bb..##",
+    "##.bbbb.##",
     "###.bb.###",
     "####..####"
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 43,
   "goals": [
     {
       "kind": "item",
@@ -21,22 +21,22 @@
     },
     {
       "kind": "level3color",
-      "count": 4,
+      "count": 8,
       "color": 0
     },
     {
       "kind": "box",
-      "count": 10
+      "count": 20
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 1000
+      "count": 8940
     },
     {
       "kind": "level3",
-      "count": 10
+      "count": 26
     }
   ]
 }

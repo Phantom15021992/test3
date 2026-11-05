@@ -18,17 +18,17 @@
   "goals": [
     {
       "kind": "level3",
-      "count": 6
+      "count": 24
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 1000
+      "count": 7250
     },
     {
       "kind": "level2",
-      "count": 10
+      "count": 98
     }
   ]
 }

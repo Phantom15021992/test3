@@ -11,25 +11,25 @@
     "..........",
     "..t....t..",
     "..t....t..",
-    "...t..t...",
+    "..ttttt...",
     ".........."
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 34,
   "goals": [
     {
       "kind": "gold",
-      "count": 6
+      "count": 9
     }
   ],
   "stars": [
     {
       "kind": "score",
-      "count": 1000
+      "count": 5600
     },
     {
       "kind": "level3",
-      "count": 10
+      "count": 18
     }
   ]
 }
