@@ -88,7 +88,7 @@ export const ICE_CRACKS_HITS = 1;
 
 /** Уголь: сторона глыбы и сколько у неё слоёв самое большее (у уровня можно меньше) */
 
-export const COAL_SIZE = 4;
+export const COAL_SIZE = 2;
 export const COAL_MAX_LAYERS = 9;
 
 /** Сколько раз за попытку уровня кампании можно купить спецфишку; нет в списке — без ограничения */
@@ -163,3 +163,6 @@ export const DOUBLE_TAP_MS = 300;
 /** Подсказка самого сильного хода появляется после такого бездействия */
 export const HINT_DELAY_MS = 15000;
 export const HINT_PULSE_MS = 450;
+
+/** Соль к seed попытки для ГСЧ, который прячет золото (hiddenGold): ГСЧ партии он не трогает */
+export const HIDDEN_GOLD_SALT = 0x5f3759df;

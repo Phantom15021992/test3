@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isCoal, type Board, type Position } from '../../src/core/board';
+import { COAL_SIZE } from '../../src/core/config';
 import { applyGravity, refill, settle } from '../../src/core/gravity';
 import { boardTemplate, parseLevel, type Level } from '../../src/core/level';
 import { LevelSession } from '../../src/core/levelSession';
@@ -11,10 +12,10 @@ import { parseBoard } from '../helpers/parseBoard';
 const p = (row: number, col: number) => ({ row, col });
 const ctx = () => ({ colorCount: 4, rng: createRng(1), campaign: true });
 
-/** Ставит глыбу угля 4×4 левым верхним углом в top, left */
+/** Ставит глыбу угля COAL_SIZE×COAL_SIZE левым верхним углом в top, left */
 function withCoal(board: Board, top: number, left: number, layers = 9): Board {
-  for (let row = top; row < top + 4; row++) {
-    for (let col = left; col < left + 4; col++)
+  for (let row = top; row < top + COAL_SIZE; row++) {
+    for (let col = left; col < left + COAL_SIZE; col++)
       board[row]![col] = { kind: 'coal', top, left, layers };
   }
   return board;
@@ -23,15 +24,13 @@ function withCoal(board: Board, top: number, left: number, layers = 9): Board {
 const clears = (steps: ResolveStep[]) =>
   steps.filter((step): step is Extract<ResolveStep, { kind: 'clear' }> => step.kind === 'clear');
 
-/** Поле 5×6: уголь в левом верхнем углу, под ним строка, где ход собирает тройку цвета R */
+/** Поле 3×5: уголь в левом верхнем углу, под ним строка, где ход собирает тройку цвета R */
 function besideCoal(level: 1 | 2 | 3, layers = 9): Board {
   return withCoal(
     parseBoard(`
-      .  .  .  .  G1 B1
-      .  .  .  .  B1 G1
-      .  .  .  .  G1 B1
-      .  .  .  .  B1 G1
-      R${level} R${level} G1 R${level} B1 G1
+      .  .  G1 B1 Y1
+      .  .  B1 G1 B1
+      R${level} R${level} G1 R${level} B1
     `),
     0,
     0,
@@ -39,7 +38,7 @@ function besideCoal(level: 1 | 2 | 3, layers = 9): Board {
   );
 }
 
-const swapIn = { type: 'swap', from: p(4, 3), to: p(4, 2) } as const;
+const swapIn = { type: 'swap', from: p(2, 3), to: p(2, 2) } as const;
 
 describe('уголь: удары', () => {
   it('совпадение фишек 1 уровня рядом снимает 1 слой', () => {
@@ -62,57 +61,50 @@ describe('уголь: удары', () => {
   it('каждый взрыв, задевший глыбу, снимает один слой: две бомбы по цепочке — два', () => {
     const board = withCoal(
       parseBoard(`
-        .  .  .  .  G1 B1
-        .  .  .  .  B1 G1
-        .  .  .  .  G1 B1
-        .  .  .  .  B1 G1
-        R1 G1 B1 *  *  Y1
-        G1 B1 Y1 R1 G1 B1
+        .  .  G1 B1
+        .  .  B1 G1
+        R1 *  *  Y1
+        G1 B1 Y1 R1
       `),
       0,
       0,
     );
-    const { steps } = runMove(board, { type: 'fire', at: p(4, 4) }, ctx());
+    const { steps } = runMove(board, { type: 'fire', at: p(2, 2) }, ctx());
     expect(clears(steps)[0]?.coal).toEqual([{ top: 0, left: 0, layers: 7 }]);
   });
 
   it('уголь не меняется обменом и не уничтожается взрывом', () => {
     const board = besideCoal(1);
-    expect(isValidSwap(board, p(3, 3), p(4, 3))).toBe(false);
+    expect(isValidSwap(board, p(1, 1), p(2, 1))).toBe(false);
     const { steps } = runMove(
       withCoal(
         parseBoard(`
-          .  .  .  .  *  B1
-          .  .  .  .  B1 G1
-          .  .  .  .  G1 B1
-          .  .  .  .  B1 G1
-          R1 G1 B1 Y1 R1 Y1
+          .  .  *  B1
+          .  .  B1 G1
+          R1 G1 B1 Y1
         `),
         0,
         0,
       ),
-      { type: 'fire', at: p(0, 4) },
+      { type: 'fire', at: p(0, 2) },
       ctx(),
     );
-    expect(clears(steps)[0]?.cells.every(({ col }) => col >= 4)).toBe(true);
+    expect(clears(steps)[0]?.cells.every(({ col }) => col >= 2)).toBe(true);
   });
 });
 
 describe('уголь: падение', () => {
-  /** Поле 6×6: уголь в середине сверху, под ним две пустые строки */
+  /** Поле 6×6: две глыбы рядом сверху — стена в 4 клетки, под ней пустые строки */
   function hollow(): Board {
-    return withCoal(
-      parseBoard(`
-        R1 .  .  .  .  G1
-        G1 .  .  .  .  B1
-        B1 .  .  .  .  R1
-        Y1 .  .  .  .  G1
-        R1 .  .  .  .  B1
-        G1 .  .  .  .  Y1
-      `),
-      0,
-      1,
-    );
+    const board = parseBoard(`
+      R1 .  .  .  .  G1
+      G1 .  .  .  .  B1
+      B1 .  .  .  .  R1
+      Y1 .  .  .  .  G1
+      R1 .  .  .  .  B1
+      G1 .  .  .  .  Y1
+    `);
+    return withCoal(withCoal(board, 0, 1), 0, 1 + COAL_SIZE);
   }
 
   it('фишки не пролетают сквозь уголь: над ним ложатся на него', () => {
@@ -122,9 +114,7 @@ describe('уголь: падение', () => {
         .  .
         .  .
         .  .
-        .  .
-        .  .
-      `).map((line) => [...line, null, null, null]),
+      `).map((line) => [...line, null]),
       1,
       0,
     );
@@ -139,8 +129,9 @@ describe('уголь: падение', () => {
     const falls = drops.flatMap((drop) => drop.falls);
     expect(falls.some(({ from, to }) => from.col !== to.col)).toBe(true);
     const inPlace = drops.flatMap((drop) => drop.spawns.filter((spawn) => spawn.inPlace));
-    // Наискосок не достать только до двух средних клеток строки сразу под углём
-    const unreachable = (pos: Position) => pos.row === 4 && (pos.col === 2 || pos.col === 3);
+    // Наискосок не достать только до двух средних клеток строки сразу под стеной
+    const unreachable = (pos: Position) =>
+      pos.row === COAL_SIZE && (pos.col === 2 || pos.col === 3);
     expect(inPlace.length).toBeGreaterThan(0);
     expect(inPlace.every(({ to }) => unreachable(to))).toBe(true);
   });
@@ -165,7 +156,7 @@ describe('уголь: уровень', () => {
       id: 1,
       title: 'Уголь',
       hint: '',
-      layout: ['cccc..', 'cccc..', 'cccc..', 'cccc..', '......', '......'],
+      layout: ['cc....', 'cc....', '......', '......', '......', '......'],
       colors: 4,
       moves: 10,
       goals: [{ kind: 'coal', count: 1 }],
@@ -177,15 +168,15 @@ describe('уголь: уровень', () => {
     };
   }
 
-  it('глыба из символов c, слоёв — coalLayers (по умолчанию 9)', () => {
+  it('глыба 2×2 из символов c, слоёв — coalLayers (по умолчанию 9)', () => {
     expect(new LevelSession(1, parseLevel(level())).coalLeft).toBe(9);
     expect(new LevelSession(1, parseLevel(level({ coalLayers: 4 }))).coalLeft).toBe(4);
-    expect(boardTemplate(level())[3]![3]).toEqual({ kind: 'coal', top: 0, left: 0, layers: 9 });
+    expect(boardTemplate(level())[1]![1]).toEqual({ kind: 'coal', top: 0, left: 0, layers: 9 });
   });
 
-  it('уголь — только квадраты 4×4, слоёв 1–9, цель не больше глыб на поле', () => {
+  it('уголь — только квадраты 2×2, слоёв 1–9, цель не больше глыб на поле', () => {
     const bad = ['ccc...', 'ccc...', 'ccc...', '......', '......', '......'];
-    expect(() => parseLevel(level({ layout: bad }))).toThrow('4×4');
+    expect(() => parseLevel(level({ layout: bad }))).toThrow('2×2');
     expect(() => parseLevel(level({ coalLayers: 10 }))).toThrow('слоёв');
     expect(() => parseLevel(level({ goals: [{ kind: 'coal', count: 2 }] }))).toThrow('больше');
   });

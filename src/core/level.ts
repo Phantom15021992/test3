@@ -1,4 +1,5 @@
 import { createEmptyBoard, type Board } from './board';
+import type { Rng } from './rng';
 import { COAL_MAX_LAYERS, COAL_SIZE, ICE_CRACKS_HITS, ICE_HITS } from './config';
 
 // Описание уровня и его проверка: уровни лежат в JSON, поэтому при загрузке им нельзя верить на слово.
@@ -16,7 +17,7 @@ import { COAL_MAX_LAYERS, COAL_SIZE, ICE_CRACKS_HITS, ICE_HITS } from './config'
 //   1, 2, 3  сундук в цепи из стольких звеньев (каждый удар снимает звено, потом — как b)
 //   u, v, w  сундук с сокровищами в цепи из 1, 2, 3 звеньев
 //   o  корона: её нужно опустить на дно
-//   c  уголь: глыба 4×4 из этих символов; слоёв у глыб уровня — coalLayers (по умолчанию 9)
+//   c  уголь: глыба 2×2 из этих символов; слоёв у глыб уровня — coalLayers (по умолчанию 9)
 
 export type GoalKind =
   | 'level2'
@@ -63,6 +64,11 @@ export interface Level {
   coalLayers?: number;
   /** Лёд 2 уровня получает ещё этап «с трещинами» — на удар больше: так уровень сложнее */
   iceCracks?: boolean;
+  /**
+   * Сколько золота спрятать в случайные льдины 2 уровня (J) и сундуки без сокровищ (b, 1–3):
+   * какие из них с золотом, решает seed попытки, остальные — пустышки
+   */
+  hiddenGold?: number;
 }
 
 const GOAL_KINDS: readonly GoalKind[] = [
@@ -123,7 +129,7 @@ export function boardTemplate(level: Level): Board {
 
 /**
  * Глыбы угля в поле (левые верхние углы); если символы угля не складываются
- * в отдельные квадраты 4×4 — исключение
+ * в отдельные квадраты 2×2 — исключение
  */
 export function coalBlocks(layout: readonly string[]): { row: number; col: number }[] {
   const taken = layout.map((line) => [...line].map(() => false));
@@ -134,7 +140,7 @@ export function coalBlocks(layout: readonly string[]): { row: number; col: numbe
       for (let r = row; r < row + COAL_SIZE; r++) {
         for (let c = col; c < col + COAL_SIZE; c++) {
           if (layout[r]?.[c] !== 'c' || taken[r]![c])
-            throw new Error('уголь — только квадраты 4×4');
+            throw new Error('уголь — только квадраты 2×2');
           taken[r]![c] = true;
         }
       }
@@ -142,6 +148,36 @@ export function coalBlocks(layout: readonly string[]): { row: number; col: numbe
     }),
   );
   return blocks;
+}
+
+/** Клетки, где может спрятаться золото: лёд 2 уровня и сундуки без сокровищ */
+function goldHideouts(level: Level): { row: number; col: number }[] {
+  const spots: { row: number; col: number }[] = [];
+  level.layout.forEach((line, row) =>
+    [...line].forEach((symbol, col) => {
+      if ('Jb123'.includes(symbol)) spots.push({ row, col });
+    }),
+  );
+  return spots;
+}
+
+/**
+ * Прячет hiddenGold уровня в случайные льдины и сундуки: льдина становится льдом со слитками
+ * (снаружи такой же), сундук — сундуком с сокровищами. ГСЧ — свой, чтобы не менять поле попытки
+ */
+export function hideGold(
+  level: Level,
+  board: Board,
+  styles: (IceStyle | null)[][],
+  rng: Rng,
+): void {
+  const spots = goldHideouts(level);
+  for (let left = level.hiddenGold ?? 0; left > 0 && spots.length > 0; left--) {
+    const [{ row, col }] = spots.splice(rng.int(spots.length), 1) as [{ row: number; col: number }];
+    const cell = board[row]![col];
+    if (cell?.kind === 'box') board[row]![col] = { ...cell, treasure: true };
+    else styles[row]![col] = 'gold';
+  }
 }
 
 /** Вид льда: от него зависят картинка и сколько ударов он держит */
@@ -200,7 +236,7 @@ export function parseLevel(value: unknown): Level {
   try {
     coal = coalBlocks(level.layout).length;
   } catch {
-    fail('уголь — только квадраты 4×4');
+    fail('уголь — только квадраты 2×2');
   }
   if (
     level.coalLayers !== undefined &&
@@ -209,6 +245,14 @@ export function parseLevel(value: unknown): Level {
       level.coalLayers > COAL_MAX_LAYERS)
   ) {
     fail(`слоёв угля 1–${COAL_MAX_LAYERS}`);
+  }
+
+  const hidden = level.hiddenGold;
+  if (
+    hidden !== undefined &&
+    (!Number.isInteger(hidden) || hidden < 1 || hidden > goldHideouts(level).length)
+  ) {
+    fail('hiddenGold — от 1 до числа льдин J и сундуков без сокровищ');
   }
 
   if (!Array.isArray(level.goals) || level.goals.length === 0) fail('нет целей');
@@ -229,7 +273,8 @@ export function parseLevel(value: unknown): Level {
     const available =
       goal.kind === 'coal'
         ? coal
-        : [...(symbols ?? '')].reduce((sum, s) => sum + countSymbol(level, s), 0);
+        : [...(symbols ?? '')].reduce((sum, s) => sum + countSymbol(level, s), 0) +
+          (goal.kind === 'gold' ? (hidden ?? 0) : 0);
     if ((symbols || goal.kind === 'coal') && available < goal.count) {
       fail(`цель ${goal.kind} больше, чем есть на поле`);
     }

@@ -10,11 +10,12 @@ import {
   type Position,
 } from './board';
 import { aimedPiece, bonusStars, isBonusTarget, type AimedBonus, type BonusType } from './bonus';
-import { CAMPAIGN_BONUS_LIMITS, FINALE_MAX_ROUNDS } from './config';
+import { CAMPAIGN_BONUS_LIMITS, FINALE_MAX_ROUNDS, HIDDEN_GOLD_SALT } from './config';
 import { recordPurchase } from './gameStats';
 import {
   FLOOR_SIZE,
   boardTemplate,
+  hideGold,
   iceStyles,
   iceTemplate,
   type IceStyle,
@@ -82,7 +83,10 @@ export class LevelSession extends GameSession {
   ) {
     super(seed, level.colors, boardTemplate(level), level.moves);
     this.ice = iceTemplate(level);
-    this.iceStyle = iceStyles(level);
+    const styles = iceStyles(level);
+    // Своё зерно: золото прячется, не трогая ГСЧ партии, — поле попытки остаётся тем же
+    if (level.hiddenGold) hideGold(level, this.board, styles, createRng(seed ^ HIDDEN_GOLD_SALT));
+    this.iceStyle = styles;
     this.board.forEach((line, row) =>
       line.forEach((cell, col) => {
         if (cell?.kind === 'coal' && cell.top === row && cell.left === col) {
