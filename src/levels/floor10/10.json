@@ -6,11 +6,11 @@
     "###.oo.###",
     "#........#",
     "..........",
-    "..cc..cc..",
+    "..........",
+    ".bcc..ccb.",
     "..ccbbcc..",
+    ".b.bbbb.b.",
     "..bbbbbb..",
-    ".bccbbccb.",
-    ".bccbbccb.",
     "#..bbbb..#",
     "###....###"
   ],
@@ -19,7 +19,7 @@
   "goals": [
     {
       "kind": "coal",
-      "count": 4
+      "count": 2
     },
     {
       "kind": "item",

@@ -132,13 +132,17 @@ const usedMoves = (played: readonly GameResult[], goals: readonly Goal[]) =>
  * задуманного — ещё и середину
  */
 function chooseSize(source: Level, place: number): SizedLevel {
-  const level = source;
+  let level = source;
   const winShare = WIN_CURVE[place]!;
   const wanted = MOVES_CURVE[place]!;
   if (place === BOSS) return chooseBossSize(level);
   const onlyCrowns = level.goals.every((goal) => goal.kind === 'item');
   if (onlyCrowns) return chooseCrownHeight(level, winShare, wanted);
-  // Короны вместе с другими целями стоят, где их поставили (не ниже середины поля): рычаг — остальные цели
+  // Короны вместе с другими целями: сначала опускаем короны (не ниже середины поля), потом подбираем
+  // размер остальных целей
+  if (level.layout.join('').includes('o')) {
+    level = { ...level, layout: chooseCrownHeight(level, winShare, wanted).layout };
+  }
   const tried: { scale: number; sized: SizedLevel; moves: number }[] = [];
   const attempt = (scale: number) => {
     const sized = resizeLevel(level.layout, level.goals, scale, resizeOptions(level));

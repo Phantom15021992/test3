@@ -34,9 +34,11 @@ const MAX_CANDIDATES = 40;
 const MAX_AIM_CELLS = 30;
 /**
  * Мастерство опытного бота — сколько обменов на поле он замечает за ход (случайных; спецфишки видны
- * всегда). Подобрано по живым игрокам на 1-1 и 1-5 (scripts/calibrateBot.ts)
+ * всегда). Подобрано по живым игрокам на 1-1 и 1-5 (scripts/calibrateBot.ts).
+ * focus — сколько обменов он ещё замечает рядом с отдельными предметами цели (короны, сундуки, уголь,
+ * камни): человек смотрит на них нарочно. Лёд лежит по всему полю, на него внимание не делится
  */
-export const botSkill = { attention: 2.25 };
+export const botSkill = { attention: 2.25, focus: 3 };
 /** Сколько лучших ходов примерять вместе со следующим ходом */
 const TOP_FIRST = 6;
 /** Сколько следующих ходов смотреть после каждого из них */
@@ -242,10 +244,6 @@ function ordered(session: LevelSession, rng: Rng): PlayerMove[] {
   // Дробное внимание: целая часть — всегда, дробная — с такой вероятностью ещё один обмен
   const whole = Math.floor(botSkill.attention);
   const limit = whole + (rng.int(1000) < (botSkill.attention - whole) * 1000 ? 1 : 0);
-  let noticed = 0;
-  const moves = all.filter((move) => move.type !== 'swap' || noticed++ < limit);
-  // Иначе отбор мог выбросить как раз их, и последняя цепь в углу ждала бы десятки ходов,
-  // а человек бьёт в неё сразу
   const crowns = allPositions(session.board).filter(
     (pos) => getCell(session.board, pos)?.kind === 'item',
   );
@@ -265,6 +263,31 @@ function ordered(session: LevelSession, rng: Rng): PlayerMove[] {
       ),
     );
   };
+  // Отдельные предметы цели человек видит и ищет ходы рядом с ними
+  const items = targets.filter((pos) => {
+    const kind = getCell(session.board, pos)?.kind;
+    return kind === 'box' || kind === 'coal' || kind === 'stone';
+  });
+  const nearItem = (move: PlayerMove) =>
+    move.type === 'swap' &&
+    (crowns.some(
+      (pos) => Math.abs(pos.col - move.from.col) + Math.abs(pos.col - move.to.col) <= 2,
+    ) ||
+      items.some(
+        (pos) =>
+          Math.min(
+            Math.abs(pos.row - move.from.row) + Math.abs(pos.col - move.from.col),
+            Math.abs(pos.row - move.to.row) + Math.abs(pos.col - move.to.col),
+          ) <= 1,
+      ));
+  let noticed = 0;
+  let focused = 0;
+  const moves = all.filter(
+    (move) =>
+      move.type !== 'swap' || noticed++ < limit || (nearItem(move) && focused++ < botSkill.focus),
+  );
+  // Иначе отбор мог выбросить как раз их, и последняя цепь в углу ждала бы десятки ходов,
+  // а человек бьёт в неё сразу
   const order = new Map(moves.map((move) => [move, distance(move)]));
   return moves.sort((x, y) => order.get(x)! - order.get(y)!);
 }
