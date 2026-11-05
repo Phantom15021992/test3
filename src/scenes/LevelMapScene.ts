@@ -64,7 +64,8 @@ export class LevelMapScene extends Phaser.Scene {
       const x = centerX + (column - (COLUMNS - 1) / 2) * COLUMN_STEP;
       const y = FIRST_ROW_Y + Math.floor(i / COLUMNS) * ROW_STEP;
       const earned = stars[level.id] ?? 0;
-      const open = isLevelOpen(level.id, stars);
+      // В dev-режиме открыты все уровни: так их можно смотреть, не проходя по порядку
+      const open = import.meta.env.DEV || isLevelOpen(level.id, stars);
 
       const number = this.add
         .text(0, -20, levelNumber(level), {
