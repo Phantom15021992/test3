@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseLevel, type Level } from '../../src/core/level';
 import { LevelSession } from '../../src/core/levelSession';
-import { goalsText, levelBriefing } from '../../src/ui/levelText';
+import { goalTaskText, goalsText } from '../../src/ui/levelText';
 import { parseBoard } from '../helpers/parseBoard';
 
 const p = (row: number, col: number) => ({ row, col });
@@ -58,9 +58,9 @@ describe('цель: ячейки 3 уровня одного цвета', () => 
     const session = new LevelSession(1, parseLevel(level(1)));
     greenStar(session);
     expect(goalsText(session)).toBe('Жёлтые звёзды 1/2');
-    expect(levelBriefing(session.level)).toContain('собери 2 жёлтые звезды');
-    expect(
-      levelBriefing(parseLevel(level(0, { goals: [{ kind: 'level3color', count: 5, color: 0 }] }))),
-    ).toContain('собери 5 синих звёзд');
+    expect(goalTaskText(session.level.goals[0]!)).toContain('собери 2 жёлтые звезды');
+    expect(goalTaskText({ kind: 'level3color', count: 5, color: 0 })).toContain(
+      'собери 5 синих звёзд',
+    );
   });
 });

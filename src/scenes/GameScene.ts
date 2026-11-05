@@ -37,14 +37,24 @@ import { sendGameResult } from '../storage/gameResults';
 import { sendLevelResult, type LevelOutcome } from '../storage/levelResults';
 import { floorWallet, saveLevelSpending, saveLevelStars } from '../storage/progress';
 import { remoteConfig, type GameTicket } from '../storage/remoteLeaderboard';
-import { goalsText, levelBriefing, levelMoveLimit, levelTitle } from '../ui/levelText';
+import {
+  GOALS_SEPARATOR,
+  goalItems,
+  levelBriefing,
+  levelMoveLimit,
+  levelTitle,
+} from '../ui/levelText';
 import { HIGHLIGHT_COLOR, UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
 import { BoardView } from '../view/BoardView';
 import { debugSeed, startGame } from './startGame';
 
 const BOARD_MARGIN = 40;
-const LEVEL_GOALS_Y_OFFSET = 112;
-const LEVEL_BRIEFING_Y_OFFSET = 142;
+/** Верх строки целей под полем и зазор до описания звёзд под ней */
+const LEVEL_GOALS_Y_OFFSET = 94;
+const LEVEL_BRIEFING_GAP = 12;
+/** Шрифт строки целей и самый мелкий, до которого он уменьшается, если цели не помещаются в ширину */
+const GOALS_FONT_SIZE = 30;
+const GOALS_MIN_FONT_SIZE = 18;
 
 /** Режим ввода: обычный, выбор цвета (радуга / мега-бомба + радуга), выбор клеток манипулятором */
 type Mode =
@@ -65,6 +75,8 @@ export class GameScene extends Phaser.Scene {
   /** Уровень; null — свободная игра */
   private level: Level | null = null;
   private goalsText: Phaser.GameObjects.Text | null = null;
+  /** Ширина, в которую должна поместиться строка целей */
+  private goalsWidth = 0;
   private briefingText: Phaser.GameObjects.Text | null = null;
   private view!: BoardView;
   private dialog!: ChoiceDialog;
@@ -176,15 +188,16 @@ export class GameScene extends Phaser.Scene {
       ? this.add
           .text(centerX, boxBottom + LEVEL_GOALS_Y_OFFSET, '', {
             fontFamily: 'sans-serif',
-            fontSize: '30px',
+            fontSize: `${GOALS_FONT_SIZE}px`,
             color: `#${HIGHLIGHT_COLOR.toString(16)}`,
             align: 'center',
           })
-          .setOrigin(0.5)
+          .setOrigin(0.5, 0)
       : null;
+    this.goalsWidth = Math.min(boxSize, this.scale.width - 2 * BOARD_MARGIN);
     if (this.level) {
       this.briefingText = this.add
-        .text(centerX, boxBottom + LEVEL_BRIEFING_Y_OFFSET, levelBriefing(this.level), {
+        .text(centerX, boxBottom + LEVEL_GOALS_Y_OFFSET, levelBriefing(this.level), {
           fontFamily: 'sans-serif',
           fontSize: '24px',
           color: UI_MUTED_TEXT_COLOR,
@@ -250,8 +263,28 @@ export class GameScene extends Phaser.Scene {
 
   private refreshGoals(): void {
     if (!(this.session instanceof LevelSession)) return;
-    this.goalsText?.setText(goalsText(this.session));
+    this.layoutGoals(goalItems(this.session));
     this.briefingText?.setText(levelBriefing(this.session.level, this.session));
+  }
+
+  /**
+   * Строка целей: в одну строку, если помещается в ширину поля, иначе цели делятся на две строки;
+   * если и так широко — шрифт уменьшается. Описание звёзд встаёт сразу под ней
+   */
+  private layoutGoals(items: string[]): void {
+    const text = this.goalsText;
+    if (!text) return;
+    const half = Math.ceil(items.length / 2);
+    const twoLines = [items.slice(0, half), items.slice(half)]
+      .map((line) => line.join(GOALS_SEPARATOR))
+      .join('\n');
+    text.setFontSize(GOALS_FONT_SIZE).setText(items.join(GOALS_SEPARATOR));
+    if (text.width > this.goalsWidth && items.length > 1) text.setText(twoLines);
+    for (let size = GOALS_FONT_SIZE; text.width > this.goalsWidth && size > GOALS_MIN_FONT_SIZE;) {
+      size -= 2;
+      text.setFontSize(size);
+    }
+    this.briefingText?.setY(text.y + text.height + LEVEL_BRIEFING_GAP);
   }
 
   /** Только для отладки: подменить поле */

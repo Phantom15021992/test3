@@ -4,6 +4,7 @@ import { LEVELS } from '../../src/levels';
 import { LevelSession } from '../../src/core/levelSession';
 import {
   goalsText,
+  goalTaskText,
   levelBriefing,
   levelNumber,
   levelTitle,
@@ -28,7 +29,7 @@ describe('подписи уровня', () => {
     expect(levelTitle(LEVELS[9]!)).toBe('1-10');
   });
 
-  it('задание и все три звезды расписаны подробно', () => {
+  it('все три звезды расписаны подробно; цели видны в строке прогресса, задание не повторяется', () => {
     const text = levelBriefing(
       level({
         goals: [{ kind: 'ice', count: 14 }],
@@ -39,7 +40,6 @@ describe('подписи уровня', () => {
       }),
     );
     expect(text.split('\n')).toEqual([
-      'Задание: сломай 14 льдин',
       '★ Выполнить задание',
       '★ Набрать 1500 очков',
       '★ Собрать 2 ячейки 3 уровня',
@@ -57,14 +57,14 @@ describe('подписи уровня', () => {
     const session = new LevelSession(1, played);
     session.score = 420;
     session.progress.level3 = 5;
-    expect(levelBriefing(played, session).split('\n').slice(1)).toEqual([
+    expect(levelBriefing(played, session).split('\n')).toEqual([
       '★ Выполнить задание',
       '★ Набрать 1500 очков — 420/1500',
       '★ Собрать 18 ячеек 3 уровня — 5/18',
     ]);
     session.progress.level2 = 3;
     session.score = 1600;
-    expect(levelBriefing(played, session).split('\n').slice(1)).toEqual([
+    expect(levelBriefing(played, session).split('\n')).toEqual([
       '★ Выполнить задание — готово',
       '★ Набрать 1500 очков — готово',
       '★ Собрать 18 ячеек 3 уровня — 5/18',
@@ -76,15 +76,9 @@ describe('подписи уровня', () => {
     expect(levelNumber(level({ id: 20 }))).toBe('2-10');
   });
 
-  it('две цели идут через «и»', () => {
-    const text = levelBriefing({
-      ...LEVELS[8]!,
-      goals: [
-        { kind: 'ice', count: 10 },
-        { kind: 'level3', count: 9 },
-      ],
-    });
-    expect(text.split('\n')[0]).toBe('Задание: сломай 10 льдин и собери 9 ячеек 3 уровня');
+  it('цели словами', () => {
+    expect(goalTaskText({ kind: 'ice', count: 10 })).toBe('сломай 10 льдин');
+    expect(goalTaskText({ kind: 'level3', count: 9 })).toBe('собери 9 ячеек 3 уровня');
   });
 
   it.each([
@@ -96,8 +90,7 @@ describe('подписи уровня', () => {
     [21, 'сломай 21 льдину'],
     [22, 'сломай 22 льдины'],
   ])('склонение после числа %i', (count, expected) => {
-    const first = levelBriefing(level({ goals: [{ kind: 'ice', count }] })).split('\n')[0];
-    expect(first).toBe(`Задание: ${expected}`);
+    expect(goalTaskText({ kind: 'ice', count })).toBe(expected);
   });
 
   it('задачи на звёзды: очки и ячейки', () => {

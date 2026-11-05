@@ -47,22 +47,29 @@ function goalName(goal: Goal): string {
 /** Ячейка 3 уровня, собранная сразу из фишек, засчитывается как две ячейки 2 уровня */
 const DIRECT3_NOTE = ' (3 ур. из фишек — за две)';
 
-/**
- * Прогресс целей одной строкой: «Лёд 3/12 · Камни 0/4». Короны — из всех на поле («1/2»):
- * уровень идёт до последней короны, и «1/1» выглядело бы так, будто он уже закончен
- */
+/** Разделитель целей в строке прогресса */
+export const GOALS_SEPARATOR = '  ·  ';
+
+/** Прогресс целей одной строкой: «Лёд 3/12 · Камни 0/4» */
 export function goalsText(session: LevelSession): string {
-  return session.level.goals
-    .map((goal) => {
-      if (goal.kind === 'item') {
-        return `${GOAL_NAMES.item} ${Math.min(session.progress.item, session.crowns)}/${session.crowns}`;
-      }
-      const text = `${goalName(goal)} ${session.goalValue(goal)}/${goal.count}`;
-      // У угля виден и остаток слоёв: иначе удары по глыбе не видны в прогрессе
-      const layers = session.coalLeft;
-      return goal.kind === 'coal' && layers > 0 ? `${text} (слоёв ${layers})` : text;
-    })
-    .join('  ·  ');
+  return goalItems(session).join(GOALS_SEPARATOR);
+}
+
+/**
+ * Прогресс каждой цели отдельно — экран переносит их на вторую строку, если не помещаются.
+ * Короны — из всех на поле («1/2»): уровень идёт до последней короны, и «1/1» выглядело бы так,
+ * будто он уже закончен
+ */
+export function goalItems(session: LevelSession): string[] {
+  return session.level.goals.map((goal) => {
+    if (goal.kind === 'item') {
+      return `${GOAL_NAMES.item} ${Math.min(session.progress.item, session.crowns)}/${session.crowns}`;
+    }
+    const text = `${goalName(goal)} ${session.goalValue(goal)}/${goal.count}`;
+    // У угля виден и остаток слоёв: иначе удары по глыбе не видны в прогрессе
+    const layers = session.coalLeft;
+    return goal.kind === 'coal' && layers > 0 ? `${text} (слоёв ${layers})` : text;
+  });
 }
 
 /** Номер уровня: этаж-уровень, например «1-10» */
@@ -85,7 +92,8 @@ function plural(count: number, one: string, few: string, many: string): string {
   return units >= 2 && units <= 4 ? few : many;
 }
 
-function goalTaskText({ kind, count, color }: Goal): string {
+/** Цель уровня словами: «сломай 14 льдин», «собери 5 синих звёзд» */
+export function goalTaskText({ kind, count, color }: Goal): string {
   const n = String(count);
   switch (kind) {
     case 'level2':
@@ -136,14 +144,12 @@ const DONE = ' — готово';
  * прогресс задания крупно над полем, а сколько набрано для звёзд, иначе было бы не понять
  */
 export function levelBriefing(level: Level, session?: LevelSession): string {
-  const tasks = level.goals.map(goalTaskText).join(' и ');
   const progress = (task: StarTask) => {
     if (!session) return '';
     const value = session.starTaskValue(task);
     return value >= task.count ? DONE : ` — ${value}/${task.count}`;
   };
   return [
-    `Задание: ${tasks}`,
     `★ Выполнить задание${session?.goalsDone ? DONE : ''}`,
     ...level.stars.map((task) => `★ ${starTaskText(task)}${progress(task)}`),
   ].join('\n');
