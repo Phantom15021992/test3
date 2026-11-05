@@ -5,26 +5,19 @@
 // каждая цель. Серия партий сразу показывает, сколько партий он прошёл бы при любом лимите.
 // Размер целей подбирается так, чтобы на уровень с кривой уходило задуманное число ходов
 // (MOVES_CURVE): цели растут или уменьшаются, препятствий на поле — ровно по цели (levelLayout.ts).
-// Затем ходы выставляются под долю побед с кривой. Звёзды: вторая — за очки, третья — за ячейки
-// (2 уровня на нечётных местах этажа, 3 — на чётных);
+// Затем ходы выставляются под долю побед с кривой (25–45). Звёзды — по шаблону: 10 и 15 ячеек
+// 3 уровня сверх целей на ячейки 3 уровня (STAR_STEPS).
+// На 5-м и 9-м местах бот может купить одну бомбу, на остальных (кроме 10-го) — ничего.
 // 10-е место: без покупок почти не проходится, а с покупкой спецфишек — в окне BOMB_WINS; размер целей
 // (у угля — слои) подбирается под это окно.
-// пороги берутся из тех же партий: сколько очков и ячеек было к концу партии.
 // С --keep-moves цели и ходы не трогаются: только условия звёзд.
 // С --only подгоняются только эти места этажа: остальные уровни могли быть поправлены вручную.
 
-import {
-  FLOOR_SIZE,
-  floorOf,
-  type Goal,
-  type Level,
-  type StarTask,
-  type StarTaskKind,
-} from '../src/core/level';
+import { FLOOR_SIZE, floorOf, type Goal, type Level, type StarTask } from '../src/core/level';
 import { LEVELS } from '../src/levels';
 import { levelNumber } from '../src/ui/levelText';
 import { play, type GameResult } from './levelBots';
-import { lowerCrowns, resizeLevel, type SizedLevel } from './levelLayout';
+import { lowerCrowns, resizeLevel, type ResizeOptions, type SizedLevel } from './levelLayout';
 
 // Скрипт запускается в Node (vite-node), а типов Node в проекте нет
 declare const process: { argv: string[] };
@@ -33,20 +26,25 @@ declare function require(name: 'node:fs'): {
   writeFileSync(path: string, data: string): void;
 };
 
-const NO_LIMIT = 50;
+/** Партии «почти без лимита»: с запасом над потолком ходов, чтобы было видно, сколько их нужно */
+const NO_LIMIT = 60;
+/** Ходов на уровне: не меньше 25 и не больше 45 — больше игроку не даём */
 const MIN_MOVES = 25;
+const MAX_MOVES = 45;
+/** Звёзды: 2★ и 3★ — столько ячеек 3 уровня сверх целей на ячейки 3 уровня */
+const STAR_STEPS = [10, 15] as const;
+/** Места этажа (с нуля), где бот может купить одну бомбу: 5-е и 9-е */
+const BOMB_PLACES = [4, 8];
 /** Партий на одну примерку размера целей: точная серия — только для выбранного */
 const SEARCH_GAMES = 40;
 /** Во сколько раз меняются цели при поиске */
 const SCALES = [0.25, 0.35, 0.45, 0.6, 0.8, 1, 1.25, 1.5, 2, 2.5, 3, 4, 5];
 
 /**
- * Какую долю партий опытный бот без покупок проходит на каждом месте этажа и какую — на три звезды.
- * Кривая владельца (одна на все этажи): места 1–4 и 6–8 — около 10% поражений, 5 и 9 — 45–55%,
- * 10 — 85–95% без покупок
+ * Какую долю партий опытный бот проходит на каждом месте этажа. Кривая владельца (одна на все этажи):
+ * места 1–4 и 6–8 — около 10% поражений, 5 и 9 — 45–55% (с одной бомбой), 10 — 85–95% без покупок
  */
 const WIN_CURVE = [0.9, 0.9, 0.9, 0.9, 0.5, 0.9, 0.9, 0.9, 0.5, 0.1];
-const THREE_STARS_CURVE = [0.8, 0.8, 0.8, 0.8, 0.3, 0.8, 0.8, 0.8, 0.3, 0.04];
 /**
  * 10-е место с покупкой спецфишек за звёзды (по правилам: бомба — одна за попытку): поражений 50–70%,
  * то есть побед 30–50%. Звёзд у бота — сколько игрок обычно собирает на 9 уровнях этажа
@@ -76,59 +74,23 @@ function finishedAt(game: GameResult, goals: readonly Goal[]): number {
   return Math.max(...moves);
 }
 
-/** Порог, которого достигает доля share значений: берём снизу, чтобы доля не вышла меньше */
-function threshold(values: readonly number[], share: number): number {
-  const sorted = [...values].sort((a, b) => a - b);
-  if (sorted.length === 0) return 1;
-  return sorted[Math.max(0, Math.floor(sorted.length * (1 - share)))]!;
+/** Звёзды по шаблону: 10 и 15 ячеек 3 уровня, а если цель — сами ячейки 3 уровня, то сверх неё */
+export function starTasks(goals: readonly Goal[]): StarTask[] {
+  const base = goals
+    .filter((goal) => goal.kind === 'level3' || goal.kind === 'level3color')
+    .reduce((sum, goal) => sum + goal.count, 0);
+  return STAR_STEPS.map((step) => ({ kind: 'level3', count: base + step }));
 }
 
-/**
- * Вторая звезда — очки: её берут примерно (win + three) / 2 партий. Третья — ячейки: обе задачи
- * вместе — примерно three. Значения берутся на конец партии: ход, когда выполнены цели, а с коронами —
- * когда на дне все короны или кончились ходы.
- */
-function starTasks(
-  played: readonly GameResult[],
-  goals: readonly Goal[],
-  moves: number,
-  place: number,
-  win: number,
-  three: number,
-): StarTask[] {
-  const cells = cellsTask(place);
-  const won = played.flatMap((game) => {
-    const at = finishedAt(game, goals);
-    if (at > moves) return [];
-    // Выполнив цели, игрок играет до конца ходов (или пока не взял все звёзды): значения — на последний ход
-    const end = Math.min(moves, game.track.score.length);
-    return [{ score: game.track.score[end - 1] ?? 0, cells: game.track[cells][end - 1] ?? 0 }];
-  });
-  const middle = (win + three) / 2;
-  const round = (value: number) => Math.max(10, Math.floor(value / 10) * 10);
-  const score = round(
-    threshold(
-      won.map((game) => game.score),
-      middle / win,
-    ),
+/** Сколько партий взяли бы звёзды при таком лимите: ячейки 3 уровня — на последний ход */
+function starShare(played: readonly GameResult[], goals: readonly Goal[], moves: number) {
+  const stars = starTasks(goals);
+  const won = played.filter((game) => finishedAt(game, goals) <= moves);
+  const cells = (game: GameResult) =>
+    game.track.level3[Math.min(moves, game.track.level3.length) - 1] ?? 0;
+  return stars.map(
+    (task) => won.filter((game) => cells(game) >= task.count).length / played.length,
   );
-  const rich = won.filter((game) => game.score >= score);
-  const count = Math.max(
-    1,
-    threshold(
-      rich.map((game) => game.cells),
-      three / middle,
-    ),
-  );
-  return [
-    { kind: 'score', count: score },
-    { kind: cells, count },
-  ];
-}
-
-/** Третья звезда: ячейки 2 уровня на нечётных местах этажа, 3 — на чётных */
-function cellsTask(place: number): StarTaskKind {
-  return place % 2 === 0 ? 'level2' : 'level3';
 }
 
 /**
@@ -138,11 +100,27 @@ function cellsTask(place: number): StarTaskKind {
 function playAll(level: Level, sized: SizedLevel, count: number): GameResult[] {
   const place = (level.id - 1) % FLOOR_SIZE;
   const stars: StarTask[] = [
-    { kind: 'score', count: Infinity },
-    { kind: cellsTask(place), count: Infinity },
+    { kind: 'level3', count: Infinity },
+    { kind: 'level3', count: Infinity },
   ];
   const open: Level = { ...level, ...sized, stars, moves: NO_LIMIT };
-  return Array.from({ length: count }, (_, i) => play(open, 7000 * level.id + i + 1, 'expert'));
+  const bombs = BOMB_PLACES.includes(place) ? 1 : undefined;
+  return Array.from({ length: count }, (_, i) =>
+    play(open, 7000 * level.id + i + 1, 'expert', 0, bombs),
+  );
+}
+
+/**
+ * Что подгонщик может менять: на первом этаже лёд — главная цель, его 30–40, и он не меняется,
+ * пока у уровня есть другие цели, которыми можно подогнать сложность
+ */
+function resizeOptions(level: Level): ResizeOptions {
+  const others = level.goals.some((goal) => !['ice', 'item', 'stone'].includes(goal.kind));
+  const fixed: Goal['kind'][] =
+    floorOf(level.id) === 1 && others && level.goals.some((goal) => goal.kind === 'ice')
+      ? ['ice']
+      : [];
+  return { coalLayers: level.coalLayers, hiddenGold: level.hiddenGold, fixed };
 }
 
 const usedMoves = (played: readonly GameResult[], goals: readonly Goal[]) =>
@@ -154,19 +132,16 @@ const usedMoves = (played: readonly GameResult[], goals: readonly Goal[]) =>
  * задуманного — ещё и середину
  */
 function chooseSize(source: Level, place: number): SizedLevel {
-  let level = source;
+  const level = source;
   const winShare = WIN_CURVE[place]!;
   const wanted = MOVES_CURVE[place]!;
   if (place === BOSS) return chooseBossSize(level);
   const onlyCrowns = level.goals.every((goal) => goal.kind === 'item');
   if (onlyCrowns) return chooseCrownHeight(level, winShare, wanted);
-  // Короны вместе с другими целями: сначала опускаем короны, потом подбираем размер остальных целей
-  if (level.layout.join('').includes('o')) {
-    level = { ...level, layout: chooseCrownHeight(level, winShare, wanted).layout };
-  }
+  // Короны вместе с другими целями стоят, где их поставили (не ниже середины поля): рычаг — остальные цели
   const tried: { scale: number; sized: SizedLevel; moves: number }[] = [];
   const attempt = (scale: number) => {
-    const sized = resizeLevel(level.layout, level.goals, scale, level.coalLayers);
+    const sized = resizeLevel(level.layout, level.goals, scale, resizeOptions(level));
     // Тот же размер уже примеряли: на поле не осталось места для препятствий
     const known = tried.find((t) => JSON.stringify(t.sized) === JSON.stringify(sized));
     if (known) return null;
@@ -211,9 +186,9 @@ function chooseCrownHeight(level: Level, winShare: number, wanted: number): Size
   return { layout, goals };
 }
 
-/** Ходы под долю побед: не меньше MIN_MOVES и не больше NO_LIMIT */
+/** Ходы под долю побед: не меньше MIN_MOVES и не больше MAX_MOVES */
 const movesFor = (used: readonly number[], share: number) =>
-  Math.min(NO_LIMIT, Math.max(MIN_MOVES, quantile(used, share)));
+  Math.min(MAX_MOVES, Math.max(MIN_MOVES, quantile(used, share)));
 
 /** Доля побед бота, покупающего спецфишки за звёзды, при лимите ходов */
 function bombWins(level: Level, sized: SizedLevel, moves: number, count: number): number {
@@ -241,7 +216,7 @@ let lastBuys: Record<string, number> = {};
 function chooseBossSize(level: Level): SizedLevel {
   let best: { sized: SizedLevel; distance: number } | null = null;
   for (const scale of [0.5, 0.7, 1, 1.4, 2, 2.8, 4]) {
-    const sized = resizeLevel(level.layout, level.goals, scale, level.coalLayers);
+    const sized = resizeLevel(level.layout, level.goals, scale, resizeOptions(level));
     const played = playAll(level, sized, SEARCH_GAMES);
     const used = usedMoves(played, sized.goals);
     const moves = movesFor(used, WIN_CURVE[BOSS]!);
@@ -264,10 +239,10 @@ function tune(level: Level, place: number) {
   const used = usedMoves(played, sized.goals);
   const moves = keepMoves ? level.moves : movesFor(used, winShare);
   const win = used.filter((value) => value <= moves).length / games;
-  const three = Math.min(THREE_STARS_CURVE[place]!, win);
-  const stars = starTasks(played, sized.goals, moves, place, win, three);
+  const stars = starTasks(sized.goals);
+  const starWins = starShare(played, sized.goals, moves);
   const bombs = place === BOSS ? bombWins(level, sized, moves, games) : undefined;
-  return { ...sized, moves, stars, win, target: winShare, bombs };
+  return { ...sized, moves, stars, win, target: winShare, bombs, starWins };
 }
 
 const fs = require('node:fs');
@@ -275,16 +250,21 @@ for (const level of LEVELS) {
   if (floorOf(level.id) !== floor) continue;
   const place = (level.id - 1) % FLOOR_SIZE;
   if (only && !only.includes(place + 1)) continue;
-  const { layout, goals, moves, stars, win, target, bombs, coalLayers } = tune(level, place);
+  const { layout, goals, moves, stars, win, target, bombs, coalLayers, hiddenGold, starWins } =
+    tune(level, place);
   const name = String(place + 1).padStart(2, '0');
   const path = `src/levels/floor${String(floor).padStart(2, '0')}/${name}.json`;
   const file = JSON.parse(fs.readFileSync(path, 'utf8')) as Level;
   fs.writeFileSync(
     path,
-    `${JSON.stringify({ ...file, layout, goals, moves, stars, ...(coalLayers !== undefined && { coalLayers }) }, null, 2)}
+    `${JSON.stringify({ ...file, layout, goals, moves, stars, ...(coalLayers !== undefined && { coalLayers }), ...(hiddenGold !== undefined && { hiddenGold }) }, null, 2)}
 `,
   );
-  const text = goals.map((goal) => `${goal.kind} ${goal.count}`).join(', ');
+  const text =
+    goals.map((goal) => `${goal.kind} ${goal.count}`).join(', ') +
+    (coalLayers !== undefined ? ` (слоёв ${coalLayers})` : '') +
+    (hiddenGold !== undefined ? ` (золота спрятано ${hiddenGold})` : '');
+  const starsText = `; ★★ ${Math.round(starWins[0]! * 100)}%, ★★★ ${Math.round(starWins[1]! * 100)}%`;
   const short =
     Math.abs(win - target) > 0.05 ? ` — мимо кривой (${Math.round(target * 100)}%)` : '';
   const withBombs =
@@ -298,6 +278,6 @@ for (const level of LEVELS) {
             .join(', ') || 'ничего'
         })`;
   console.log(
-    `${levelNumber(level)}: ${text}; ходов ${moves}; победы ${Math.round(win * 100)}%${short}${withBombs}`,
+    `${levelNumber(level)}: ${text}; ходов ${moves}; победы ${Math.round(win * 100)}%${short}${starsText}${withBombs}`,
   );
 }

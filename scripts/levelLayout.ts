@@ -21,6 +21,8 @@ const ICE = 'iJg';
 const GOLD = 'gtuvw';
 /** Все сундуки поля: простые, с сокровищами, в цепях */
 const CHESTS = 'bt123uvw';
+/** Где прячется спрятанное золото: лёд 2 уровня и сундуки без сокровищ */
+const HIDEOUTS = 'Jb123';
 /** Сколько звеньев бывает на одной цепи */
 const MAX_LINKS = 3;
 
@@ -29,6 +31,16 @@ export interface SizedLevel {
   goals: Goal[];
   /** Слои угля — рычаг сложности уровней с углём */
   coalLayers?: number;
+  /** Сколько золота спрятано в случайных льдинах и сундуках */
+  hiddenGold?: number;
+}
+
+/** Что ещё нужно знать, чтобы поменять размер целей */
+export interface ResizeOptions {
+  coalLayers?: number;
+  hiddenGold?: number;
+  /** Цели, которые не меняются: например, лёд 30–40 на первом этаже — там рычаг остальные цели */
+  fixed?: readonly Goal['kind'][];
 }
 
 /** Цели в scale раз больше (меньше 1 — меньше); препятствий на поле — ровно по цели */
@@ -36,23 +48,35 @@ export function resizeLevel(
   layout: readonly string[],
   goals: readonly Goal[],
   scale: number,
-  coalLayers?: number,
+  { coalLayers, hiddenGold, fixed = [] }: ResizeOptions = {},
 ): SizedLevel {
   const grid = layout.map((line) => [...line]);
-  const has = (kind: Goal['kind']) => goals.some((goal) => goal.kind === kind);
+  const has = (kind: Goal['kind']) =>
+    goals.some((goal) => goal.kind === kind) && !fixed.includes(kind);
   // Сначала меняется поле, потом считаются цели: лёд и сундуки со слитками входят в две цели сразу
-  if (has('gold')) resizeGold(grid, scale);
+  if (has('gold')) resizeGold(grid, scale, hiddenGold !== undefined);
   if (has('ice')) resizeIce(grid, scale);
   if (has('box')) resizeChests(grid, scale);
+  // Спрятанное золото — в той же доле, но не больше, чем есть льдин 2 уровня и сундуков без сокровищ
+  const hidden =
+    hiddenGold === undefined
+      ? undefined
+      : Math.min(
+          cellsOf(grid, HIDEOUTS).length,
+          has('gold') ? Math.max(1, Math.round(hiddenGold * scale)) : hiddenGold,
+        );
   const sized = goals.map((goal): Goal => {
     if (goal.kind === 'ice') return { kind: 'ice', count: cellsOf(grid, ICE).length };
     if (goal.kind === 'box') return { kind: 'box', count: cellsOf(grid, CHESTS).length };
-    if (goal.kind === 'gold') return { kind: 'gold', count: cellsOf(grid, GOLD).length };
+    if (goal.kind === 'gold') {
+      return { kind: 'gold', count: cellsOf(grid, GOLD).length + (hidden ?? 0) };
+    }
     // Камни — помеха, короны и уголь меняются не числом: у короны — высота, у угля — слои
-    if (['item', 'stone', 'coal'].includes(goal.kind)) return goal;
+    if (['item', 'stone', 'coal'].includes(goal.kind) || fixed.includes(goal.kind)) return goal;
     return { ...goal, count: Math.max(1, Math.round(goal.count * scale)) };
   });
   const result: SizedLevel = { layout: grid.map((line) => line.join('')), goals: sized };
+  if (hidden !== undefined) result.hiddenGold = hidden;
   if (coalLayers !== undefined && goals.some((goal) => goal.kind === 'coal')) {
     result.coalLayers = Math.min(COAL_MAX_LAYERS, Math.max(1, Math.round(coalLayers * scale)));
   }
@@ -66,9 +90,12 @@ function resizeIce(grid: Grid, scale: number): void {
   if (count > 0) resizeLayer(grid, symbol, count, scale);
 }
 
-/** Золото: слитки во льду и сундуки с сокровищами (без цепей) меняются каждые в своей доле */
-function resizeGold(grid: Grid, scale: number): void {
-  for (const symbol of ['g', 't']) {
+/**
+ * Золото: слитки во льду и сундуки с сокровищами (без цепей) меняются каждые в своей доле.
+ * Со спрятанным золотом меняются и места, где оно прячется: лёд 2 уровня и простые сундуки
+ */
+function resizeGold(grid: Grid, scale: number, hidden: boolean): void {
+  for (const symbol of hidden ? ['g', 't', 'J', 'b'] : ['g', 't']) {
     const count = cellsOf(grid, symbol).length;
     if (count > 0) resizeLayer(grid, symbol, count, scale);
   }
@@ -226,16 +253,20 @@ function resizeChains(grid: Grid, scale: number): number {
 
 /**
  * Короны опускаются на rows клеток своего столбца (дыры не клетки): так уровень с коронами
- * становится легче, а цели не меняются. На дно столбца корону не ставим — она засчиталась бы сразу,
- * и встаёт она только на свободную клетку: если та занята, корона остаётся выше.
+ * становится легче, а цели не меняются. Ниже середины поля корону не ставим: снизу её доводят
+ * за пару ходов. Встаёт она только на свободную клетку: если та занята, корона остаётся выше.
  */
+/** Самая низкая строка, где может стоять корона: середина поля */
+export function middleRow(grid: readonly (readonly string[] | string)[]): number {
+  return Math.floor((grid.length - 1) / 2);
+}
+
 export function lowerCrowns(layout: readonly string[], rows: number): string[] {
   const grid = layout.map((line) => [...line]);
   for (const crown of cellsOf(grid, 'o')) {
     const below = grid
       .map((line, row) => ({ row, symbol: line[crown.col]! }))
-      .filter(({ row, symbol }) => row > crown.row && symbol !== '#')
-      .slice(0, -1);
+      .filter(({ row, symbol }) => row > crown.row && row <= middleRow(grid) && symbol !== '#');
     let target = Math.min(rows, below.length) - 1;
     while (target >= 0 && below[target]!.symbol !== '.') target--;
     if (target < 0) continue;

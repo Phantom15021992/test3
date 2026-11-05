@@ -49,6 +49,25 @@ describe('размер целей уровня', () => {
     );
   });
 
+  it('спрятанное золото меняется вместе с местами, где прячется; закреплённая цель не меняется', () => {
+    const layout = ['......', '.JJJJ.', '.JJJJ.', '.JJJJ.', '.JJJJ.', '......'];
+    const goals = [{ kind: 'gold', count: 4 } as const];
+    const sized = resizeLevel(layout, goals, 0.5, { hiddenGold: 4 });
+    expect(sized.hiddenGold).toBe(2);
+    expect(count(sized.layout, 'J')).toBe(8);
+    expect(sized.goals).toEqual([{ kind: 'gold', count: 2 }]);
+    const ice = [
+      { kind: 'ice', count: 16 },
+      { kind: 'level3', count: 10 },
+    ] as const;
+    const fixed = resizeLevel(layout, ice, 2, { fixed: ['ice'] });
+    expect(fixed.layout).toEqual(layout);
+    expect(fixed.goals).toEqual([
+      { kind: 'ice', count: 16 },
+      { kind: 'level3', count: 20 },
+    ]);
+  });
+
   it('цели из ячеек растут числом, короны не меняются', () => {
     const goals = [
       { kind: 'level2', count: 10 },
@@ -60,12 +79,13 @@ describe('размер целей уровня', () => {
     ]);
   });
 
-  it('короны опускаются по своему столбцу сквозь дыры, но не на дно и не на занятую клетку', () => {
-    const layout = ['o..o', '....', '#...', '..s.', '....'];
+  it('короны опускаются по своему столбцу сквозь дыры, но не ниже середины и не на занятую клетку', () => {
+    const below = ['....', '....', '....', '....'];
+    const layout = ['o..o', '....', '#...', '..s.', '....', ...below];
     // Левая корона пролетает дыру во 2-й строке
-    expect(lowerCrowns(layout, 2)).toEqual(['....', '....', '#..o', 'o.s.', '....']);
-    // Ниже некуда: на дне корона засчиталась бы сразу
-    expect(lowerCrowns(layout, 10)).toEqual(['....', '....', '#...', 'o.so', '....']);
+    expect(lowerCrowns(layout, 2)).toEqual(['....', '....', '#..o', 'o.s.', '....', ...below]);
+    // Ниже середины поля (строка 4 из 9) не опускаются: снизу корону доводят за пару ходов
+    expect(lowerCrowns(layout, 10)).toEqual(['....', '....', '#...', '..s.', 'o..o', ...below]);
     // Под короной камень: она встаёт выше него
     expect(lowerCrowns(['..o.', '..s.', '....'], 1)).toEqual(['..o.', '..s.', '....']);
   });
