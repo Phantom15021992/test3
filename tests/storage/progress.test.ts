@@ -3,6 +3,7 @@ import {
   floorWallet,
   isLevelOpen,
   loadLevelStars,
+  resetCampaignProgress,
   saveLevelStars,
   saveLevelSpending,
 } from '../../src/storage/progress';
@@ -12,6 +13,7 @@ beforeEach(() => {
   vi.stubGlobal('localStorage', {
     getItem: (key: string) => data.get(key) ?? null,
     setItem: (key: string, value: string) => data.set(key, value),
+    removeItem: (key: string) => data.delete(key),
   });
 });
 
@@ -87,5 +89,20 @@ describe('порядок уровней', () => {
     expect(isLevelOpen(2, stars)).toBe(true);
     expect(isLevelOpen(3, stars)).toBe(false);
     expect(isLevelOpen(11, stars)).toBe(true);
+  });
+});
+
+describe('сброс прогресса кампании', () => {
+  it('стирает звёзды и траты: открыт только 1-1, кошельки пусты', () => {
+    saveLevelStars(1, 3);
+    saveLevelStars(2, 2);
+    saveLevelSpending(2, 1);
+    expect(isLevelOpen(3, loadLevelStars())).toBe(true);
+    resetCampaignProgress();
+    const stars = loadLevelStars();
+    expect(stars).toEqual({});
+    expect(isLevelOpen(1, stars)).toBe(true);
+    expect(isLevelOpen(2, stars)).toBe(false);
+    expect(floorWallet(1)).toBe(0);
   });
 });

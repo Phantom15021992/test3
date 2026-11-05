@@ -42,3 +42,5 @@ export const UI_BUTTON_COLOR = 0x4a6cf7;
 export const UI_BUTTON_ALT_COLOR = 0x8e5cf7;
 export const UI_TEXT_COLOR = '#ffffff';
 export const UI_MUTED_TEXT_COLOR = '#aab2d5';
+/** Надпись необратимого действия (сброс прогресса) */
+export const UI_WARNING_TEXT_COLOR = '#ff8a80';

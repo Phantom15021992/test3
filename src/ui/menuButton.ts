@@ -30,8 +30,13 @@ export function createMenuButton(
 }
 
 /** Подпись по центру кнопки меню */
-export function menuButtonLabel(scene: Phaser.Scene, label: string): Phaser.GameObjects.Text {
+export function menuButtonLabel(
+  scene: Phaser.Scene,
+  label: string,
+  fontSize = 40,
+  color = UI_TEXT_COLOR,
+): Phaser.GameObjects.Text {
   return scene.add
-    .text(0, 0, label, { fontFamily: 'sans-serif', fontSize: '40px', color: UI_TEXT_COLOR })
+    .text(0, 0, label, { fontFamily: 'sans-serif', fontSize: `${fontSize}px`, color })
     .setOrigin(0.5);
 }

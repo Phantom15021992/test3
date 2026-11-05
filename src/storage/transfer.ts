@@ -19,6 +19,18 @@ export function loadTransferCode(): string {
   }
 }
 
+/**
+ * Забыть код переноса — при сбросе прогресса: перед сохранением копия с сервера вливается в местный
+ * прогресс, и со старым кодом сброшенный прогресс вернулся бы
+ */
+export function forgetTransferCode(): void {
+  try {
+    localStorage.removeItem(CODE_KEY);
+  } catch {
+    // Хранилище недоступно — забывать нечего
+  }
+}
+
 function saveTransferCode(code: string): void {
   try {
     localStorage.setItem(CODE_KEY, code);

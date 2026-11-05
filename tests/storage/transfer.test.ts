@@ -8,7 +8,13 @@ import {
   saveLevelStars,
   saveLevelSpending,
 } from '../../src/storage/progress';
-import { loadFromCode, normalizeCode, saveToCode } from '../../src/storage/transfer';
+import {
+  forgetTransferCode,
+  loadFromCode,
+  loadTransferCode,
+  normalizeCode,
+  saveToCode,
+} from '../../src/storage/transfer';
 
 const config = { url: 'https://example.test', key: 'public-key' };
 
@@ -17,6 +23,16 @@ beforeEach(() => {
   vi.stubGlobal('localStorage', {
     getItem: (key: string) => data.get(key) ?? null,
     setItem: (key: string, value: string) => data.set(key, value),
+    removeItem: (key: string) => data.delete(key),
+  });
+});
+
+describe('сброс прогресса', () => {
+  it('код переноса забывается: иначе сброшенный прогресс вернулся бы с сервера', () => {
+    localStorage.setItem('match3.transferCode', 'ABCD2345');
+    expect(loadTransferCode()).toBe('ABCD2345');
+    forgetTransferCode();
+    expect(loadTransferCode()).toBe('');
   });
 });
 

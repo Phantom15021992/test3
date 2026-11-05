@@ -36,6 +36,18 @@ export function floorWallet(floor: number): number {
   return earned - (loadRecord(SPENT_KEY)[floor] ?? 0);
 }
 
+/**
+ * Сброс прогресса кампании на этом устройстве: звёзды и траты всех уровней стираются, открыт только 1-1.
+ * Код переноса забывает transfer.ts (forgetTransferCode): иначе прогресс вернулся бы с сервера
+ */
+export function resetCampaignProgress(): void {
+  try {
+    for (const key of [STARS_KEY, SPENT_KEY, LEVEL_SPENT_KEY]) localStorage.removeItem(key);
+  } catch {
+    // Хранилище недоступно — стирать нечего
+  }
+}
+
 /** Уровни открываются строго по порядку: нужен пройденный предыдущий */
 export function isLevelOpen(levelId: number, stars: LevelStars): boolean {
   return levelId === 1 || (stars[levelId - 1] ?? 0) > 0;
