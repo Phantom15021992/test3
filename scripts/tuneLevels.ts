@@ -7,7 +7,7 @@
 // (MOVES_CURVE): цели растут или уменьшаются, препятствий на поле — ровно по цели (levelLayout.ts).
 // Затем ходы выставляются под долю побед с кривой. Звёзды: вторая — за очки, третья — за ячейки
 // (2 уровня на нечётных местах этажа, 3 — на чётных);
-// 10-е место: без покупок почти не проходится, а с двумя бомбами — в окне BOMB_WINS; размер целей
+// 10-е место: без покупок почти не проходится, а с покупкой спецфишек — в окне BOMB_WINS; размер целей
 // (у угля — слои) подбирается под это окно.
 // пороги берутся из тех же партий: сколько очков и ячеек было к концу партии.
 // С --keep-moves цели и ходы не трогаются: только условия звёзд.
@@ -43,12 +43,15 @@ const SCALES = [0.25, 0.35, 0.45, 0.6, 0.8, 1, 1.25, 1.5, 2, 2.5, 3, 4, 5];
 /**
  * Какую долю партий опытный бот без покупок проходит на каждом месте этажа и какую — на три звезды.
  * Кривая владельца (одна на все этажи): места 1–4 и 6–8 — около 10% поражений, 5 и 9 — 45–55%,
- * 10 — 90–95% без покупок
+ * 10 — 85–95% без покупок
  */
-const WIN_CURVE = [0.9, 0.9, 0.9, 0.9, 0.5, 0.9, 0.9, 0.9, 0.5, 0.075];
+const WIN_CURVE = [0.9, 0.9, 0.9, 0.9, 0.5, 0.9, 0.9, 0.9, 0.5, 0.1];
 const THREE_STARS_CURVE = [0.8, 0.8, 0.8, 0.8, 0.3, 0.8, 0.8, 0.8, 0.3, 0.04];
-/** 10-е место с покупкой до двух бомб: поражений 50–70%, то есть побед 30–50% */
-const BOMBS = 2;
+/**
+ * 10-е место с покупкой спецфишек за звёзды (по правилам: бомба — одна за попытку): поражений 50–70%,
+ * то есть побед 30–50%. Звёзд у бота — сколько игрок обычно собирает на 9 уровнях этажа
+ */
+const BOSS_WALLET = 20;
 const BOMB_WINS = { min: 0.3, max: 0.5, target: 0.4 };
 const BOSS = FLOOR_SIZE - 1;
 /** Сколько ходов задумано на уровне: от 25 до 40, к концу этажа длиннее; ходов на уровне — 25–50 */
@@ -212,27 +215,41 @@ function chooseCrownHeight(level: Level, winShare: number, wanted: number): Size
 const movesFor = (used: readonly number[], share: number) =>
   Math.min(NO_LIMIT, Math.max(MIN_MOVES, quantile(used, share)));
 
-/** Доля побед с покупкой до BOMBS бомб при лимите ходов */
+/** Доля побед бота, покупающего спецфишки за звёзды, при лимите ходов */
 function bombWins(level: Level, sized: SizedLevel, moves: number, count: number): number {
   const open: Level = { ...level, ...sized, moves };
-  const won = Array.from({ length: count }, (_, i) =>
-    play(open, 9000 * level.id + i + 1, 'expert', 0, BOMBS),
-  ).filter((game) => game.won).length;
-  return won / count;
+  const games = Array.from({ length: count }, (_, i) =>
+    play(open, 9000 * level.id + i + 1, 'buyer', BOSS_WALLET),
+  );
+  // Что бот покупал — в среднем за партию, для отчёта
+  lastBuys = {};
+  for (const game of games) {
+    for (const [type, bought] of Object.entries(game.boughtBy)) {
+      lastBuys[type] = (lastBuys[type] ?? 0) + bought / count;
+    }
+  }
+  return games.filter((game) => game.won).length / count;
 }
 
+/** Покупки бота в последнем замере 10-го места: вид спецфишки → сколько в среднем за партию */
+let lastBuys: Record<string, number> = {};
+
 /**
- * 10-е место: ходы ставятся под 7,5% побед без покупок, а размер целей (у угля — слои) — так,
- * чтобы с двумя бомбами побед было ближе всего к BOMB_WINS.target
+ * 10-е место: ходы ставятся под 10% побед без покупок (окно 5–15%), а размер целей (у угля — слои) — так,
+ * чтобы с покупкой спецфишек побед было ближе всего к BOMB_WINS.target
  */
 function chooseBossSize(level: Level): SizedLevel {
   let best: { sized: SizedLevel; distance: number } | null = null;
-  for (const scale of [0.35, 0.5, 0.7, 1, 1.4, 2]) {
+  for (const scale of [0.5, 0.7, 1, 1.4, 2, 2.8, 4]) {
     const sized = resizeLevel(level.layout, level.goals, scale, level.coalLayers);
     const played = playAll(level, sized, SEARCH_GAMES);
-    const moves = movesFor(usedMoves(played, sized.goals), WIN_CURVE[BOSS]!);
+    const used = usedMoves(played, sized.goals);
+    const moves = movesFor(used, WIN_CURVE[BOSS]!);
     const share = bombWins(level, sized, moves, SEARCH_GAMES);
-    const distance = Math.abs(share - BOMB_WINS.target);
+    // Ходов не меньше MIN_MOVES: мелкие цели и без бомб проходятся чаще задуманного — это тоже промах
+    const plain = used.filter((value) => value <= moves).length / used.length;
+    const distance =
+      Math.abs(share - BOMB_WINS.target) + Math.max(0, plain - WIN_CURVE[BOSS]! - 0.05) * 2;
     if (!best || distance < best.distance) best = { sized, distance };
   }
   return best!.sized;
@@ -273,7 +290,13 @@ for (const level of LEVELS) {
   const withBombs =
     bombs === undefined
       ? ''
-      : `; с бомбами ${Math.round(bombs * 100)}%${bombs < BOMB_WINS.min || bombs > BOMB_WINS.max ? ' — мимо окна 30–50%' : ''}`;
+      : `; с покупками ${Math.round(bombs * 100)}%${bombs < BOMB_WINS.min || bombs > BOMB_WINS.max ? ' — мимо окна 30–50%' : ''}` +
+        ` (куплено за партию: ${
+          Object.entries(lastBuys)
+            .filter(([, value]) => value > 0)
+            .map(([type, value]) => `${type} ${value.toFixed(1)}`)
+            .join(', ') || 'ничего'
+        })`;
   console.log(
     `${levelNumber(level)}: ${text}; ходов ${moves}; победы ${Math.round(win * 100)}%${short}${withBombs}`,
   );
