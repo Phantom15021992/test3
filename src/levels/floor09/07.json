@@ -1,41 +1,41 @@
 {
   "id": 87,
   "title": "Буква C",
-  "hint": "Совпадения рядом с углём откалывают слои: звёзды — по три",
+  "hint": "Совпадения рядом с углём откалывают слои: ячейки 3 уровня — по три",
   "layout": [
-    "...cccc...",
-    "...cccc...",
-    "...cccc...",
-    "...cccc...",
+    "..........",
+    ".ccJccJcc.",
+    ".ccJccJcc.",
+    "..........",
     ".....#####",
     ".....#####",
     "..........",
-    "..........",
-    "....JJJ...",
+    ".ccJccJcc.",
+    ".ccJccJcc.",
     ".........."
   ],
   "colors": 3,
-  "moves": 39,
+  "moves": 30,
   "goals": [
     {
       "kind": "coal",
-      "count": 1
+      "count": 6
     },
     {
       "kind": "ice",
-      "count": 3
+      "count": 8
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 8330
+      "kind": "level3",
+      "count": 10
     },
     {
-      "kind": "level2",
-      "count": 112
+      "kind": "level3",
+      "count": 15
     }
   ],
-  "coalLayers": 2,
+  "coalLayers": 9,
   "iceCracks": true
 }

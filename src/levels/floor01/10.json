@@ -1,42 +1,44 @@
 {
   "id": 10,
-  "title": "Сердце",
+  "title": "Поле 10×10",
   "hint": "Последний уровень этажа: здесь можно купить спецфишки",
   "layout": [
-    "#...##...#",
-    ".iii..iii.",
+    "..........",
+    "..........",
+    "..........",
+    "..........",
     ".iiiiiiii.",
     ".iiiiiiii.",
-    "#.iiiiii.#",
-    "##.iiii.##",
-    "###.ii.###",
-    "####..####"
+    ".iiiiiiii.",
+    ".iiiiiiii.",
+    ".iiiiiiii.",
+    ".........."
   ],
   "colors": 3,
-  "moves": 29,
+  "moves": 30,
   "goals": [
     {
       "kind": "ice",
-      "count": 34
+      "count": 40
     },
     {
       "kind": "level3",
-      "count": 22
+      "count": 10
     },
     {
       "kind": "level3color",
-      "count": 10,
+      "count": 4,
       "color": 2
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 8830
+      "kind": "level3",
+      "count": 24
     },
     {
       "kind": "level3",
-      "count": 28
+      "count": 29
     }
   ]
 }

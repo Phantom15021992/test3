@@ -3,42 +3,42 @@
   "title": "Поле 10×10",
   "hint": "Последний уровень этажа: здесь можно купить спецфишки",
   "layout": [
-    "cccc.cccc.",
-    "cccc3cccc.",
-    "cccc.cccc.",
-    "cccc.cccc.",
-    "......3...",
     "..........",
-    ".3........",
-    ".b..bb.3b.",
-    ".bbb3bbb..",
+    ".cc.cc.cc.",
+    ".cc2cc.cc.",
+    "......1...",
+    "....cc....",
+    ".cc2cc.cc.",
+    ".cc....cc.",
+    ".bb.cc2b..",
+    "..b2cc.b..",
     ".........."
   ],
   "colors": 3,
-  "moves": 27,
+  "moves": 30,
   "goals": [
     {
       "kind": "coal",
-      "count": 2
+      "count": 7
     },
     {
       "kind": "box",
-      "count": 15
+      "count": 10
     },
     {
       "kind": "level3color",
-      "count": 8,
+      "count": 4,
       "color": 0
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 9900
+      "kind": "level3",
+      "count": 14
     },
     {
       "kind": "level3",
-      "count": 31
+      "count": 19
     }
   ],
   "coalLayers": 9

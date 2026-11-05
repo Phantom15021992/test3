@@ -4,34 +4,34 @@
   "hint": "Толстый лёд выдерживает три удара: 2 уровень, 1 уровень, трещины",
   "layout": [
     "##......##",
-    "#........#",
-    ".1........",
-    ".......1..",
-    "#..J..J..#",
-    "##.J.bJ.##",
+    "#...1....#",
+    ".1JJJJJJ..",
+    ".J..bb.1J.",
+    "#.JJJJJJ.#",
+    "##.JbbJ.##",
     "###..1.###",
     "####..####"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 30,
   "goals": [
     {
       "kind": "ice",
-      "count": 4
+      "count": 16
     },
     {
       "kind": "box",
-      "count": 4
+      "count": 8
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 6260
+      "kind": "level3",
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 19
+      "count": 15
     }
   ],
   "iceCracks": true

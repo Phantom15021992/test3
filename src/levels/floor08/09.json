@@ -7,34 +7,35 @@
     "....##....",
     "....##....",
     "..........",
-    ".g........",
     "..........",
-    "..........",
-    ".Jg.##.gJ.",
+    ".JJJ..JJJ.",
+    ".JJJ..JJJ.",
+    ".J..##..J.",
     ".JJ.##.JJ.",
     "....##...."
   ],
   "colors": 3,
-  "moves": 50,
+  "moves": 30,
   "goals": [
     {
       "kind": "ice",
-      "count": 9
+      "count": 18
     },
     {
       "kind": "gold",
-      "count": 3
+      "count": 6
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 12170
+      "kind": "level3",
+      "count": 10
     },
     {
-      "kind": "level2",
-      "count": 145
+      "kind": "level3",
+      "count": 15
     }
   ],
-  "iceCracks": true
+  "iceCracks": true,
+  "hiddenGold": 6
 }

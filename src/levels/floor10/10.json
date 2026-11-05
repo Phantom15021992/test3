@@ -5,21 +5,21 @@
   "layout": [
     "###.oo.###",
     "#........#",
-    "cccc..cccc",
-    "cccc..cccc",
-    "cccc..cccc",
-    "cccc..cccc",
-    "...tttt...",
-    ".tttttttt.",
-    "#..tttt..#",
+    "..........",
+    "..cc..cc..",
+    "..ccbbcc..",
+    "..bbbbbb..",
+    ".bccbbccb.",
+    ".bccbbccb.",
+    "#..bbbb..#",
     "###....###"
   ],
   "colors": 3,
-  "moves": 50,
+  "moves": 30,
   "goals": [
     {
       "kind": "coal",
-      "count": 2
+      "count": 4
     },
     {
       "kind": "item",
@@ -27,19 +27,20 @@
     },
     {
       "kind": "gold",
-      "count": 16
+      "count": 7
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 14280
+      "kind": "level3",
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 38
+      "count": 15
     }
   ],
   "coalLayers": 9,
-  "iceCracks": true
+  "iceCracks": true,
+  "hiddenGold": 7
 }

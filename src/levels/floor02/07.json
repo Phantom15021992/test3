@@ -11,25 +11,25 @@
     "..........",
     "######....",
     "..........",
-    "...bbbbb..",
+    ".bbbbbbbb.",
     ".........."
   ],
   "colors": 3,
-  "moves": 25,
+  "moves": 30,
   "goals": [
     {
       "kind": "box",
-      "count": 5
+      "count": 8
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 3450
+      "kind": "level3",
+      "count": 10
     },
     {
-      "kind": "level2",
-      "count": 67
+      "kind": "level3",
+      "count": 15
     }
   ]
 }

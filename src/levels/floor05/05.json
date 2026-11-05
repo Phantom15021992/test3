@@ -4,36 +4,37 @@
   "hint": "Лёд 2 уровня выдерживает два удара",
   "layout": [
     "#...##...#",
-    "..........",
-    "..........",
-    "..........",
-    "#...##...#",
-    "#...##.t.#",
-    ".ttt..ttt.",
+    ".b......b.",
+    "..bbbbbb..",
+    ".b.b..b.b.",
+    "#.b.##.b.#",
+    "#.b.##.b.#",
+    ".JJb..bJJ.",
     ".JJJJJJJJ.",
     ".JJJ..JJJ.",
     "#...##...#"
   ],
   "colors": 3,
-  "moves": 31,
+  "moves": 30,
   "goals": [
     {
       "kind": "ice",
-      "count": 14
+      "count": 18
     },
     {
       "kind": "gold",
-      "count": 7
+      "count": 9
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 6250
+      "kind": "level3",
+      "count": 10
     },
     {
-      "kind": "level2",
-      "count": 93
+      "kind": "level3",
+      "count": 15
     }
-  ]
+  ],
+  "hiddenGold": 9
 }

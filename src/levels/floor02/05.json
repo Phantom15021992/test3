@@ -7,33 +7,34 @@
     "..........",
     ".....#####",
     "..........",
-    ".g.gggg.g.",
     "..........",
-    ".....#####",
+    "..........",
+    "..b..#####",
     "..........",
     ".bbbbbbbb.",
     ".........."
   ],
   "colors": 3,
-  "moves": 37,
+  "moves": 30,
   "goals": [
     {
       "kind": "box",
-      "count": 8
+      "count": 9
     },
     {
       "kind": "gold",
-      "count": 6
+      "count": 3
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 7810
+      "kind": "level3",
+      "count": 10
     },
     {
-      "kind": "level2",
-      "count": 117
+      "kind": "level3",
+      "count": 15
     }
-  ]
+  ],
+  "hiddenGold": 3
 }

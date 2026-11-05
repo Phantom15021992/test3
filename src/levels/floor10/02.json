@@ -3,19 +3,19 @@
   "title": "Буква U",
   "hint": "Доведи обе короны до самого низа",
   "layout": [
+    "..o.##.o..",
+    ".cc.##.cc.",
+    ".cc.##.cc.",
     "....##....",
-    "....##....",
-    "....##....",
-    "....##....",
-    "....##....",
-    "...cccc...",
-    "...cccc...",
-    "...cccc...",
-    "..occcco..",
+    ".cc.##.cc.",
+    ".cc....cc.",
+    "..........",
+    ".cc.cc....",
+    ".cc.cc....",
     ".........."
   ],
   "colors": 3,
-  "moves": 48,
+  "moves": 30,
   "goals": [
     {
       "kind": "item",
@@ -23,18 +23,18 @@
     },
     {
       "kind": "coal",
-      "count": 1
+      "count": 6
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 9280
+      "kind": "level3",
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 28
+      "count": 15
     }
   ],
-  "coalLayers": 4
+  "coalLayers": 9
 }

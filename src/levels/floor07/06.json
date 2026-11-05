@@ -5,36 +5,36 @@
   "layout": [
     "..........",
     "..........",
-    "..........",
+    "....1.....",
     "####....1.",
     "###......#",
     "#...1..###",
     "......####",
     ".1........",
-    "....bb1...",
+    "..b.bb1b..",
     ".........."
   ],
   "colors": 3,
-  "moves": 32,
+  "moves": 30,
   "goals": [
     {
       "kind": "level3color",
-      "count": 1,
+      "count": 3,
       "color": 1
     },
     {
       "kind": "box",
-      "count": 6
+      "count": 9
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 4940
+      "kind": "level3",
+      "count": 13
     },
     {
       "kind": "level3",
-      "count": 19
+      "count": 18
     }
   ]
 }

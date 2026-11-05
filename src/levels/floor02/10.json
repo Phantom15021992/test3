@@ -4,40 +4,41 @@
   "hint": "Последний уровень этажа: здесь можно купить спецфишки",
   "layout": [
     "###....###",
-    "#..gggg..#",
-    ".gggggggg.",
-    ".gggggggg.",
-    ".bbbbbbbb.",
-    ".bggggggb.",
-    ".gggggggg.",
-    ".bgbbbbgb.",
+    "#........#",
+    "..........",
+    "..........",
+    "..........",
+    "..........",
+    "..........",
+    ".b.bbbb.b.",
     "#..bbbb..#",
     "###....###"
   ],
   "colors": 3,
-  "moves": 42,
+  "moves": 30,
   "goals": [
     {
       "kind": "box",
-      "count": 20
+      "count": 10
     },
     {
       "kind": "gold",
-      "count": 36
+      "count": 3
     },
     {
       "kind": "level3",
-      "count": 45
+      "count": 10
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 17690
+      "kind": "level3",
+      "count": 20
     },
     {
       "kind": "level3",
-      "count": 49
+      "count": 25
     }
-  ]
+  ],
+  "hiddenGold": 3
 }

@@ -10,22 +10,32 @@ describe('размер целей уровня', () => {
   it('препятствий на поле ровно по цели, остальное поле не меняется', () => {
     for (const level of LEVELS) {
       for (const scale of [0.6, 1.5, 3]) {
-        const { layout, goals } = resizeLevel(level.layout, level.goals, scale);
+        const {
+          layout,
+          goals,
+          hiddenGold = 0,
+        } = resizeLevel(level.layout, level.goals, scale, {
+          hiddenGold: level.hiddenGold,
+        });
         // Золото во льду и сундуках не меняется: без цели на лёд или сундуки на поле только оно
+        // (и укрытия спрятанного золота)
         for (const [kind, all, own] of [
-          ['ice', 'iJg', 'iJ'],
-          ['box', 'bt123uvw', 'b123'],
+          ['ice', 'iJg', hiddenGold > 0 ? 'ig' : 'iJ'],
+          ['box', 'bt123uvw', hiddenGold > 0 ? '' : 'b123'],
           ['gold', 'gtuvw', 'gtuvw'],
         ] as const) {
           const goal = goals.find((g) => g.kind === kind)?.count;
           const where = `уровень ${level.id}, ${kind}, ×${scale}`;
+          const hidden = kind === 'gold' ? hiddenGold : 0;
           if (goal === undefined) expect(count(layout, own), where).toBe(0);
-          else expect(count(layout, all), where).toBe(goal);
+          else expect(count(layout, all) + hidden, where).toBe(goal);
         }
         expect(count(layout, '#')).toBe(count(level.layout, '#'));
         expect(count(layout, 'o')).toBe(count(level.layout, 'o'));
         expect(count(layout, 's')).toBe(count(level.layout, 's'));
-        expect(() => parseLevel({ ...level, layout, goals })).not.toThrow();
+        expect(() =>
+          parseLevel({ ...level, layout, goals, ...(hiddenGold > 0 && { hiddenGold }) }),
+        ).not.toThrow();
       }
     }
   });

@@ -5,7 +5,7 @@
   "layout": [
     "####..####",
     "###.ii.###",
-    "##.iiii.##",
+    "##.i..i.##",
     "#.iiiiii.#",
     ".iiiiiiii.",
     ".iiiiiiii.",
@@ -15,21 +15,25 @@
     "####..####"
   ],
   "colors": 3,
-  "moves": 25,
+  "moves": 30,
   "goals": [
     {
       "kind": "ice",
-      "count": 40
+      "count": 38
+    },
+    {
+      "kind": "level3",
+      "count": 10
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 4930
+      "kind": "level3",
+      "count": 20
     },
     {
       "kind": "level3",
-      "count": 17
+      "count": 25
     }
   ]
 }

@@ -6,32 +6,33 @@
     "##......##",
     "#..1.....#",
     "..........",
-    ".tt...1t..",
-    "#.1.bb...#",
-    "##.bttb.##",
-    "###..1.###",
+    "......2...",
+    "#.1bbb...#",
+    "##.b..b.##",
+    "###..2.###",
     "####..####"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 30,
   "goals": [
     {
       "kind": "box",
-      "count": 13
+      "count": 9
     },
     {
       "kind": "gold",
-      "count": 5
+      "count": 3
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 6450
+      "kind": "level3",
+      "count": 10
     },
     {
-      "kind": "level2",
-      "count": 81
+      "kind": "level3",
+      "count": 15
     }
-  ]
+  ],
+  "hiddenGold": 3
 }

@@ -1,40 +1,40 @@
 {
   "id": 64,
   "title": "Буква U",
-  "hint": "Совпадения рядом с углём откалывают слои: звёзды — по три",
+  "hint": "Совпадения рядом с углём откалывают слои: ячейки 3 уровня — по три",
   "layout": [
     "....##....",
+    ".cc.##.cc.",
+    ".cc.##.cc.",
     "....##....",
-    "....##....",
-    "....##....",
-    "....##....",
-    "...cccc...",
-    "...cccc...",
-    "...cccc...",
-    ".JJccccJJ.",
+    ".cc.##.cc.",
+    ".ccJ..Jcc.",
+    ".JJJJJJJJ.",
+    "..J..ccJ..",
+    ".JJ..ccJJ.",
     ".........."
   ],
   "colors": 3,
-  "moves": 28,
+  "moves": 30,
   "goals": [
     {
       "kind": "coal",
-      "count": 1
+      "count": 5
     },
     {
       "kind": "ice",
-      "count": 4
+      "count": 16
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 4660
+      "kind": "level3",
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 16
+      "count": 15
     }
   ],
-  "coalLayers": 2
+  "coalLayers": 7
 }

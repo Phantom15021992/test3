@@ -4,42 +4,42 @@
   "hint": "Последний уровень этажа: здесь можно купить спецфишки",
   "layout": [
     "..........",
-    "......2...",
-    "cccc##....",
-    "cccc......",
-    "cccc......",
-    "cccc..2...",
-    "..3.##....",
-    "..bb..b...",
-    ".bbbbbb3b.",
+    ".......1..",
+    ".cc.##.cc.",
+    ".cc....cc.",
+    "....2.....",
+    ".2........",
+    ".cc.##.cc.",
+    ".cc...bcc.",
+    "..b.bb2b..",
     ".........."
   ],
   "colors": 3,
-  "moves": 45,
+  "moves": 30,
   "goals": [
     {
       "kind": "coal",
-      "count": 1
+      "count": 4
     },
     {
       "kind": "box",
-      "count": 14
+      "count": 9
     },
     {
       "kind": "level3color",
-      "count": 8,
+      "count": 4,
       "color": 2
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 10430
+      "kind": "level3",
+      "count": 14
     },
     {
       "kind": "level3",
-      "count": 36
+      "count": 19
     }
   ],
-  "coalLayers": 9
+  "coalLayers": 8
 }

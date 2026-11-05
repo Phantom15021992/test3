@@ -1,41 +1,42 @@
 {
   "id": 77,
   "title": "Буква C",
-  "hint": "Подо льдом спрятаны слитки золота: разбей лёд, чтобы их достать",
+  "hint": "Слитки спрятаны не во всякой льдине: разбивай лёд, чтобы их найти",
   "layout": [
-    "...cccc...",
-    "...cccc...",
-    "...cccc...",
-    "...cccc...",
-    ".....#####",
-    ".....#####",
     "..........",
+    ".ccJccJcc.",
+    ".ccJccJcc.",
     "..........",
-    "....gg....",
+    ".....#####",
+    "..cc.#####",
+    "..cc......",
+    ".JJJJJJJJ.",
+    ".JJJJJJJJ.",
     ".........."
   ],
   "colors": 3,
-  "moves": 36,
+  "moves": 30,
   "goals": [
     {
       "kind": "gold",
-      "count": 2
+      "count": 7
     },
     {
       "kind": "coal",
-      "count": 1
+      "count": 4
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 7450
+      "kind": "level3",
+      "count": 10
     },
     {
-      "kind": "level2",
-      "count": 106
+      "kind": "level3",
+      "count": 15
     }
   ],
-  "coalLayers": 2,
-  "iceCracks": true
+  "coalLayers": 6,
+  "iceCracks": true,
+  "hiddenGold": 7
 }

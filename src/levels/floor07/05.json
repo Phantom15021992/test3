@@ -1,41 +1,41 @@
 {
   "id": 65,
   "title": "Поле 10×10",
-  "hint": "Совпадения рядом с углём откалывают слои: звёзды — по три",
+  "hint": "Совпадения рядом с углём откалывают слои: ячейки 3 уровня — по три",
   "layout": [
     "..........",
+    ".cc....cc.",
+    ".cc.cc.cc.",
+    "....cc....",
     "..........",
-    "...cccc...",
-    "...cccc...",
-    "...cccc...",
-    "...cccc...",
-    "..........",
+    ".cc....cc.",
+    ".cc....cc.",
     "..........",
     "..........",
     ".........."
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 30,
   "goals": [
     {
       "kind": "coal",
-      "count": 1
+      "count": 5
     },
     {
       "kind": "level3color",
-      "count": 14,
+      "count": 3,
       "color": 0
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 14120
+      "kind": "level3",
+      "count": 13
     },
     {
-      "kind": "level2",
-      "count": 165
+      "kind": "level3",
+      "count": 18
     }
   ],
-  "coalLayers": 9
+  "coalLayers": 8
 }

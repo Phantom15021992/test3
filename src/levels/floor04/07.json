@@ -1,41 +1,41 @@
 {
   "id": 37,
   "title": "Буква T",
-  "hint": "Совпадения рядом с углём откалывают слои: звёзды — по три",
+  "hint": "Совпадения рядом с углём откалывают слои: ячейки 3 уровня — по три",
   "layout": [
     "..........",
+    ".cc.cc.cc.",
+    ".cc.cc.cc.",
     "..........",
-    "...cccc...",
-    "...cccc...",
-    "###cccc###",
-    "###cccc###",
+    "###.cc.###",
+    "###.cc.###",
     "###....###",
     "###....###",
     "###....###",
     "###....###"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 30,
   "goals": [
     {
       "kind": "coal",
-      "count": 1
+      "count": 4
     },
     {
       "kind": "level3color",
-      "count": 5,
+      "count": 3,
       "color": 2
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 4640
+      "kind": "level3",
+      "count": 13
     },
     {
-      "kind": "level2",
-      "count": 73
+      "kind": "level3",
+      "count": 18
     }
   ],
-  "coalLayers": 9
+  "coalLayers": 5
 }

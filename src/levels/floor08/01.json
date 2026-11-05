@@ -6,28 +6,28 @@
     "........",
     "........",
     "........",
-    "........",
-    "........",
-    "........",
-    "........",
-    "...JJJ.."
+    "..J..J..",
+    "..J..J..",
+    ".JJJJJJ.",
+    ".JJJJJJ.",
+    "........"
   ],
   "colors": 3,
-  "moves": 42,
+  "moves": 30,
   "goals": [
     {
       "kind": "ice",
-      "count": 3
+      "count": 16
     }
   ],
   "stars": [
     {
-      "kind": "score",
-      "count": 9330
+      "kind": "level3",
+      "count": 10
     },
     {
-      "kind": "level2",
-      "count": 106
+      "kind": "level3",
+      "count": 15
     }
   ],
   "iceCracks": true
