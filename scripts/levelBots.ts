@@ -32,6 +32,11 @@ export const BOTS: readonly Bot[] = ['novice', 'expert', 'buyer'];
 const MAX_CANDIDATES = 40;
 /** Сколько клеток примерять для покупной бомбы */
 const MAX_AIM_CELLS = 30;
+/**
+ * Мастерство опытного бота — сколько обменов на поле он замечает за ход (случайных; спецфишки видны
+ * всегда). Подобрано по живым игрокам на 1-1 и 1-5 (scripts/calibrateBot.ts)
+ */
+export const botSkill = { attention: 2.25 };
 /** Сколько лучших ходов примерять вместе со следующим ходом */
 const TOP_FIRST = 6;
 /** Сколько следующих ходов смотреть после каждого из них */
@@ -232,7 +237,13 @@ interface Pick {
 /** Ходы по порядку перебора: сначала рядом с коронами и оставшимися препятствиями цели */
 function ordered(session: LevelSession, rng: Rng): PlayerMove[] {
   // Перемешиваем, чтобы отбор не предпочитал верх поля
-  const moves = shuffled(candidates(session), rng);
+  const all = shuffled(candidates(session), rng);
+  // Человек замечает не все обмены на поле, а случайные несколько; спецфишки видны всегда
+  // Дробное внимание: целая часть — всегда, дробная — с такой вероятностью ещё один обмен
+  const whole = Math.floor(botSkill.attention);
+  const limit = whole + (rng.int(1000) < (botSkill.attention - whole) * 1000 ? 1 : 0);
+  let noticed = 0;
+  const moves = all.filter((move) => move.type !== 'swap' || noticed++ < limit);
   // Иначе отбор мог выбросить как раз их, и последняя цепь в углу ждала бы десятки ходов,
   // а человек бьёт в неё сразу
   const crowns = allPositions(session.board).filter(
