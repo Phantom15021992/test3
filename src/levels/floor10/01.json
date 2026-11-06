@@ -1,39 +1,38 @@
 {
   "id": 91,
   "title": "Поле 8×8",
-  "hint": "Толстый лёд выдерживает три удара: 2 уровень, 1 уровень, трещины",
+  "hint": "Лёд 2 уровня выдерживает два удара",
   "layout": [
     "s......s",
     "........",
     "........",
     "........",
-    "........",
-    "........",
     "..JJJJ..",
+    ".JJJJJJ.",
+    ".JJJJJJ.",
     "........"
   ],
   "colors": 3,
-  "moves": 45,
+  "moves": 30,
   "goals": [
     {
       "kind": "ice",
-      "count": 4
+      "count": 16
     },
     {
       "kind": "level3color",
-      "count": 1,
+      "count": 3,
       "color": 2
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 11
+      "count": 13
     },
     {
       "kind": "level3",
-      "count": 16
+      "count": 18
     }
-  ],
-  "iceCracks": true
+  ]
 }

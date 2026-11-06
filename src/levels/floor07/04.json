@@ -7,23 +7,23 @@
     ".cc.##.cc.",
     ".cc.##.cc.",
     "....##....",
-    ".cc.##.cc.",
-    ".cc....cc.",
-    "..........",
-    ".....cc...",
-    ".JJ..ccJJ.",
+    "....##.cc.",
+    "...J..Jcc.",
+    "...JJJJ...",
+    "...JJJJ...",
+    ".JJJ..JJJ.",
     ".........."
   ],
   "colors": 3,
-  "moves": 45,
+  "moves": 30,
   "goals": [
     {
       "kind": "coal",
-      "count": 5
+      "count": 3
     },
     {
       "kind": "ice",
-      "count": 4
+      "count": 16
     }
   ],
   "stars": [
@@ -36,5 +36,5 @@
       "count": 15
     }
   ],
-  "coalLayers": 2
+  "coalLayers": 7
 }

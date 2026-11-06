@@ -10,20 +10,20 @@
     ".....#####",
     ".....#####",
     "..........",
-    ".cc.ccJcc.",
-    ".ccJccJcc.",
+    ".JJJJJJJJ.",
+    ".JJJJJJJJ.",
     ".........."
   ],
   "colors": 3,
-  "moves": 45,
+  "moves": 30,
   "goals": [
     {
       "kind": "coal",
-      "count": 6
+      "count": 3
     },
     {
       "kind": "ice",
-      "count": 3
+      "count": 16
     }
   ],
   "stars": [
@@ -36,6 +36,5 @@
       "count": 15
     }
   ],
-  "coalLayers": 3,
-  "iceCracks": true
+  "coalLayers": 9
 }

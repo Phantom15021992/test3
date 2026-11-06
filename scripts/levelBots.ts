@@ -39,6 +39,8 @@ const MAX_AIM_CELLS = 30;
  * камни): человек смотрит на них нарочно. Лёд лежит по всему полю, на него внимание не делится
  */
 export const botSkill = { attention: 2.25, focus: 3 };
+/** Сколько клеток цели на поле человек видит все разом: при таком числе и лёд — отдельные предметы */
+const FOCUS_TARGETS = 12;
 /** Сколько лучших ходов примерять вместе со следующим ходом */
 const TOP_FIRST = 6;
 /** Сколько следующих ходов смотреть после каждого из них */
@@ -263,11 +265,15 @@ function ordered(session: LevelSession, rng: Rng): PlayerMove[] {
       ),
     );
   };
-  // Отдельные предметы цели человек видит и ищет ходы рядом с ними
-  const items = targets.filter((pos) => {
-    const kind = getCell(session.board, pos)?.kind;
-    return kind === 'box' || kind === 'coal' || kind === 'stone';
-  });
+  // Отдельные предметы цели человек видит и ищет ходы рядом с ними. Лёд — тоже, когда его немного:
+  // по всему полю льдины не высмотреть, а несколько штук (или последние) видны сразу
+  const items =
+    targets.length <= FOCUS_TARGETS
+      ? targets
+      : targets.filter((pos) => {
+          const kind = getCell(session.board, pos)?.kind;
+          return kind === 'box' || kind === 'coal' || kind === 'stone';
+        });
   const nearItem = (move: PlayerMove) =>
     move.type === 'swap' &&
     (crowns.some(
