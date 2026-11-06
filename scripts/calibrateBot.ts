@@ -17,6 +17,8 @@ const attention = Number(process.argv[3]);
 if (Number.isFinite(attention) && attention > 0) botSkill.attention = attention;
 const focusArg = process.argv.find((arg) => arg.startsWith('--focus='));
 if (focusArg) botSkill.focus = Number(focusArg.slice('--focus='.length));
+const crownArg = process.argv.find((arg) => arg.startsWith('--crown='));
+if (crownArg) botSkill.crownRow = Number(crownArg.slice('--crown='.length));
 
 const fs = require('node:fs');
 for (const path of process.argv.slice(4).filter((arg) => !arg.startsWith('--'))) {
@@ -30,6 +32,6 @@ for (const path of process.argv.slice(4).filter((arg) => !arg.startsWith('--')))
   }
   const name = path.split(/[\\/]/).pop();
   console.log(
-    `${name}: внимание ${botSkill.attention}, фокус ${botSkill.focus}, побед ${Math.round((wins / games) * 100)}%, целей в среднем ${Math.round((done / games) * 100)}%`,
+    `${name}: внимание ${botSkill.attention}, фокус ${botSkill.focus}, корона ${botSkill.crownRow}, побед ${Math.round((wins / games) * 100)}%, целей в среднем ${Math.round((done / games) * 100)}%`,
   );
 }

@@ -38,9 +38,11 @@ const MAX_AIM_CELLS = 30;
  * focus — сколько обменов он ещё замечает рядом с отдельными предметами цели (короны, сундуки, уголь,
  * камни): человек смотрит на них нарочно. Лёд лежит по всему полю, на него внимание не делится
  */
-export const botSkill = { attention: 2.25, focus: 3 };
+export const botSkill = { attention: 2.25, focus: 3, crownRow: 40 };
 /** Сколько клеток цели на поле человек видит все разом: при таком числе и лёд — отдельные предметы */
 const FOCUS_TARGETS = 12;
+/** На сколько клеток под корону человек смотрит всегда */
+const CROWN_LOOK = 3;
 /** Сколько лучших ходов примерять вместе со следующим ходом */
 const TOP_FIRST = 6;
 /** Сколько следующих ходов смотреть после каждого из них */
@@ -120,10 +122,20 @@ function goldOdds(session: LevelSession): number {
   return spots > 0 ? gold / spots : 0;
 }
 
-function itemRows(board: Board): number {
+/**
+ * Сколько клеток коронам осталось до дна своих столбцов. Доставленная корона уходит с поля —
+ * ей остаётся 0, а не «минус все её ряды», как было бы при счёте по строкам корон
+ */
+function crownDistance(board: Board): number {
   return allPositions(board)
     .filter((pos) => getCell(board, pos)?.kind === 'item')
-    .reduce((sum: number, pos: Position) => sum + pos.row, 0);
+    .reduce((sum: number, pos: Position) => {
+      let bottom = pos.row;
+      for (let row = pos.row + 1; row < board.length; row++) {
+        if (getCell(board, { row, col: pos.col })?.kind !== 'hole') bottom = row;
+      }
+      return sum + bottom - pos.row;
+    }, 0);
 }
 
 /** Насколько ход приближает к целям; очки — лишь слабая подсказка при равенстве */
@@ -160,7 +172,7 @@ function moveValue(
   );
   const iced = new Set<string>();
   const odds = need('gold') ? goldOdds(session) : 0;
-  let value = (itemRows(board) - itemRows(session.board)) * 40;
+  let value = (crownDistance(session.board) - crownDistance(board)) * botSkill.crownRow;
 
   const scoreStep = (step: ResolveStep) => {
     if (step.kind === 'clear') {
@@ -286,11 +298,28 @@ function ordered(session: LevelSession, rng: Rng): PlayerMove[] {
             Math.abs(pos.row - move.to.row) + Math.abs(pos.col - move.to.col),
           ) <= 1,
       ));
+  // Под корону человек смотрит всегда: обмены в 1–3 клетках под ней (в её столбце или рядом)
+  const rightUnder = (pos: Position) =>
+    crowns.some(
+      (crown) =>
+        Math.abs(pos.col - crown.col) <= 1 &&
+        pos.row > crown.row &&
+        pos.row <= crown.row + CROWN_LOOK,
+    );
+  const seenUnderCrown = (move: PlayerMove) =>
+    move.type === 'swap' &&
+    rightUnder(move.from) &&
+    rightUnder(move.to) &&
+    (move.from.col === crowns.find((c) => Math.abs(c.col - move.from.col) <= 1)?.col ||
+      move.to.col === crowns.find((c) => Math.abs(c.col - move.to.col) <= 1)?.col);
   let noticed = 0;
   let focused = 0;
   const moves = all.filter(
     (move) =>
-      move.type !== 'swap' || noticed++ < limit || (nearItem(move) && focused++ < botSkill.focus),
+      move.type !== 'swap' ||
+      seenUnderCrown(move) ||
+      noticed++ < limit ||
+      (nearItem(move) && focused++ < botSkill.focus),
   );
   // Иначе отбор мог выбросить как раз их, и последняя цепь в углу ждала бы десятки ходов,
   // а человек бьёт в неё сразу
