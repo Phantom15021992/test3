@@ -21,6 +21,21 @@ const REGIONS: Record<'crystal' | 'circle' | 'stone' | 'rays', Region> = {
   rays: [300, 1020, 520, 520],
 };
 
+/**
+ * Блёстки, нарисованные прямо на гранях (центр и полуразмах лучей по x и y, в координатах листа):
+ * они не мерцают и спорят с анимированными, поэтому закрашиваются цветом грани вокруг
+ */
+const PAINTED_STARS: Partial<
+  Record<keyof typeof REGIONS, readonly (readonly [number, number, number, number])[]>
+> = {
+  crystal: [[482, 314, 36, 46]],
+  circle: [[1302, 288, 30, 46]],
+};
+/** Запас вокруг блёстки: у неё тёмная кайма */
+const STAR_MARGIN = 6;
+/** Сколько раз сглаживать закраску: цвет должен дотечь от краёв до середины звезды */
+const STAR_ERASE_PASSES = 400;
+
 /** Тёмный контур рисунка: по нему тело отделяется от ореола */
 const OUTLINE_BRIGHTNESS = 330;
 const OUTLINE_ALPHA = 150;
@@ -46,7 +61,7 @@ export function createSparkleTextures(scene: Phaser.Scene): void {
   if (layers.size > 0 && scene.textures.exists(STAR_KEY)) return;
   const sheet = scene.textures.get(SPARKLE_SHEET).getSourceImage() as HTMLImageElement;
   for (const name of ['crystal', 'circle', 'stone', 'rays'] as const) {
-    const cut = cutRegion(sheet, REGIONS[name]);
+    const cut = cutRegion(sheet, REGIONS[name], PAINTED_STARS[name] ?? []);
     const add = (part: 'body' | 'halo', canvas: HTMLCanvasElement) => {
       const key = `sparkle-${name}-${part}`;
       if (scene.textures.exists(key)) scene.textures.remove(key);
@@ -60,7 +75,11 @@ export function createSparkleTextures(scene: Phaser.Scene): void {
 }
 
 /** Слои области: тело внутри контура и всё, что снаружи (ореол, лучи, блёстки художника) */
-function cutRegion(sheet: HTMLImageElement, [rx, ry, rw, rh]: Region) {
+function cutRegion(
+  sheet: HTMLImageElement,
+  [rx, ry, rw, rh]: Region,
+  stars: readonly (readonly [number, number, number, number])[],
+) {
   const canvas = document.createElement('canvas');
   canvas.width = rw;
   canvas.height = rh;
@@ -69,6 +88,7 @@ function cutRegion(sheet: HTMLImageElement, [rx, ry, rw, rh]: Region) {
   const image = ctx.getImageData(0, 0, rw, rh);
   const d = image.data;
   const n = rw * rh;
+  for (const [sx, sy, ax, ay] of stars) eraseStar(d, rw, rh, sx - rx, sy - ry, ax, ay);
 
   const dark = new Uint8Array(n);
   for (let i = 0; i < n; i++) {
@@ -143,6 +163,39 @@ function cutRegion(sheet: HTMLImageElement, [rx, ry, rw, rh]: Region) {
       bodyWidth: Math.max(maxX - minX, 1),
     },
   };
+}
+
+/**
+ * Закрашивает четырёхлучевую звезду с центром (cx, cy) цветом грани вокруг: точки звезды многократно
+ * усредняются с соседями, а точки за её краем не меняются — цвет плавно затекает внутрь с краёв
+ * (уравнение Лапласа), без следов от лучей
+ */
+function eraseStar(
+  d: Uint8ClampedArray,
+  w: number,
+  h: number,
+  cx: number,
+  cy: number,
+  ax: number,
+  ay: number,
+): void {
+  // Ромб по размаху лучей: кончики лучей и кайма звезды должны попасть внутрь, иначе подкрасят закраску
+  const rx = ax + STAR_MARGIN;
+  const ry = ay + STAR_MARGIN;
+  const cells: number[] = [];
+  for (let y = Math.max(1, Math.floor(cy - ry)); y <= Math.min(h - 2, cy + ry); y++) {
+    for (let x = Math.max(1, Math.floor(cx - rx)); x <= Math.min(w - 2, cx + rx); x++) {
+      if (Math.abs((x - cx) / rx) + Math.abs((y - cy) / ry) <= 1) cells.push(y * w + x);
+    }
+  }
+  for (let pass = 0; pass < STAR_ERASE_PASSES; pass++) {
+    for (const i of cells) {
+      for (let c = 0; c < 4; c++) {
+        const k = i * 4 + c;
+        d[k] = (d[k - 4]! + d[k + 4]! + d[k - w * 4]! + d[k + w * 4]!) / 4;
+      }
+    }
+  }
 }
 
 /** Блёстка — четырёхлучевая звёздочка, как на рисунке */
