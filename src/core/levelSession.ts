@@ -27,7 +27,16 @@ import {
 import { findPossibleMoves } from './moves';
 import type { Move, ResolveStep } from './resolve';
 import { createRng, type Rng } from './rng';
-import { GameSession, type Steps } from './session';
+import { GameSession, type PlayerMove, type Steps } from './session';
+
+/**
+ * Действие в журнале попытки уровня: ход или покупка за звёзды. Покупная бомба или ракета
+ * ставится в клетку (aim) и срабатывает следующим ходом 'fire'; радуга и манипулятор оплачиваются
+ * (pay) и применяются своим ходом. По seed, звёздам на начало и журналу попытку можно проиграть
+ * заново (core/levelReplay.ts) — так ходы живых игроков сравниваются с ходами бота.
+ */
+export type LevelAction =
+  PlayerMove | { type: 'aim'; bonus: AimedBonus; at: Position } | { type: 'pay'; bonus: BonusType };
 
 // Партия на уровне: те же ходы, что и в свободной игре, плюс лёд, цели и звёзды.
 // Спецфишки покупаются за звёзды этажа и применяются сразу: копить их нельзя. Списание сохраняет
@@ -72,6 +81,8 @@ export class LevelSession extends GameSession {
    * только в конце хода, а прогресс виден сразу
    */
   coal = new Map<string, number>();
+  /** Журнал попытки: ходы и покупки по порядку */
+  readonly journal: LevelAction[] = [];
 
   constructor(
     seed: number,
@@ -179,6 +190,7 @@ export class LevelSession extends GameSession {
       coal: new Map(this.coal),
       stats: structuredClone(this.stats),
       actions: [],
+      journal: [],
     });
     const steps = copy.run(move, rng);
     for (let next = steps.next(); !next.done; next = steps.next());
@@ -246,8 +258,19 @@ export class LevelSession extends GameSession {
     );
   }
 
-  /** Платит за покупку; false — звёзд не хватает или лимит исчерпан */
+  override play(move: PlayerMove): Steps {
+    this.journal.push(move);
+    return super.play(move);
+  }
+
+  /** Платит за радугу или манипулятор (их ход идёт следом); false — звёзд не хватает или лимит исчерпан */
   payBonus(type: BonusType): boolean {
+    if (!this.charge(type)) return false;
+    this.journal.push({ type: 'pay', bonus: type });
+    return true;
+  }
+
+  private charge(type: BonusType): boolean {
     if (!this.canBuy(type)) return false;
     const cost = bonusStars(type);
     this.starsSpent += cost;
@@ -260,7 +283,8 @@ export class LevelSession extends GameSession {
    * спецфишка следующим ходом 'fire'. null — клетка не подходит или не хватает звёзд.
    */
   aimBonus(type: AimedBonus, at: Position): Piece | null {
-    if (!isBonusTarget(this.board, at) || !this.payBonus(type)) return null;
+    if (!isBonusTarget(this.board, at) || !this.charge(type)) return null;
+    this.journal.push({ type: 'aim', bonus: type, at });
     const piece = aimedPiece(type);
     const next = cloneBoard(this.board);
     setCell(next, at, piece);

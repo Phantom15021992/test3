@@ -34,6 +34,7 @@ import { ChoiceDialog } from '../ui/ChoiceDialog';
 import { GameOverDialog } from '../ui/GameOverDialog';
 import { LevelResultDialog } from '../ui/LevelResultDialog';
 import { sendGameResult } from '../storage/gameResults';
+import { sendLevelMoves } from '../storage/levelMoves';
 import { sendLevelResult, type LevelOutcome } from '../storage/levelResults';
 import { attemptWallet, saveLevelSpending, saveLevelStars } from '../storage/progress';
 import { remoteConfig, type GameTicket } from '../storage/remoteLeaderboard';
@@ -75,6 +76,9 @@ export class GameScene extends Phaser.Scene {
   private ticket: GameTicket | null = null;
   /** Уровень; null — свободная игра */
   private level: Level | null = null;
+  /** Seed и звёзды на начало попытки: с журналом они проигрывают попытку заново (level_moves) */
+  private seed = 0;
+  private wallet = 0;
   /** Тестовый уровень с экрана правил: правила Детского, фишки — самоцветы */
   private gems = false;
   private goalsText: Phaser.GameObjects.Text | null = null;
@@ -140,8 +144,10 @@ export class GameScene extends Phaser.Scene {
     // Seed выдаёт сервер, чтобы партию можно было проверить. ?seed=123 — одинаковое поле при
     // каждом запуске (для отладки; в общую таблицу такая партия не попадает, см. startGame)
     const seed = debugSeed() ?? this.ticket?.seed ?? Date.now() >>> 0;
+    this.seed = seed;
+    this.wallet = this.level ? attemptWallet(this.level.id) : 0;
     this.session = this.level
-      ? new LevelSession(seed, this.level, attemptWallet(this.level.id))
+      ? new LevelSession(seed, this.level, this.wallet)
       : new GameSession(seed, this.difficulty.colors);
     if (import.meta.env.DEV) {
       // Доступ к сцене из консоли браузера для ручной проверки
@@ -633,6 +639,16 @@ export class GameScene extends Phaser.Scene {
       starsSpent: session.starsSpent,
       stats: session.stats,
       ...clientInfo(),
+    });
+    // Ходы — отдельной строкой: по ним бот калибруется под живых игроков (scripts/humanMoves.ts)
+    void sendLevelMoves(config, {
+      levelId: session.level.id,
+      version: clientInfo().version,
+      seed: this.seed,
+      wallet: this.wallet,
+      outcome,
+      movesMade: session.moves,
+      actions: session.journal,
     });
   }
 

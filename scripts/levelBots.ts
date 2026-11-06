@@ -18,7 +18,7 @@ import {
 } from '../src/core/board';
 import { aimedPiece, isBonusTarget, type AimedBonus } from '../src/core/bonus';
 import { iceHits, type Level, type StarTaskKind } from '../src/core/level';
-import { LevelSession } from '../src/core/levelSession';
+import { LevelSession, type LevelAction } from '../src/core/levelSession';
 import { findPossibleMoves } from '../src/core/moves';
 import { runMove, type ResolveStep } from '../src/core/resolve';
 import { createRng, type Rng } from '../src/core/rng';
@@ -52,6 +52,9 @@ const NEXT_WEIGHT = 0.5;
 
 export interface GameResult {
   won: boolean;
+  /** Журнал попытки и итоговые очки: по ним партию можно проиграть заново (core/levelReplay.ts) */
+  journal: readonly LevelAction[];
+  score: number;
   /** Сколько ходов ушло на цели; при поражении — весь лимит */
   movesUsed: number;
   /** По каждой цели: на каком ходу достигнуто 1, 2, 3… её единиц */
@@ -480,6 +483,8 @@ export function play(level: Level, seed: number, bot: Bot, wallet = 0, bombs?: n
   finish(session.campaignFinale());
   const shares = level.goals.map((goal) => session.goalValue(goal) / goal.count);
   return {
+    journal: session.journal,
+    score: session.score,
     won: session.goalsDone,
     movesUsed: session.moves,
     reached,

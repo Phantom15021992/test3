@@ -58,7 +58,7 @@ export function sendGameResult(
 export async function sendRow(
   config: RemoteConfig,
   table: string,
-  row: Record<string, string | number>,
+  row: Record<string, unknown>,
   fetchFn: typeof fetch,
 ): Promise<void> {
   try {
