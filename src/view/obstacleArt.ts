@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { COAL_MAX_LAYERS, COAL_SIZE } from '../core/config';
 import type { Box } from '../core/board';
 import { iceHits, type IceStyle } from '../core/level';
+import { coalStage } from './coalStage';
 
 // Препятствия и лёд рисуются картинками из public/assets/obstacles (грузятся в BootScene).
 
@@ -48,7 +49,10 @@ export function iceImage(style: IceStyle, hits: number, cracks: boolean): Obstac
   return cracked ? 'ice-cracked' : 'ice-thin';
 }
 
-/** Уголь рисуется по стадиям 1–9: чем меньше осталось слоёв, тем дальше стадия и меньше глыба */
+/**
+ * Уголь рисуется по стадиям 1–9: чем меньше осталось слоёв, тем дальше стадия и меньше глыба.
+ * Глыба на уровне всегда начинается с самой большой картинки, сколько бы слоёв ни задал уровень
+ */
 const coalKey = (stage: number) => `obstacle-coal-${stage}`;
 
 export const OBSTACLE_IMAGE_FILES: readonly { key: string; path: string }[] = [
@@ -62,18 +66,14 @@ export const OBSTACLE_IMAGE_FILES: readonly { key: string; path: string }[] = [
 /** На сколько уменьшается глыба угля с каждой стадией */
 const COAL_SHRINK = 0.065;
 
-/** Стадия картинки угля по оставшимся слоям: 9 слоёв — стадия 1, 1 слой — стадия 9 */
-export function coalStage(layers: number): number {
-  return Math.min(COAL_MAX_LAYERS, Math.max(1, COAL_MAX_LAYERS + 1 - layers));
-}
-
 /** Глыба угля: картинка стадии во всю глыбу 4×4, с каждой стадией меньше */
 export function setCoalArt(
   image: Phaser.GameObjects.Image,
   layers: number,
   cellSize: number,
+  start: number = COAL_MAX_LAYERS,
 ): void {
-  const stage = coalStage(layers);
+  const stage = coalStage(layers, start);
   const size = cellSize * COAL_SIZE * (1 - (stage - 1) * COAL_SHRINK);
   image.setTexture(coalKey(stage)).setDisplaySize(size, size);
 }

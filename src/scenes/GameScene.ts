@@ -140,6 +140,7 @@ export class GameScene extends Phaser.Scene {
     const originX = boxLeft + (boxSize - cellSize * cols) / 2;
     const originY = boxTop + (boxSize - cellSize * rows) / 2;
     this.view = new BoardView(this, originX, originY, cellSize);
+    if (this.level?.coalLayers) this.view.coalLayers = this.level.coalLayers;
     this.view.render(this.session.board);
     this.refreshIce();
     this.dialog = new ChoiceDialog(this, boxBottom + 30);

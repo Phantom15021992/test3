@@ -3,6 +3,7 @@ import { isCoal, type Board, type Cell, type Position, type Tile } from '../core
 import type { CoalHit } from '../core/coal';
 import {
   CLEAR_DURATION_MS,
+  COAL_MAX_LAYERS,
   COAL_SIZE,
   COMBO_LABEL_DURATION_MS,
   FALL_DURATION_PER_CELL_MS,
@@ -51,6 +52,8 @@ export class BoardView {
   private coal = new Map<string, Phaser.GameObjects.Image>();
   private rows = 0;
   private cols = 0;
+  /** Сколько слоёв у целой глыбы на этом уровне: от него считается стадия картинки */
+  coalLayers: number = COAL_MAX_LAYERS;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -153,7 +156,7 @@ export class BoardView {
         });
         continue;
       }
-      setCoalArt(image, layers, this.cellSize);
+      setCoalArt(image, layers, this.cellSize, this.coalLayers);
       const scale = image.scaleX;
       this.scene.tweens.add({
         targets: image,
@@ -173,7 +176,7 @@ export class BoardView {
         '',
       )
       .setMask(this.mask);
-    setCoalArt(image, layers, this.cellSize);
+    setCoalArt(image, layers, this.cellSize, this.coalLayers);
     this.coal.set(`${top},${left}`, image);
   }
 
