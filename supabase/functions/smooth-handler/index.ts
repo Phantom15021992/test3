@@ -39,7 +39,7 @@ var MEGA_BOMB_ROCKET_WIDTH = 5;
 var CAMPAIGN_BOMB_GROUP = 6;
 var CAMPAIGN_LEVEL2_PIECES = { 5: ["megaBomb"], 6: ["rainbow"], 7: ["rainbow", "rainbow"] };
 var CAMPAIGN_LEVEL2_TILES = 2;
-var COAL_SIZE = 4;
+var COAL_SIZE = 2;
 var BONUS_TIERS = [
   { cost: 150, stars: 3, type: "bomb" },
   { cost: 300, stars: 5, type: "rocket" },
