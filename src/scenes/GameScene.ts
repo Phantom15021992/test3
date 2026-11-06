@@ -48,6 +48,13 @@ import {
 import { HIGHLIGHT_COLOR, UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
 import { BoardView } from '../view/BoardView';
 import { GEM_IMAGE_FILES } from '../view/gemArt';
+import {
+  addSparkleObject,
+  createSparkleTextures,
+  SPARKLE_SHEET,
+  SPARKLE_SHEET_PATH,
+  type SparkleKind,
+} from '../view/sparkleGems';
 import { debugSeed, startGame } from './startGame';
 
 const BOARD_MARGIN = 40;
@@ -57,6 +64,10 @@ const LEVEL_BRIEFING_GAP = 12;
 /** Шрифт строки целей и самый мелкий, до которого он уменьшается, если цели не помещаются в ширину */
 const GOALS_FONT_SIZE = 30;
 const GOALS_MIN_FONT_SIZE = 18;
+/** Анимированные объекты под полем тестового уровня: отступ от поля, шаг между ними и ширина тела */
+const SPARKLE_SHOWCASE_Y = 200;
+const SPARKLE_SHOWCASE_GAP = 220;
+const SPARKLE_SHOWCASE_SIZE = 130;
 
 /** Режим ввода: обычный, выбор цвета (радуга / мега-бомба + радуга), выбор клеток манипулятором */
 type Mode =
@@ -129,6 +140,7 @@ export class GameScene extends Phaser.Scene {
     for (const { key, path } of GEM_IMAGE_FILES) {
       if (!this.textures.exists(key)) this.load.image(key, path);
     }
+    if (!this.textures.exists(SPARKLE_SHEET)) this.load.image(SPARKLE_SHEET, SPARKLE_SHEET_PATH);
   }
 
   create(): void {
@@ -252,6 +264,18 @@ export class GameScene extends Phaser.Scene {
         });
     }
     if (this.gems) {
+      // Под полем — анимированные объекты с листа художника: кристалл, круг и камень
+      createSparkleTextures(this);
+      const kinds: SparkleKind[] = ['crystal', 'circle', 'stone'];
+      kinds.forEach((kind, i) =>
+        addSparkleObject(
+          this,
+          kind,
+          centerX + (i - 1) * SPARKLE_SHOWCASE_GAP,
+          boxBottom + SPARKLE_SHOWCASE_Y,
+          SPARKLE_SHOWCASE_SIZE,
+        ),
+      );
       // Тестовый уровень открыт с экрана правил — туда и возвращает
       this.add
         .text(30, boxTop - 275, '← Правила', {
