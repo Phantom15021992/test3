@@ -1,35 +1,54 @@
 import Phaser from 'phaser';
 
-// Анимированные объекты с листа художника (public/assets/sparkle/sheet.webp): сияющий кристалл
-// с блёстками, круг — сияет слабее, и камень. Лист один, слои вырезаются при запуске: тело —
+// Анимированные объекты с листов художника: сияющий кристалл с блёстками, круг и ромб — сияют
+// слабее, и камень (public/assets/sparkle/sheet.webp — синим; rhombus.webp — ромб сразу в трёх цветах). Лист один, слои вырезаются при запуске: тело —
 // всё внутри тёмного контура, ореол и лучи — всё снаружи. Так ореол и лучи живут своей анимацией,
 // а тело остаётся чётким. Блёстки рисуются в коде, чтобы мерцали в разных местах, а не на одном.
 
 export const SPARKLE_SHEET = 'sparkle-sheet';
 export const SPARKLE_SHEET_PATH = 'assets/sparkle/sheet.webp';
+export const RHOMBUS_SHEET = 'sparkle-rhombus-sheet';
+export const RHOMBUS_SHEET_PATH = 'assets/sparkle/rhombus.webp';
 
-export type SparkleKind = 'crystal' | 'circle' | 'stone';
+export type SparkleKind = 'crystal' | 'circle' | 'rhombus' | 'stone';
 
 /** Цвета: лист нарисован синим, красный и зелёный получаются сдвигом оттенка */
 export const SPARKLE_COLORS = ['blue', 'green', 'red'] as const;
 export type SparkleColor = (typeof SPARKLE_COLORS)[number];
 
+/** Оттенок синего тела на листе (градусы): от него считается сдвиг в другие цвета */
+const BLUE_HUE = 233;
+
 /**
- * Оттенок пикселя синего рисунка → оттенок в нужном цвете (градусы). Синее тело (~230°) уходит в цвет,
- * а голубые блики (~190°) — в тёплую сторону: у красного в оранжевые, у зелёного в жёлто-зелёные,
- * как у настоящих камней. Поэтому у красного шкала перевёрнута
+ * Оттенок пикселя синего рисунка → оттенок в нужном цвете (градусы). Цвета взяты с ромба, который
+ * художник нарисовал сам во всех трёх: красный тело ~345° (малиновый), блики уходят в розовые;
+ * зелёный ~150° (мятный), блики — в салатовые. Разброс оттенков у красного вдвое уже: иначе голубые
+ * блики становятся фиолетовыми
  */
 const HUE_MAPS: Record<SparkleColor, ((hue: number) => number) | null> = {
   blue: null,
-  green: (hue) => hue - 100,
-  red: (hue) => 225 - hue,
+  green: (hue) => 150 + (hue - BLUE_HUE) * 1.15,
+  red: (hue) => 345 + (hue - BLUE_HUE) * 0.5,
 };
 
 /** Блёстки в тон камню */
 const STAR_TINTS: Record<SparkleColor, number> = {
   blue: 0xa8f4ff,
-  green: 0xeaff9a,
-  red: 0xffd890,
+  green: 0xd8ffb0,
+  red: 0xffc8dc,
+};
+
+/** Ромб художник нарисовал в каждом цвете сам: перекрашивать не нужно, только вырезать */
+const RHOMBUS_REGIONS: Record<SparkleColor, Region> = {
+  blue: [775, 550, 450, 475],
+  red: [325, 1025, 450, 475],
+  green: [1125, 1075, 475, 475],
+};
+/** Нарисованная блёстка в середине ромба — закрашивается, как у круга */
+const RHOMBUS_STARS: Record<SparkleColor, readonly [number, number, number, number]> = {
+  blue: [970, 752, 20, 24],
+  red: [518, 1226, 20, 24],
+  green: [1328, 1271, 20, 24],
 };
 
 /** Область листа с одним рисунком (x, y, ширина, высота) */
@@ -158,6 +177,21 @@ export function createSparkleTextures(scene: Phaser.Scene): void {
       };
       add('body', cut.body);
       add('halo', cut.halo);
+    }
+  }
+  if (scene.textures.exists(RHOMBUS_SHEET)) {
+    const rhombus = scene.textures.get(RHOMBUS_SHEET).getSourceImage() as HTMLImageElement;
+    for (const color of SPARKLE_COLORS) {
+      const cut = cutRegion(rhombus, RHOMBUS_REGIONS[color], [RHOMBUS_STARS[color]]);
+      for (const [part, canvas] of [
+        ['body', cut.body],
+        ['halo', cut.halo],
+      ] as const) {
+        const key = layerKey(color, 'rhombus', part);
+        if (scene.textures.exists(key)) scene.textures.remove(key);
+        scene.textures.addCanvas(key, canvas);
+        layers.set(key, { key, ...cut.anchor });
+      }
     }
   }
   drawStar(scene);
@@ -328,6 +362,7 @@ const LOOKS: Record<
 > = {
   crystal: { glow: [0.3, 0.55], rays: true, sparkles: 3, breathe: 0.015 },
   circle: { glow: [0.12, 0.3], rays: false, sparkles: 1, breathe: 0.01 },
+  rhombus: { glow: [0.12, 0.3], rays: false, sparkles: 1, breathe: 0.01 },
   stone: { glow: [0, 0], rays: false, sparkles: 0, breathe: 0 },
 };
 

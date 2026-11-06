@@ -47,7 +47,13 @@ import {
 } from '../ui/levelText';
 import { HIGHLIGHT_COLOR, UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
 import { BoardView } from '../view/BoardView';
-import { createSparkleTextures, SPARKLE_SHEET, SPARKLE_SHEET_PATH } from '../view/sparkleGems';
+import {
+  createSparkleTextures,
+  RHOMBUS_SHEET,
+  RHOMBUS_SHEET_PATH,
+  SPARKLE_SHEET,
+  SPARKLE_SHEET_PATH,
+} from '../view/sparkleGems';
 import { debugSeed, startGame } from './startGame';
 
 const BOARD_MARGIN = 40;
@@ -79,7 +85,7 @@ export class GameScene extends Phaser.Scene {
   /** Seed и звёзды на начало попытки: с журналом они проигрывают попытку заново (level_moves) */
   private seed = 0;
   private wallet = 0;
-  /** Тестовый уровень с экрана правил: правила Детского, фишки — камень, круг и кристалл */
+  /** Тестовый уровень с экрана правил: правила Детского, фишки — камень, ромб и кристалл */
   private gems = false;
   private goalsText: Phaser.GameObjects.Text | null = null;
   /** Ширина, в которую должна поместиться строка целей */
@@ -123,10 +129,11 @@ export class GameScene extends Phaser.Scene {
     this.level = this.gems ? null : (data.level ?? null);
   }
 
-  /** Лист с кристаллом, кругом и камнем грузится только для тестового уровня: остальной игре он не нужен */
+  /** Листы с кристаллом, ромбом и камнем грузятся только для тестового уровня: остальной игре они не нужны */
   preload(): void {
     if (!this.gems) return;
     if (!this.textures.exists(SPARKLE_SHEET)) this.load.image(SPARKLE_SHEET, SPARKLE_SHEET_PATH);
+    if (!this.textures.exists(RHOMBUS_SHEET)) this.load.image(RHOMBUS_SHEET, RHOMBUS_SHEET_PATH);
   }
 
   create(): void {

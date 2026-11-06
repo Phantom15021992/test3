@@ -31,8 +31,8 @@ import { drawPiece } from './pieceArt';
 import { addSparkleObject, SPARKLE_COLORS, type SparkleKind } from './sparkleGems';
 import { drawTileShape } from './tileArt';
 
-/** Тестовый уровень: 1 уровень — камень, 2 — круг, 3 — кристалл */
-const GEM_KINDS: readonly SparkleKind[] = ['stone', 'circle', 'crystal'];
+/** Тестовый уровень: 1 уровень — камень, 2 — ромб, 3 — кристалл */
+const GEM_KINDS: readonly SparkleKind[] = ['stone', 'rhombus', 'crystal'];
 /** Ширина камня в клетке: ореол и лучи выходят за неё, поэтому тело меньше клетки */
 const GEM_CELL_SHARE = 0.72;
 
@@ -60,7 +60,7 @@ export class BoardView {
   private cols = 0;
   /** Сколько слоёв у целой глыбы на этом уровне: от него считается стадия картинки */
   coalLayers: number = COAL_MAX_LAYERS;
-  /** Тестовый уровень с экрана правил: фишки — анимированные камень, круг и кристалл (лист грузит GameScene) */
+  /** Тестовый уровень с экрана правил: фишки — анимированные камень, ромб и кристалл (лист грузит GameScene) */
   gems = false;
 
   constructor(
