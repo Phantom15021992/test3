@@ -11,19 +11,19 @@
     "#...##...#",
     "..........",
     "..........",
-    "...J..J...",
+    ".JJJ..J.J.",
     "#...##...#"
   ],
   "colors": 3,
-  "moves": 36,
+  "moves": 45,
   "goals": [
     {
       "kind": "ice",
-      "count": 2
+      "count": 5
     },
     {
       "kind": "gold",
-      "count": 2
+      "count": 3
     }
   ],
   "stars": [
@@ -37,5 +37,5 @@
     }
   ],
   "iceCracks": true,
-  "hiddenGold": 2
+  "hiddenGold": 3
 }

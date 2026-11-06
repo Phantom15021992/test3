@@ -14,7 +14,7 @@
     "........."
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 45,
   "goals": [
     {
       "kind": "item",
@@ -22,17 +22,17 @@
     },
     {
       "kind": "level3",
-      "count": 8
+      "count": 5
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 18
+      "count": 15
     },
     {
       "kind": "level3",
-      "count": 23
+      "count": 20
     }
   ]
 }

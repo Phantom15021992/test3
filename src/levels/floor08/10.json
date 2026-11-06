@@ -4,13 +4,13 @@
   "hint": "Последний уровень этажа: здесь можно купить спецфишки",
   "layout": [
     "###....###",
-    "#........#",
-    "..........",
-    "..........",
-    "..........",
-    "....JJ....",
+    "#..JJJJ..#",
     ".JJJJJJJJ.",
-    ".JJ.JJJJJ.",
+    ".JJJJJJJJ.",
+    ".JJJJJJJJ.",
+    ".JJJJJJJJ.",
+    ".JJJJJJJJ.",
+    ".JJJJJJJJ.",
     "#..JJJJ..#",
     "###....###"
   ],
@@ -19,28 +19,28 @@
   "goals": [
     {
       "kind": "ice",
-      "count": 21
+      "count": 56
     },
     {
       "kind": "gold",
-      "count": 7
+      "count": 20
     },
     {
       "kind": "level3color",
-      "count": 4,
+      "count": 11,
       "color": 1
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 14
+      "count": 21
     },
     {
       "kind": "level3",
-      "count": 19
+      "count": 26
     }
   ],
   "iceCracks": true,
-  "hiddenGold": 7
+  "hiddenGold": 20
 }

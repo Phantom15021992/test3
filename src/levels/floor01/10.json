@@ -15,7 +15,7 @@
     ".........."
   ],
   "colors": 3,
-  "moves": 45,
+  "moves": 31,
   "goals": [
     {
       "kind": "ice",
@@ -23,22 +23,22 @@
     },
     {
       "kind": "level3",
-      "count": 40
+      "count": 28
     },
     {
       "kind": "level3color",
-      "count": 16,
+      "count": 11,
       "color": 2
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 66
+      "count": 49
     },
     {
       "kind": "level3",
-      "count": 71
+      "count": 54
     }
   ]
 }

@@ -23,23 +23,23 @@
     },
     {
       "kind": "gold",
-      "count": 20
+      "count": 28
     },
     {
       "kind": "level3color",
-      "count": 8,
+      "count": 11,
       "color": 1
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 18
+      "count": 21
     },
     {
       "kind": "level3",
-      "count": 23
+      "count": 26
     }
   ],
-  "hiddenGold": 20
+  "hiddenGold": 28
 }

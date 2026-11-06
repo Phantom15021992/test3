@@ -9,31 +9,31 @@
     "..........",
     "..........",
     "..........",
-    "..........",
+    "........1.",
     "..1.......",
-    "...b.1b...",
+    "...bb1b...",
     ".........."
   ],
   "colors": 3,
-  "moves": 32,
+  "moves": 45,
   "goals": [
     {
       "kind": "box",
-      "count": 4
+      "count": 6
     },
     {
       "kind": "level3",
-      "count": 4
+      "count": 5
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 14
+      "count": 15
     },
     {
       "kind": "level3",
-      "count": 19
+      "count": 20
     }
   ]
 }

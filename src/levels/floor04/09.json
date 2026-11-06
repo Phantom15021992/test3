@@ -4,17 +4,17 @@
   "hint": "Совпадения рядом с углём откалывают слои: ячейки 3 уровня — по три",
   "layout": [
     ".........",
-    ".cc...cc.",
-    ".cc...cc.",
-    "....J....",
-    ".J.JJJ.J.",
+    ".ccJJJcc.",
+    ".ccJJJcc.",
+    ".JJJJJJJ.",
+    ".JJJJJJJ.",
     ".JJJJJJJ.",
     ".JccJccJ.",
     ".JccJccJ.",
     "........."
   ],
   "colors": 3,
-  "moves": 36,
+  "moves": 43,
   "goals": [
     {
       "kind": "coal",
@@ -22,7 +22,7 @@
     },
     {
       "kind": "gold",
-      "count": 6
+      "count": 15
     }
   ],
   "stars": [
@@ -35,6 +35,6 @@
       "count": 15
     }
   ],
-  "coalLayers": 4,
-  "hiddenGold": 6
+  "coalLayers": 9,
+  "hiddenGold": 15
 }

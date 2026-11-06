@@ -9,13 +9,13 @@
     "..........",
     "..cc..cc..",
     "..cc..cc..",
-    "...bbbb...",
+    "..........",
     "..bbbbbb..",
     "#..bbbb..#",
     "###....###"
   ],
   "colors": 3,
-  "moves": 45,
+  "moves": 30,
   "goals": [
     {
       "kind": "coal",
@@ -27,7 +27,7 @@
     },
     {
       "kind": "gold",
-      "count": 5
+      "count": 4
     }
   ],
   "stars": [
@@ -40,7 +40,7 @@
       "count": 15
     }
   ],
-  "coalLayers": 6,
+  "coalLayers": 4,
   "iceCracks": true,
-  "hiddenGold": 5
+  "hiddenGold": 4
 }

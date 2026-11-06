@@ -10,20 +10,20 @@
     "...bbbb...",
     ".b......b.",
     "....##....",
-    "..b....b..",
-    "...JJJJ...",
+    ".Jbb...bJ.",
+    ".bJJJJJJb.",
     ".........."
   ],
   "colors": 3,
-  "moves": 25,
+  "moves": 43,
   "goals": [
     {
       "kind": "ice",
-      "count": 4
+      "count": 8
     },
     {
       "kind": "gold",
-      "count": 4
+      "count": 6
     }
   ],
   "stars": [
@@ -36,5 +36,5 @@
       "count": 15
     }
   ],
-  "hiddenGold": 4
+  "hiddenGold": 6
 }
