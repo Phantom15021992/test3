@@ -13,6 +13,7 @@ import { UI_TEXT_COLOR } from '../view/palette';
 const TITLE_Y = 110;
 const PANEL_TOP = 170;
 const PANEL_MARGIN = 18;
+const TEST_FONT_SIZE = 26;
 
 // Отдельный экран с правилами игры; открывается кнопкой из главного меню. Внизу — сброс прогресса кампании.
 export class RulesScene extends Phaser.Scene {
@@ -31,17 +32,28 @@ export class RulesScene extends Phaser.Scene {
       .setOrigin(0.5);
     new RulesPanel(this, PANEL_MARGIN, PANEL_TOP, this.scale.width - PANEL_MARGIN * 2);
     const backY = PANEL_TOP + RULES_PANEL_HEIGHT + MENU_BUTTON_GAP * 1.5 + MENU_BUTTON_HEIGHT / 2;
-    // «Назад» и сброс прогресса кампании — в один ряд: под панелью правил места на два ряда нет
-    const half = (MENU_BUTTON_WIDTH - MENU_BUTTON_GAP) / 2;
-    const offset = (half + MENU_BUTTON_GAP) / 2;
+    // «Назад», сброс прогресса кампании и тестовый уровень — в один ряд: под панелью правил
+    // места на два ряда нет
+    const third = (MENU_BUTTON_WIDTH - MENU_BUTTON_GAP * 2) / 3;
+    const step = third + MENU_BUTTON_GAP;
     createMenuButton(
       this,
-      centerX - offset,
+      centerX - step,
       backY,
       [menuButtonLabel(this, 'Назад')],
       () => this.scene.start('Menu'),
-      half,
+      third,
     );
-    addResetProgressButton(this, centerX + offset, backY, half, MENU_BUTTON_HEIGHT);
+    addResetProgressButton(this, centerX, backY, third, MENU_BUTTON_HEIGHT);
+    // Тестовый уровень: правила Детского, фишки — картинки самоцветов
+    const test = menuButtonLabel(this, 'Тестовый\nуровень', TEST_FONT_SIZE).setAlign('center');
+    createMenuButton(
+      this,
+      centerX + step,
+      backY,
+      [test],
+      () => this.scene.start('Game', { gems: true }),
+      third,
+    );
   }
 }

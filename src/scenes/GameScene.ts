@@ -46,6 +46,7 @@ import {
 } from '../ui/levelText';
 import { HIGHLIGHT_COLOR, UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
 import { BoardView } from '../view/BoardView';
+import { GEM_IMAGE_FILES } from '../view/gemArt';
 import { debugSeed, startGame } from './startGame';
 
 const BOARD_MARGIN = 40;
@@ -74,6 +75,8 @@ export class GameScene extends Phaser.Scene {
   private ticket: GameTicket | null = null;
   /** Уровень; null — свободная игра */
   private level: Level | null = null;
+  /** Тестовый уровень с экрана правил: правила Детского, фишки — самоцветы */
+  private gems = false;
   private goalsText: Phaser.GameObjects.Text | null = null;
   /** Ширина, в которую должна поместиться строка целей */
   private goalsWidth = 0;
@@ -101,10 +104,27 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Сложность и билет на партию приходят из startGame; при «Играть снова» сложность та же */
-  init(data: { difficulty?: DifficultyId; ticket?: GameTicket | null; level?: Level }): void {
-    this.difficulty = DIFFICULTIES.find((d) => d.id === data.difficulty) ?? DIFFICULTIES[2];
-    this.ticket = data.ticket ?? null;
-    this.level = data.level ?? null;
+  init(data: {
+    difficulty?: DifficultyId;
+    ticket?: GameTicket | null;
+    level?: Level;
+    gems?: boolean;
+  }): void {
+    this.gems = data.gems ?? false;
+    // Тестовый уровень — по правилам Детского, без билета: в общую таблицу и статистику не идёт
+    this.difficulty = this.gems
+      ? DIFFICULTIES[0]!
+      : (DIFFICULTIES.find((d) => d.id === data.difficulty) ?? DIFFICULTIES[2]);
+    this.ticket = this.gems ? null : (data.ticket ?? null);
+    this.level = this.gems ? null : (data.level ?? null);
+  }
+
+  /** Картинки самоцветов грузятся только для тестового уровня: остальной игре они не нужны */
+  preload(): void {
+    if (!this.gems) return;
+    for (const { key, path } of GEM_IMAGE_FILES) {
+      if (!this.textures.exists(key)) this.load.image(key, path);
+    }
   }
 
   create(): void {
@@ -140,6 +160,7 @@ export class GameScene extends Phaser.Scene {
     const originX = boxLeft + (boxSize - cellSize * cols) / 2;
     const originY = boxTop + (boxSize - cellSize * rows) / 2;
     this.view = new BoardView(this, originX, originY, cellSize);
+    this.view.gems = this.gems;
     if (this.level?.coalLayers) this.view.coalLayers = this.level.coalLayers;
     this.view.render(this.session.board);
     this.refreshIce();
@@ -149,8 +170,8 @@ export class GameScene extends Phaser.Scene {
     this.add
       .text(centerX, boxTop - 275, this.titleText(), {
         fontFamily: 'sans-serif',
-        // У уровня заголовок длиннее, а слева от него ещё кнопка карты
-        fontSize: this.level ? '36px' : '44px',
+        // У уровня заголовок длиннее, а слева от него ещё кнопка карты (у тестового — правил)
+        fontSize: this.level || this.gems ? '36px' : '44px',
         color: UI_TEXT_COLOR,
       })
       .setOrigin(0.5);
@@ -224,6 +245,20 @@ export class GameScene extends Phaser.Scene {
           this.scene.start('LevelMap', this.mapData());
         });
     }
+    if (this.gems) {
+      // Тестовый уровень открыт с экрана правил — туда и возвращает
+      this.add
+        .text(30, boxTop - 275, '← Правила', {
+          fontFamily: 'sans-serif',
+          fontSize: '30px',
+          color: UI_MUTED_TEXT_COLOR,
+        })
+        .setOrigin(0, 0.5)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerup', () => {
+          if (!this.busy) this.scene.start('Rules');
+        });
+    }
 
     this.input.on('pointerdown', this.onPointerDown, this);
     this.input.on('pointermove', this.onPointerMove, this);
@@ -252,6 +287,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private titleText(): string {
+    if (this.gems) return 'Тестовый уровень';
     return this.level ? levelTitle(this.level) : `Три в ряд · ${this.difficulty.name}`;
   }
 
@@ -515,13 +551,14 @@ export class GameScene extends Phaser.Scene {
     const scoreBeforeFinale = session.score;
     await this.animate(session.finale());
     this.hintText.setText('');
-    this.sendResult(session.score - scoreBeforeFinale);
+    if (!this.gems) this.sendResult(session.score - scoreBeforeFinale);
     new GameOverDialog(this).show(
       session.score,
       this.difficulty,
       {
-        onRestart: () => void startGame(this, this.difficulty.id),
-        onMenu: () => this.scene.start('Menu'),
+        onRestart: () =>
+          this.gems ? this.scene.restart({ gems: true }) : void startGame(this, this.difficulty.id),
+        onMenu: () => this.scene.start(this.gems ? 'Rules' : 'Menu'),
       },
       this.ticket && { ticketId: this.ticket.id, actions: session.actions },
     );

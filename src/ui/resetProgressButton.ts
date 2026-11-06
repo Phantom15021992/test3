@@ -4,10 +4,11 @@ import { forgetTransferCode } from '../storage/transfer';
 import { UI_WARNING_TEXT_COLOR } from '../view/palette';
 import { createMenuButton, menuButtonLabel } from './menuButton';
 
-const RESET_FONT_SIZE = 26;
+const RESET_FONT_SIZE = 24;
 /** Сколько ждать второго нажатия: сброс необратим, одно случайное касание его не запускает */
 const RESET_CONFIRM_MS = 3000;
-const RESET_LABEL = 'Сброс прогресса\nкампании';
+// Кнопка — треть ряда на экране правил, поэтому надписи в три коротких строки
+const RESET_LABEL = 'Сброс\nпрогресса\nкампании';
 
 /**
  * Кнопка сброса прогресса кампании: первое нажатие просит подтвердить, второе в течение
@@ -31,7 +32,7 @@ export function addResetProgressButton(
     [text],
     () => {
       if (!armed) {
-        text.setText('Нажмите ещё раз —\nпрогресс сотрётся');
+        text.setText('Нажмите\nещё раз —\nвсё сотрётся');
         armed = scene.time.delayedCall(RESET_CONFIRM_MS, () => {
           armed = null;
           text.setText(RESET_LABEL);
@@ -42,7 +43,7 @@ export function addResetProgressButton(
       armed = null;
       resetCampaignProgress();
       forgetTransferCode();
-      text.setText('Прогресс кампании\nсброшен');
+      text.setText('Прогресс\nкампании\nсброшен');
       scene.time.delayedCall(RESET_CONFIRM_MS, () => {
         if (text.active) text.setText(RESET_LABEL);
       });
