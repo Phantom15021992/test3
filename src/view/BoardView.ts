@@ -28,8 +28,13 @@ import {
 } from './palette';
 import { chestParts, iceImage, obstacleImage, setCoalArt } from './obstacleArt';
 import { drawPiece } from './pieceArt';
-import { GEM_CELL_SHARE, gemKey } from './gemArt';
+import { addSparkleObject, SPARKLE_COLORS, type SparkleKind } from './sparkleGems';
 import { drawTileShape } from './tileArt';
+
+/** Тестовый уровень: 1 уровень — камень, 2 — круг, 3 — кристалл */
+const GEM_KINDS: readonly SparkleKind[] = ['stone', 'circle', 'crystal'];
+/** Ширина камня в клетке: ореол и лучи выходят за неё, поэтому тело меньше клетки */
+const GEM_CELL_SHARE = 0.72;
 
 type TileSprite = Phaser.GameObjects.Container;
 
@@ -55,7 +60,7 @@ export class BoardView {
   private cols = 0;
   /** Сколько слоёв у целой глыбы на этом уровне: от него считается стадия картинки */
   coalLayers: number = COAL_MAX_LAYERS;
-  /** Тестовый уровень с экрана правил: фишки — картинки самоцветов (загружает GameScene) */
+  /** Тестовый уровень с экрана правил: фишки — анимированные камень, круг и кристалл (лист грузит GameScene) */
   gems = false;
 
   constructor(
@@ -359,10 +364,9 @@ export class BoardView {
       const name = cell.kind === 'item' ? 'crown' : cell.kind;
       children = [obstacleImage(this.scene, name, this.cellSize)];
     } else if (cell.kind === 'tile' && this.gems) {
-      const size = this.cellSize * GEM_CELL_SHARE;
-      children = [
-        this.scene.add.image(0, 0, gemKey(cell.color, cell.level)).setDisplaySize(size, size),
-      ];
+      const kind = GEM_KINDS[cell.level - 1] ?? 'stone';
+      const color = SPARKLE_COLORS[cell.color] ?? SPARKLE_COLORS[0];
+      children = [addSparkleObject(this.scene, kind, 0, 0, this.cellSize * GEM_CELL_SHARE, color)];
     } else if (cell.kind === 'tile') {
       const body = this.scene.add.graphics();
       this.drawTile(body, cell);

@@ -10,6 +10,28 @@ export const SPARKLE_SHEET_PATH = 'assets/sparkle/sheet.webp';
 
 export type SparkleKind = 'crystal' | 'circle' | 'stone';
 
+/** Цвета: лист нарисован синим, красный и зелёный получаются сдвигом оттенка */
+export const SPARKLE_COLORS = ['blue', 'green', 'red'] as const;
+export type SparkleColor = (typeof SPARKLE_COLORS)[number];
+
+/**
+ * Оттенок пикселя синего рисунка → оттенок в нужном цвете (градусы). Синее тело (~230°) уходит в цвет,
+ * а голубые блики (~190°) — в тёплую сторону: у красного в оранжевые, у зелёного в жёлто-зелёные,
+ * как у настоящих камней. Поэтому у красного шкала перевёрнута
+ */
+const HUE_MAPS: Record<SparkleColor, ((hue: number) => number) | null> = {
+  blue: null,
+  green: (hue) => hue - 100,
+  red: (hue) => 225 - hue,
+};
+
+/** Блёстки в тон камню */
+const STAR_TINTS: Record<SparkleColor, number> = {
+  blue: 0xa8f4ff,
+  green: 0xeaff9a,
+  red: 0xffd890,
+};
+
 /** Область листа с одним рисунком (x, y, ширина, высота) */
 type Region = readonly [number, number, number, number];
 
@@ -43,7 +65,6 @@ const OUTLINE_ALPHA = 150;
 const OUTLINE_GROW = 3;
 
 const STAR_KEY = 'sparkle-star';
-const STAR_COLOR = 0xa8f4ff;
 
 interface Layer {
   key: string;
@@ -56,20 +77,88 @@ interface Layer {
 
 const layers = new Map<string, Layer>();
 
+const layerKey = (color: SparkleColor, name: string, part: 'body' | 'halo') =>
+  `sparkle-${color}-${name}-${part}`;
+
+/** Копия слоя в другом цвете: оттенок меняется, яркость и насыщенность остаются */
+function recolor(
+  source: HTMLCanvasElement,
+  map: ((hue: number) => number) | null,
+): HTMLCanvasElement {
+  if (!map) return source;
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(source, 0, 0);
+  const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = image.data;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] === 0) continue;
+    const hsl = rgbToHsl(d[i]!, d[i + 1]!, d[i + 2]!);
+    const [r, g, b] = hslToRgb(((map(hsl[0]) % 360) + 360) % 360, hsl[1], hsl[2]);
+    d[i] = r;
+    d[i + 1] = g;
+    d[i + 2] = b;
+  }
+  ctx.putImageData(image, 0, 0);
+  return canvas;
+}
+
+function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  const h =
+    max === rn
+      ? ((gn - bn) / d + (gn < bn ? 6 : 0)) * 60
+      : max === gn
+        ? ((bn - rn) / d + 2) * 60
+        : ((rn - gn) / d + 4) * 60;
+  return [h, s, l];
+}
+
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  const [r, g, b] =
+    h < 60
+      ? [c, x, 0]
+      : h < 120
+        ? [x, c, 0]
+        : h < 180
+          ? [0, c, x]
+          : h < 240
+            ? [0, x, c]
+            : h < 300
+              ? [x, 0, c]
+              : [c, 0, x];
+  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+}
+
 /** Режет лист на слои один раз за запуск; лист должен быть уже загружен */
 export function createSparkleTextures(scene: Phaser.Scene): void {
   if (layers.size > 0 && scene.textures.exists(STAR_KEY)) return;
   const sheet = scene.textures.get(SPARKLE_SHEET).getSourceImage() as HTMLImageElement;
   for (const name of ['crystal', 'circle', 'stone', 'rays'] as const) {
     const cut = cutRegion(sheet, REGIONS[name], PAINTED_STARS[name] ?? []);
-    const add = (part: 'body' | 'halo', canvas: HTMLCanvasElement) => {
-      const key = `sparkle-${name}-${part}`;
-      if (scene.textures.exists(key)) scene.textures.remove(key);
-      scene.textures.addCanvas(key, canvas);
-      layers.set(key, { key, ...cut.anchor });
-    };
-    add('body', cut.body);
-    add('halo', cut.halo);
+    for (const color of SPARKLE_COLORS) {
+      const add = (part: 'body' | 'halo', canvas: HTMLCanvasElement) => {
+        const key = layerKey(color, name, part);
+        if (scene.textures.exists(key)) scene.textures.remove(key);
+        scene.textures.addCanvas(key, recolor(canvas, HUE_MAPS[color]));
+        layers.set(key, { key, ...cut.anchor });
+      };
+      add('body', cut.body);
+      add('halo', cut.halo);
+    }
   }
   drawStar(scene);
 }
@@ -214,9 +303,10 @@ function drawStar(scene: Phaser.Scene): void {
     new Phaser.Math.Vector2(c - long, c),
     new Phaser.Math.Vector2(c - thin, c - thin),
   ];
-  g.fillStyle(STAR_COLOR, 0.35);
+  // Белая: в тон камню её красит tint
+  g.fillStyle(0xffffff, 0.35);
   g.fillCircle(c, c, 9);
-  g.fillStyle(STAR_COLOR, 1);
+  g.fillStyle(0xffffff, 1);
   g.fillPoints(ray(c, 5), true);
   g.fillStyle(0xffffff, 1);
   g.fillPoints(ray(c * 0.55, 2.5), true);
@@ -251,9 +341,12 @@ export function addSparkleObject(
   x: number,
   y: number,
   size: number,
+  color: SparkleColor = 'blue',
 ): Phaser.GameObjects.Container {
   const look = LOOKS[kind];
   const container = scene.add.container(x, y);
+  // Своя фаза у каждого объекта: иначе фишки на поле дышат и качаются в такт, всё поле разом
+  const phase = Math.random() * PULSE_MS;
   const image = (key: string, scale = 1) => {
     const layer = layers.get(key)!;
     const img = scene.add
@@ -275,14 +368,20 @@ export function addSparkleObject(
   };
 
   if (look.rays) {
-    const rays = image('sparkle-rays-halo');
-    rays.setAlpha(0.25);
+    const rays = image(layerKey(color, 'rays', 'halo'));
+    rays.setAlpha(0.25).setAngle(Math.random() * 360);
     tweens.push(
-      scene.tweens.add({ targets: rays, angle: 360, duration: RAYS_TURN_MS, repeat: -1 }),
+      scene.tweens.add({
+        targets: rays,
+        angle: '+=360',
+        duration: RAYS_TURN_MS,
+        repeat: -1,
+      }),
       scene.tweens.add({
         targets: rays,
         alpha: 0.45,
         duration: PULSE_MS,
+        delay: phase,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut',
@@ -290,7 +389,7 @@ export function addSparkleObject(
     );
   }
   if (look.glow[1] > 0) {
-    const glow = image(`sparkle-${kind}-halo`);
+    const glow = image(layerKey(color, kind, 'halo'));
     const scale = glow.scale;
     glow.setAlpha(look.glow[0]);
     tweens.push(
@@ -299,6 +398,7 @@ export function addSparkleObject(
         alpha: look.glow[1],
         scale: scale * 1.04,
         duration: PULSE_MS,
+        delay: phase,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut',
@@ -306,7 +406,7 @@ export function addSparkleObject(
     );
   }
 
-  const body = image(`sparkle-${kind}-body`);
+  const body = image(layerKey(color, kind, 'body'));
   const bodyScale = body.scale;
   if (look.breathe > 0) {
     tweens.push(
@@ -314,6 +414,7 @@ export function addSparkleObject(
         targets: body,
         scale: bodyScale * (1 + look.breathe),
         duration: PULSE_MS,
+        delay: phase,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut',
@@ -327,6 +428,7 @@ export function addSparkleObject(
         y: -size * 0.015,
         angle: 1,
         duration: PULSE_MS * 1.3,
+        delay: phase,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut',
@@ -335,7 +437,7 @@ export function addSparkleObject(
   }
 
   for (let i = 0; i < look.sparkles; i++) {
-    const star = scene.add.image(0, 0, STAR_KEY).setScale(0).setAlpha(0);
+    const star = scene.add.image(0, 0, STAR_KEY).setScale(0).setAlpha(0).setTint(STAR_TINTS[color]);
     container.add(star);
     const twinkle = () => {
       if (!star.active) return;

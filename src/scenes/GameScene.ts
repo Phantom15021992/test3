@@ -47,14 +47,7 @@ import {
 } from '../ui/levelText';
 import { HIGHLIGHT_COLOR, UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
 import { BoardView } from '../view/BoardView';
-import { GEM_IMAGE_FILES } from '../view/gemArt';
-import {
-  addSparkleObject,
-  createSparkleTextures,
-  SPARKLE_SHEET,
-  SPARKLE_SHEET_PATH,
-  type SparkleKind,
-} from '../view/sparkleGems';
+import { createSparkleTextures, SPARKLE_SHEET, SPARKLE_SHEET_PATH } from '../view/sparkleGems';
 import { debugSeed, startGame } from './startGame';
 
 const BOARD_MARGIN = 40;
@@ -64,10 +57,6 @@ const LEVEL_BRIEFING_GAP = 12;
 /** Шрифт строки целей и самый мелкий, до которого он уменьшается, если цели не помещаются в ширину */
 const GOALS_FONT_SIZE = 30;
 const GOALS_MIN_FONT_SIZE = 18;
-/** Анимированные объекты под полем тестового уровня: отступ от поля, шаг между ними и ширина тела */
-const SPARKLE_SHOWCASE_Y = 200;
-const SPARKLE_SHOWCASE_GAP = 220;
-const SPARKLE_SHOWCASE_SIZE = 130;
 
 /** Режим ввода: обычный, выбор цвета (радуга / мега-бомба + радуга), выбор клеток манипулятором */
 type Mode =
@@ -90,7 +79,7 @@ export class GameScene extends Phaser.Scene {
   /** Seed и звёзды на начало попытки: с журналом они проигрывают попытку заново (level_moves) */
   private seed = 0;
   private wallet = 0;
-  /** Тестовый уровень с экрана правил: правила Детского, фишки — самоцветы */
+  /** Тестовый уровень с экрана правил: правила Детского, фишки — камень, круг и кристалл */
   private gems = false;
   private goalsText: Phaser.GameObjects.Text | null = null;
   /** Ширина, в которую должна поместиться строка целей */
@@ -134,12 +123,9 @@ export class GameScene extends Phaser.Scene {
     this.level = this.gems ? null : (data.level ?? null);
   }
 
-  /** Картинки самоцветов грузятся только для тестового уровня: остальной игре они не нужны */
+  /** Лист с кристаллом, кругом и камнем грузится только для тестового уровня: остальной игре он не нужен */
   preload(): void {
     if (!this.gems) return;
-    for (const { key, path } of GEM_IMAGE_FILES) {
-      if (!this.textures.exists(key)) this.load.image(key, path);
-    }
     if (!this.textures.exists(SPARKLE_SHEET)) this.load.image(SPARKLE_SHEET, SPARKLE_SHEET_PATH);
   }
 
@@ -179,6 +165,8 @@ export class GameScene extends Phaser.Scene {
     const originY = boxTop + (boxSize - cellSize * rows) / 2;
     this.view = new BoardView(this, originX, originY, cellSize);
     this.view.gems = this.gems;
+    // Фишки тестового уровня — слои с листа художника: их нужно нарезать до первой отрисовки поля
+    if (this.gems) createSparkleTextures(this);
     if (this.level?.coalLayers) this.view.coalLayers = this.level.coalLayers;
     this.view.render(this.session.board);
     this.refreshIce();
@@ -264,18 +252,6 @@ export class GameScene extends Phaser.Scene {
         });
     }
     if (this.gems) {
-      // Под полем — анимированные объекты с листа художника: кристалл, круг и камень
-      createSparkleTextures(this);
-      const kinds: SparkleKind[] = ['crystal', 'circle', 'stone'];
-      kinds.forEach((kind, i) =>
-        addSparkleObject(
-          this,
-          kind,
-          centerX + (i - 1) * SPARKLE_SHOWCASE_GAP,
-          boxBottom + SPARKLE_SHOWCASE_Y,
-          SPARKLE_SHOWCASE_SIZE,
-        ),
-      );
       // Тестовый уровень открыт с экрана правил — туда и возвращает
       this.add
         .text(30, boxTop - 275, '← Правила', {
