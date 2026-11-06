@@ -171,13 +171,20 @@ function drawStar(scene: Phaser.Scene): void {
   g.destroy();
 }
 
+/** Темп спокойной анимации: один вдох-выдох ореола и тела, оборот лучей */
+const PULSE_MS = 2400;
+const RAYS_TURN_MS = 32000;
+/** Блёстка: вспышка и пауза до следующей */
+const TWINKLE_MS = 650;
+const TWINKLE_PAUSE_MS = 1000;
+
 /** Как сияет объект: сила ореола, лучи и сколько блёсток мерцает разом */
 const LOOKS: Record<
   SparkleKind,
   { glow: [number, number]; rays: boolean; sparkles: number; breathe: number }
 > = {
-  crystal: { glow: [0.55, 1], rays: true, sparkles: 4, breathe: 0.035 },
-  circle: { glow: [0.25, 0.6], rays: false, sparkles: 2, breathe: 0.025 },
+  crystal: { glow: [0.3, 0.55], rays: true, sparkles: 3, breathe: 0.015 },
+  circle: { glow: [0.12, 0.3], rays: false, sparkles: 1, breathe: 0.01 },
   stone: { glow: [0, 0], rays: false, sparkles: 0, breathe: 0 },
 };
 
@@ -216,13 +223,13 @@ export function addSparkleObject(
 
   if (look.rays) {
     const rays = image('sparkle-rays-halo');
-    rays.setAlpha(0.6);
+    rays.setAlpha(0.25);
     tweens.push(
-      scene.tweens.add({ targets: rays, angle: 360, duration: 14000, repeat: -1 }),
+      scene.tweens.add({ targets: rays, angle: 360, duration: RAYS_TURN_MS, repeat: -1 }),
       scene.tweens.add({
         targets: rays,
-        alpha: 1,
-        duration: 900,
+        alpha: 0.45,
+        duration: PULSE_MS,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut',
@@ -237,8 +244,8 @@ export function addSparkleObject(
       scene.tweens.add({
         targets: glow,
         alpha: look.glow[1],
-        scale: scale * 1.08,
-        duration: 1100,
+        scale: scale * 1.04,
+        duration: PULSE_MS,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut',
@@ -253,7 +260,7 @@ export function addSparkleObject(
       scene.tweens.add({
         targets: body,
         scale: bodyScale * (1 + look.breathe),
-        duration: 1100,
+        duration: PULSE_MS,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut',
@@ -264,9 +271,9 @@ export function addSparkleObject(
     tweens.push(
       scene.tweens.add({
         targets: body,
-        y: -size * 0.03,
-        angle: 2,
-        duration: 1600,
+        y: -size * 0.015,
+        angle: 1,
+        duration: PULSE_MS * 1.3,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut',
@@ -283,16 +290,16 @@ export function addSparkleObject(
       const angle = Math.random() * Math.PI * 2;
       const radius = size * (0.35 + Math.random() * 0.3);
       star.setPosition(Math.cos(angle) * radius, Math.sin(angle) * radius);
-      const peak = (size / 64) * (0.25 + Math.random() * 0.25);
+      const peak = (size / 64) * (0.16 + Math.random() * 0.12);
       scene.tweens.add({
         targets: star,
         scale: peak,
-        alpha: 1,
+        alpha: 0.75,
         angle: { from: 0, to: 45 },
-        duration: 350,
+        duration: TWINKLE_MS,
         yoyo: true,
-        ease: 'Quad.easeOut',
-        onComplete: () => later(200 + Math.random() * 900, twinkle),
+        ease: 'Sine.easeInOut',
+        onComplete: () => later(TWINKLE_PAUSE_MS + Math.random() * TWINKLE_PAUSE_MS * 2, twinkle),
       });
     };
     later(i * 400 + Math.random() * 300, twinkle);
