@@ -38,7 +38,7 @@ const MAX_AIM_CELLS = 30;
  * focus — сколько обменов он ещё замечает рядом с отдельными предметами цели (короны, сундуки, уголь,
  * камни): человек смотрит на них нарочно. Лёд лежит по всему полю, на него внимание не делится
  */
-export const botSkill = { attention: 2.25, focus: 3, crownRow: 40 };
+export const botSkill = { attention: 2.25, focus: 3, crownRow: 40, temperature: 0 };
 /** Сколько клеток цели на поле человек видит все разом: при таком числе и лёд — отдельные предметы */
 const FOCUS_TARGETS = 12;
 /** На сколько клеток под корону человек смотрит всегда */
@@ -345,26 +345,63 @@ export function pickMove(session: LevelSession, bot: Bot, rng: Rng): Pick | null
     const moves = candidates(session);
     return moves.length > 0 ? { move: moves[rng.int(moves.length)]!, value: 0 } : null;
   }
+  const weighed = weighMoves(session, rng);
+  if (weighed.length === 0) return null;
+  const chosen =
+    botSkill.temperature > 0
+      ? weighed[sampleIndex(choiceOdds(weighed, botSkill.temperature), rng)]!
+      : weighed.reduce((best, pick) => (pick.total > best.total ? pick : best));
+  // Ценность — самого хода: с ней сравнивается покупка, а она тоже примеряется без следующего
+  return { move: chosen.move, value: chosen.value };
+}
+
+export interface WeighedMove extends Pick {
+  /** Ценность хода вместе с лучшим следующим (вполовину веса) — по ней бот выбирает */
+  total: number;
+}
+
+/**
+ * Ходы, между которыми бот выбирает: из замеченных обменов лучшие TOP_FIRST, примеренные целиком,
+ * с каскадами, и к каждому — лучший следующий ход. Дальше бот не смотрит, как и человек
+ */
+export function weighMoves(session: LevelSession, rng: Rng): WeighedMove[] {
   const moves = ordered(session, rng);
-  if (moves.length === 0) return null;
+  if (moves.length === 0) return [];
   const first = moves
     .slice(0, MAX_CANDIDATES)
     .map((move) => ({ move, value: moveValue(session, move, createRng(rng.int(2 ** 31))) }))
     .sort((a, b) => b.value - a.value);
-  // На ход вперёд: лучшие ходы примеряются целиком, с каскадами, и к каждому — лучший следующий.
-  // Дальше бот не смотрит, как и человек
-  let best = first[0]!;
-  let bestTotal = -Infinity;
-  for (const pick of first.slice(0, TOP_FIRST)) {
+  return first.slice(0, TOP_FIRST).map((pick) => {
     const after = session.trial(pick.move, createRng(rng.int(2 ** 31)));
-    const total = pick.value + NEXT_WEIGHT * bestNext(after, createRng(rng.int(2 ** 31)));
-    if (total > bestTotal) {
-      bestTotal = total;
-      best = pick;
-    }
+    return {
+      ...pick,
+      total: pick.value + NEXT_WEIGHT * bestNext(after, createRng(rng.int(2 ** 31))),
+    };
+  });
+}
+
+/**
+ * Вероятности выбора (softmax с температурой): человек берёт не всегда лучший ход, а тем чаще,
+ * чем он ценнее. Температура 0 — всегда лучший. Подбирается по ходам живых игроков (scripts/humanMoves.ts)
+ */
+export function choiceOdds(weighed: readonly WeighedMove[], temperature: number): number[] {
+  const top = Math.max(...weighed.map((pick) => pick.total));
+  if (temperature <= 0) {
+    const best = weighed.findIndex((pick) => pick.total === top);
+    return weighed.map((_, i) => (i === best ? 1 : 0));
   }
-  // Ценность — самого хода: с ней сравнивается покупка, а она тоже примеряется без следующего
-  return best;
+  const weights = weighed.map((pick) => Math.exp((pick.total - top) / temperature));
+  const sum = weights.reduce((a, w) => a + w, 0);
+  return weights.map((w) => w / sum);
+}
+
+function sampleIndex(odds: readonly number[], rng: Rng): number {
+  let left = rng.int(1_000_000) / 1_000_000;
+  for (let i = 0; i < odds.length; i++) {
+    left -= odds[i]!;
+    if (left < 0) return i;
+  }
+  return odds.length - 1;
 }
 
 type Purchase =
