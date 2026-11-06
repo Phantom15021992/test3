@@ -5,25 +5,25 @@
   "layout": [
     "..........",
     "..........",
-    "..b.##.b..",
-    ".b.b..b.b.",
-    ".bbbbbbbb.",
-    ".b.J..J.b.",
-    ".JJ.##.JJ.",
-    ".JbJ..JbJ.",
-    ".JJJJJJJJ.",
+    "....##....",
+    "..........",
+    "...bbbb...",
+    ".b......b.",
+    "....##....",
+    "..b....b..",
+    "...JJJJ...",
     ".........."
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 25,
   "goals": [
     {
       "kind": "ice",
-      "count": 18
+      "count": 4
     },
     {
       "kind": "gold",
-      "count": 9
+      "count": 4
     }
   ],
   "stars": [
@@ -36,5 +36,5 @@
       "count": 15
     }
   ],
-  "hiddenGold": 9
+  "hiddenGold": 4
 }

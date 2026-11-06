@@ -15,7 +15,7 @@
     "###....###"
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 27,
   "goals": [
     {
       "kind": "coal",
@@ -37,5 +37,5 @@
       "count": 18
     }
   ],
-  "coalLayers": 6
+  "coalLayers": 5
 }

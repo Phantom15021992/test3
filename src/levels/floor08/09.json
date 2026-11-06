@@ -8,22 +8,22 @@
     "....##....",
     "..........",
     "..........",
-    ".JJJ..JJJ.",
-    ".JJJ..JJJ.",
-    ".J..##..J.",
-    ".JJ.##.JJ.",
+    "..........",
+    "..........",
+    "....##..J.",
+    "....##....",
     "....##...."
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 25,
   "goals": [
     {
       "kind": "ice",
-      "count": 18
+      "count": 1
     },
     {
       "kind": "gold",
-      "count": 6
+      "count": 1
     }
   ],
   "stars": [
@@ -37,5 +37,5 @@
     }
   ],
   "iceCracks": true,
-  "hiddenGold": 6
+  "hiddenGold": 1
 }

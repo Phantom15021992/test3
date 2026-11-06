@@ -5,8 +5,8 @@
   "layout": [
     ".........",
     ".cc...cc.",
-    ".ccJ.Jcc.",
-    ".JJJJJJJ.",
+    ".cc...cc.",
+    "....J....",
     ".J.JJJ.J.",
     ".JJJJJJJ.",
     ".JccJccJ.",
@@ -14,7 +14,7 @@
     "........."
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 36,
   "goals": [
     {
       "kind": "coal",
@@ -22,7 +22,7 @@
     },
     {
       "kind": "gold",
-      "count": 9
+      "count": 6
     }
   ],
   "stars": [
@@ -35,6 +35,6 @@
       "count": 15
     }
   ],
-  "coalLayers": 6,
-  "hiddenGold": 9
+  "coalLayers": 4,
+  "hiddenGold": 6
 }

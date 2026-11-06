@@ -5,17 +5,17 @@
   "layout": [
     "..........",
     ".cc.cc.cc.",
-    ".cc2cc.cc.",
+    ".cc1cc.cc.",
     "......1...",
     "....cc....",
-    ".cc2cc.cc.",
+    ".cc1cc.cc.",
     ".cc....cc.",
-    ".bb.cc2b..",
-    "..b2cc.b..",
+    ".b..cc1...",
+    "..b1cc.b..",
     ".........."
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 25,
   "goals": [
     {
       "kind": "coal",
@@ -23,23 +23,23 @@
     },
     {
       "kind": "box",
-      "count": 10
+      "count": 8
     },
     {
       "kind": "level3color",
-      "count": 4,
+      "count": 2,
       "color": 0
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 14
+      "count": 12
     },
     {
       "kind": "level3",
-      "count": 19
+      "count": 17
     }
   ],
-  "coalLayers": 9
+  "coalLayers": 5
 }

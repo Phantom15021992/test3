@@ -10,12 +10,12 @@
     "....##....",
     "....##....",
     ".......b..",
-    ".b..bbccb.",
+    "......cc..",
     ".b..bbccb.",
     ".........."
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 25,
   "goals": [
     {
       "kind": "coal",
@@ -23,7 +23,7 @@
     },
     {
       "kind": "box",
-      "count": 9
+      "count": 5
     }
   ],
   "stars": [
@@ -36,5 +36,5 @@
       "count": 15
     }
   ],
-  "coalLayers": 6
+  "coalLayers": 4
 }

@@ -7,18 +7,18 @@
     ".........",
     ".........",
     "..J......",
-    ".J.....J.",
-    ".JJJJJJJ.",
-    ".JJJJJJJ.",
-    ".JJJJJJJ.",
+    ".........",
+    "....J....",
+    "....J....",
+    "...JJJ...",
     "........."
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 34,
   "goals": [
     {
       "kind": "gold",
-      "count": 8
+      "count": 2
     }
   ],
   "stars": [
@@ -31,5 +31,5 @@
       "count": 15
     }
   ],
-  "hiddenGold": 8
+  "hiddenGold": 2
 }

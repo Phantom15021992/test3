@@ -5,17 +5,17 @@
   "layout": [
     "..........",
     "..cc..cc..",
-    ".3cc..cc..",
+    "..cc..cc..",
     "......1...",
     ".cc.##.cc.",
     ".cc.##.cc.",
-    "..bb...b..",
+    "..........",
     ".cc1...cc.",
     ".cc.bb1cc.",
     ".........."
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 44,
   "goals": [
     {
       "kind": "coal",
@@ -23,7 +23,7 @@
     },
     {
       "kind": "box",
-      "count": 9
+      "count": 5
     }
   ],
   "stars": [
@@ -36,5 +36,5 @@
       "count": 15
     }
   ],
-  "coalLayers": 9
+  "coalLayers": 4
 }

@@ -4,22 +4,22 @@
   "hint": "Слитки спрятаны не во всякой льдине: разбивай лёд, чтобы их найти",
   "layout": [
     "..........",
-    ".ccJccJcc.",
-    ".ccJccJcc.",
+    ".cc.cc.cc.",
+    ".cc.cc.cc.",
     "..........",
     ".....#####",
     "..cc.#####",
     "..cc......",
-    ".JJJJJJJJ.",
-    ".JJJJJJJJ.",
+    "..........",
+    "...JJJJJ..",
     ".........."
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 45,
   "goals": [
     {
       "kind": "gold",
-      "count": 7
+      "count": 2
     },
     {
       "kind": "coal",
@@ -36,7 +36,7 @@
       "count": 15
     }
   ],
-  "coalLayers": 6,
+  "coalLayers": 2,
   "iceCracks": true,
-  "hiddenGold": 7
+  "hiddenGold": 2
 }

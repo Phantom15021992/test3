@@ -9,17 +9,17 @@
     "....##....",
     "....##....",
     "..........",
-    "..b....b..",
-    ".bbbbbbbb.",
+    "..........",
+    ".....b....",
     "..bbbbbb..",
     ".........."
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 29,
   "goals": [
     {
       "kind": "gold",
-      "count": 5
+      "count": 2
     }
   ],
   "stars": [
@@ -32,5 +32,5 @@
       "count": 15
     }
   ],
-  "hiddenGold": 5
+  "hiddenGold": 2
 }

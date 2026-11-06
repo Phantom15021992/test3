@@ -8,18 +8,18 @@
     "##......##",
     "#........#",
     "....cc....",
-    ".JJJccJJJ.",
-    "#.JJJJJJ.#",
+    "....cc....",
+    "#...JJJ..#",
     "##.J..J.##",
     "###.JJ.###",
     "####..####"
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 45,
   "goals": [
     {
       "kind": "ice",
-      "count": 16
+      "count": 7
     },
     {
       "kind": "coal",
@@ -36,6 +36,6 @@
       "count": 15
     }
   ],
-  "coalLayers": 9,
+  "coalLayers": 4,
   "iceCracks": true
 }
