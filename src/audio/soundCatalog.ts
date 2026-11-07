@@ -543,10 +543,11 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
         s.shatter({ vol: 0.44, dur: 0.5, size: 0.9 });
         s.glass({ f: anyNote(0, 3) / 2, dur: 0.5, vol: 0.16, at: 0.02 });
       },
-      // в — каменный «бух»: глухой удар и камни, падающие следом
+      // в — каменный «бух»: глухой удар, камни следом и россыпь искр, как в прошлых вариантах «в»
       (s) => {
         s.noise({ dur: 0.22, vol: 1.6, filter: 'lowpass', f: 300, f2: 110, q: 0.8 });
         pebbles(s, Math.floor(rand(5, 9)), 0.4, 700, 1800, 1, 0.08);
+        s.sparkle({ count: Math.floor(rand(5, 8)), span: 0.4, at: 0.04, vol: 0.08 });
       },
       // г — звонкий взрыв: хлопок и короткий низкий звон осколков
       (s) => {
