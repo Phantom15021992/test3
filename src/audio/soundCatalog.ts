@@ -48,6 +48,32 @@ const SWAP_SHIFT = 2 ** (-2 / 12);
 /** Случайное число в диапазоне */
 const rand = (from: number, to: number) => from + Math.random() * (to - from);
 
+/**
+ * Стук камешков: count коротких щелчков (полосовой шум) вразнобой за span секунд — так стучат
+ * мелкие камни, падая друг на друга
+ */
+function pebbles(
+  s: Synth,
+  count: number,
+  span: number,
+  from: number,
+  to: number,
+  vol: number,
+  at = 0,
+) {
+  for (let i = 0; i < count; i++) {
+    s.noise({
+      dur: rand(0.012, 0.025),
+      vol: vol * rand(0.5, 1),
+      at: at + Math.random() * span,
+      filter: 'bandpass',
+      f: rand(from, to),
+      q: rand(3, 6),
+      pan: rand(-0.6, 0.6),
+    });
+  }
+}
+
 /** Глухой удар снизу — основа взрывов и тяжёлых предметов */
 function thump(s: Synth, f: number, dur: number, vol = 0.5, at = 0) {
   // Удар — больше шум, чем тон: чистый низкий синус звучит как электронная «бочка»
@@ -220,6 +246,36 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
         s.soft({ f: low(15), dur: 0.1, vol: 0.05 });
       },
       (s) => s.sparkle({ count: 2, span: 0.04, low: 1500, high: 2500, vol: 0.08, dur: 0.1 }),
+      // г — россыпь мелких камешков: несколько сухих щелчков вразнобой
+      (s) => pebbles(s, Math.floor(rand(4, 8)), 0.14, 1300, 2600, 0.4),
+      // д — камни покрупнее: пара глухих стуков и мелкий камешек вдогонку
+      (s) => {
+        const count = Math.floor(rand(2, 4));
+        for (let i = 0; i < count; i++) {
+          s.noise({
+            dur: 0.05,
+            vol: rand(0.2, 0.3),
+            at: i * rand(0.03, 0.06),
+            filter: 'lowpass',
+            f: rand(500, 800),
+            q: 1,
+          });
+        }
+        pebbles(s, 1, 0.02, 1600, 2200, 0.3, count * 0.05);
+      },
+      // е — камешки о кристалл: щелчки и одна-две тихие стеклянные ноты
+      (s) => {
+        pebbles(s, Math.floor(rand(3, 6)), 0.1, 1200, 2400, 0.35);
+        s.glass({
+          f: anyNote(2, 6),
+          dur: 0.15,
+          vol: 0.035,
+          at: rand(0.01, 0.05),
+          pan: rand(-0.4, 0.4),
+        });
+        if (Math.random() < 0.5)
+          s.glass({ f: anyNote(3, 7), dur: 0.12, vol: 0.03, at: rand(0.05, 0.1) });
+      },
     ],
   },
   {
