@@ -46,6 +46,11 @@ const SOFT: readonly (readonly [number, number])[] = [
   [3.93, 0.22],
   [9.24, 0.05],
 ];
+/** Калимба (пальцевое пианино): основной тон и высокий обертон язычка, который быстро гаснет */
+const KALIMBA: readonly (readonly [number, number])[] = [
+  [1, 1],
+  [5.4, 0.16],
+];
 /** Обертон раздваивается на два тона, разнесённых на эту долю: слышны медленные биения */
 const BEAT_SPREAD = 0.0025;
 /** Отзвук комнаты: длина и доля «мокрого» сигнала */
@@ -190,6 +195,26 @@ export class Synth {
   /** Мягкий тёплый звон, как у маримбы из камня */
   soft(options: ToneOptions): void {
     this.partials(SOFT, options, 2.5, 0.5);
+  }
+
+  /** Калимба: тёплый щипок металлического язычка — приятный и не «кристальный» */
+  kalimba(options: ToneOptions): void {
+    this.partials(KALIMBA, options, 8, 0.25);
+  }
+
+  /** Пузырёк: короткий тон, быстро взлетающий вверх, — как капля или пузырь в воде */
+  bubble({
+    f,
+    vol = 0.12,
+    at = 0,
+    pan = 0,
+  }: {
+    f: number;
+    vol?: number;
+    at?: number;
+    pan?: number;
+  }): void {
+    this.tone({ f, f2: f * 2.2, dur: 0.07, vol, at, attack: 0.004, pan });
   }
 
   /** Подъём воздуха (или спад, falling): «волшебный» нарастающий шорох вместо скользящего тона */
