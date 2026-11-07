@@ -32,7 +32,9 @@ for (const entry of SOUND_CATALOG) {
   row.append(title);
   entry.variants.forEach((recipe, i) => {
     const button = document.createElement('button');
-    button.textContent = `▶ ${entry.id}${LETTERS[i]}`;
+    const chosen = entry.chosen === i;
+    button.textContent = `${chosen ? '✓' : '▶'} ${entry.id}${LETTERS[i]}`;
+    if (chosen) button.className = 'chosen';
     button.addEventListener('click', () => {
       const s = getSynth();
       const steps = entry.steps ?? 1;

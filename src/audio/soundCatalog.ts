@@ -14,6 +14,8 @@ export interface SoundEntry {
   group: string;
   /** Сколько шагов проиграть подряд в лаборатории (комбо, звёзды); по умолчанию один */
   steps?: number;
+  /** Вариант, который владелец выбрал на слух (0 — а, 1 — б, 2 — в); он пойдёт в игру */
+  chosen?: 0 | 1 | 2;
   variants: readonly [SoundRecipe, SoundRecipe, SoundRecipe];
 }
 
@@ -56,6 +58,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 1,
     group: 'Ходы и фишки',
     title: 'Нажатие на фишку',
+    chosen: 2,
     variants: [
       (s) => s.glass({ f: low(27), dur: 0.18, vol: 0.12 }),
       (s) => s.soft({ f: low(19), dur: 0.25, vol: 0.14 }),

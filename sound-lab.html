@@ -70,6 +70,10 @@
       button:active {
         transform: scale(0.97);
       }
+      button.chosen {
+        background: #2f5a3c;
+        border-color: #6fcf8a;
+      }
       label {
         font-size: 13px;
         color: #9aa3bd;
@@ -80,8 +84,9 @@
     <header>
       <h1>Звуковая лаборатория</h1>
       <p>
-        Варианты: а — хрусталь, б — мягкий (тёплый, как маримба из камня), в — искры. Назови номер и букву (например «5б»).
-        Громкость: <input id="volume" type="range" min="0" max="1" step="0.05" value="0.7" />
+        Варианты: а — хрусталь, б — мягкий (тёплый, как маримба из камня), в — искры. Назови номер и
+        букву (например «5б»). Громкость:
+        <input id="volume" type="range" min="0" max="1" step="0.05" value="0.7" />
       </p>
     </header>
     <main id="list"></main>
