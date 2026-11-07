@@ -529,18 +529,33 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 12,
     group: 'Спецфишки',
     title: 'Бомба 3×3',
+    // Новый набор: прежние не подошли. Короче и легче мега-бомбы, каждый раз чуть разный
     variants: [
+      // а — мягкий хлопок, камешки разлетаются, пара искр
       (s) => {
-        thump(s, 140, 0.35, 0.5);
-        s.shatter({ vol: 0.3, dur: 0.6 });
+        s.noise({ dur: 0.18, vol: 0.8, filter: 'lowpass', f: 450, f2: 160, q: 0.8 });
+        pebbles(s, Math.floor(rand(7, 11)), 0.35, 1000, 2600, 0.64, 0.03);
+        s.sparkle({ count: 3, span: 0.3, at: 0.05, vol: 0.08 });
       },
+      // б — треск кристалла: сухой треск, осколки и низкий звон
       (s) => {
-        thump(s, 120, 0.4, 0.45);
-        run(s, 'soft', [p(2), p(0)], 0.08, { dur: 0.5, vol: 0.1, at: 0.05 });
+        s.noise({ dur: 0.05, vol: 0.6, filter: 'bandpass', f: 1500, q: 1 });
+        s.shatter({ vol: 0.44, dur: 0.5, size: 0.9 });
+        s.glass({ f: anyNote(0, 3) / 2, dur: 0.5, vol: 0.16, at: 0.02 });
       },
+      // в — каменный «бух»: глухой удар и камни, падающие следом
       (s) => {
-        thump(s, 160, 0.25, 0.4);
-        s.sparkle({ count: 16, span: 0.35, vol: 0.06 });
+        s.noise({ dur: 0.22, vol: 1.6, filter: 'lowpass', f: 300, f2: 110, q: 0.8 });
+        pebbles(s, Math.floor(rand(5, 9)), 0.4, 700, 1800, 1, 0.08);
+      },
+      // г — звонкий взрыв: хлопок и короткий низкий звон осколков
+      (s) => {
+        s.noise({ dur: 0.15, vol: 0.7, filter: 'lowpass', f: 500, f2: 180, q: 0.8 });
+        const root = Math.floor(rand(0, 3));
+        [0, 2, 4].forEach((step, i) =>
+          s.glass({ f: p(root + step) / 2, dur: 0.4, vol: 0.12, at: 0.01 + i * 0.02 }),
+        );
+        s.sparkle({ count: 5, span: 0.3, at: 0.03, vol: 0.09 });
       },
     ],
   },
@@ -548,19 +563,49 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 13,
     group: 'Спецфишки',
     title: 'Мега-бомба 5×5',
+    // Новый набор: прежние не подошли. Взрыв кристаллов и камней — без электронного «бума», с разбросом
     variants: [
+      // а — тяжёлый хлопок и долгая россыпь камней во все стороны
       (s) => {
-        thump(s, 90, 0.7, 0.65);
-        s.shatter({ vol: 0.4, dur: 1, size: 1.6 });
+        s.noise({ dur: 0.35, vol: 1, filter: 'lowpass', f: 420, f2: 120, q: 0.8 });
+        pebbles(s, Math.floor(rand(14, 20)), 0.7, 900, 2600, 0.72, 0.04);
+        s.sparkle({ count: 8, span: 0.6, at: 0.08, vol: 0.08 });
       },
+      // б — «бах-бах»: двойной удар и осколки после каждого
       (s) => {
-        thump(s, 80, 0.8, 0.6);
-        s.noise({ dur: 0.9, vol: 0.25, filter: 'lowpass', f: 900, f2: 200 });
-        run(s, 'soft', [p(4), p(2), p(0)], 0.1, { dur: 0.7, vol: 0.1, at: 0.1 });
+        [0, rand(0.14, 0.2)].forEach((at, i) => {
+          s.noise({
+            dur: 0.22,
+            vol: i === 0 ? 0.96 : 0.76,
+            at,
+            filter: 'lowpass',
+            f: 380,
+            f2: 130,
+            q: 0.8,
+          });
+          s.shatter({ vol: 0.4, at: at + 0.01, dur: 0.5, size: 1.4 });
+        });
       },
+      // в — раскатистый: удар, низкий рокот, который медленно стихает, и камешки
       (s) => {
-        thump(s, 100, 0.6, 0.55);
-        s.sparkle({ count: 30, span: 0.9, vol: 0.06 });
+        s.noise({ dur: 0.18, vol: 1.5, filter: 'lowpass', f: 500, q: 0.8 });
+        s.noise({
+          dur: 1.1,
+          vol: 1.1,
+          filter: 'lowpass',
+          f: 380,
+          f2: 90,
+          q: 0.7,
+          at: 0.03,
+          attack: 0.04,
+        });
+        pebbles(s, Math.floor(rand(8, 12)), 0.8, 800, 2000, 0.56, 0.15);
+      },
+      // г — взрыв с эхом: большие осколки, а через миг ещё горсть мелких, тише
+      (s) => {
+        s.noise({ dur: 0.25, vol: 0.9, filter: 'lowpass', f: 400, f2: 140, q: 0.8 });
+        s.shatter({ vol: 0.6, dur: 0.8, size: 1.6 });
+        s.shatter({ vol: 0.24, at: rand(0.32, 0.4), dur: 0.5, size: 1 });
       },
     ],
   },
