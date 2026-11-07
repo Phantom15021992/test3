@@ -51,6 +51,8 @@ const SWAP_SHIFT = 2 ** (-2 / 12);
 const COMBO_SHIFT = 2 ** (-6 / 12);
 /** Во сколько раз медленнее звучит перемешивание поля, чем в первых вариантах */
 const SHUFFLE_SLOW = 1.6;
+/** 13а — на октаву глуше первого варианта */
+const MEGA_OCTAVE = 0.5;
 /** Случайное число в диапазоне */
 const rand = (from: number, to: number) => from + Math.random() * (to - from);
 
@@ -566,22 +568,37 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     title: 'Мега-бомба 5×5',
     // Новый набор: прежние не подошли. Взрыв кристаллов и камней — без электронного «бума», с разбросом
     variants: [
-      // а — тяжёлый хлопок и долгая россыпь камней во все стороны
+      // а — тяжёлый хлопок и долгая россыпь камней во все стороны; на октаву глуше первого варианта
+      // (все частоты умножены на MEGA_OCTAVE), громкость чуть поднята: низкое звучит тише
       (s) => {
-        s.noise({ dur: 0.35, vol: 1, filter: 'lowpass', f: 420, f2: 120, q: 0.8 });
+        s.noise({
+          dur: 0.35,
+          vol: 1.3,
+          filter: 'lowpass',
+          f: 420 * MEGA_OCTAVE,
+          f2: 120 * MEGA_OCTAVE,
+          q: 0.8,
+        });
         // Объём, как у 13в: низкий рокот медленно стихает под камнями
         s.noise({
           dur: 1,
-          vol: 1.1,
+          vol: 1.4,
           filter: 'lowpass',
-          f: 380,
-          f2: 90,
+          f: 380 * MEGA_OCTAVE,
+          f2: 90 * MEGA_OCTAVE,
           q: 0.7,
           at: 0.03,
           attack: 0.04,
         });
-        pebbles(s, Math.floor(rand(14, 20)), 0.7, 900, 2600, 0.72, 0.04);
-        s.sparkle({ count: 8, span: 0.6, at: 0.08, vol: 0.08 });
+        pebbles(s, Math.floor(rand(14, 20)), 0.7, 900 * MEGA_OCTAVE, 2600 * MEGA_OCTAVE, 0.9, 0.04);
+        s.sparkle({
+          count: 8,
+          span: 0.6,
+          at: 0.08,
+          vol: 0.09,
+          low: 1400 * MEGA_OCTAVE,
+          high: 3600 * MEGA_OCTAVE,
+        });
       },
       // б — «бах-бах»: двойной удар и осколки после каждого
       (s) => {
