@@ -51,8 +51,9 @@ const SWAP_SHIFT = 2 ** (-2 / 12);
 const COMBO_SHIFT = 2 ** (-6 / 12);
 /** Во сколько раз медленнее звучит перемешивание поля, чем в первых вариантах */
 const SHUFFLE_SLOW = 1.6;
-/** 13а — на октаву глуше первого варианта */
+/** 13а — камни на октаву глуше первого варианта, сам взрыв — на пол-октавы выше камней */
 const MEGA_OCTAVE = 0.5;
+const MEGA_BOOM = MEGA_OCTAVE * Math.SQRT2;
 /** Случайное число в диапазоне */
 const rand = (from: number, to: number) => from + Math.random() * (to - from);
 
@@ -569,14 +570,14 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     // Новый набор: прежние не подошли. Взрыв кристаллов и камней — без электронного «бума», с разбросом
     variants: [
       // а — тяжёлый хлопок и долгая россыпь камней во все стороны; удары, рокот и камни на октаву глуше первого варианта
-      // (MEGA_OCTAVE), искры — прежней высоты; громкость чуть поднята: низкое звучит тише
+      // (MEGA_OCTAVE), сам взрыв — хлопок и рокот — на пол-октавы выше камней (MEGA_BOOM), искры прежней высоты
       (s) => {
         s.noise({
           dur: 0.35,
           vol: 1.3,
           filter: 'lowpass',
-          f: 420 * MEGA_OCTAVE,
-          f2: 120 * MEGA_OCTAVE,
+          f: 420 * MEGA_BOOM,
+          f2: 120 * MEGA_BOOM,
           q: 0.8,
         });
         // Объём, как у 13в: низкий рокот медленно стихает под камнями
@@ -584,8 +585,8 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
           dur: 1,
           vol: 1.4,
           filter: 'lowpass',
-          f: 380 * MEGA_OCTAVE,
-          f2: 90 * MEGA_OCTAVE,
+          f: 380 * MEGA_BOOM,
+          f2: 90 * MEGA_BOOM,
           q: 0.7,
           at: 0.03,
           attack: 0.04,
