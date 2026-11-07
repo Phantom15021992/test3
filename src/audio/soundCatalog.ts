@@ -173,12 +173,11 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
         s.noise({ dur: 0.1, vol: 0.12, filter: 'lowpass', f: 900 });
         s.glass({ f: low(7), f2: low(2), dur: 0.25, vol: 0.1, at: 0.04 });
       },
-      // г — как обмен 2в, но туда и обратно: шорох вверх, шорох вниз и тихий глухой стук в конце
+      // г — как обмен 2в, но туда и обратно: только шорох вверх и сразу вниз (стук владелец убрал)
       (s) => {
         const go = rand(0.1, 0.13);
         whoosh(s, 1700 * SWAP_SHIFT, 4500 * SWAP_SHIFT, go, 0.09);
         whoosh(s, 4500 * SWAP_SHIFT, 1500 * SWAP_SHIFT, go, 0.08, go);
-        s.soft({ f: anyNote(0, 2) / 2, dur: 0.18, vol: 0.08, at: go * 2 - 0.02 });
       },
       // д — «не-а»: короткий шорох и две тихие ноты вниз, каждый раз на других соседних нотах
       (s) => {
