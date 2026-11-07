@@ -47,6 +47,8 @@ function run(
 const anyNote = (from: number, to: number) => p(from + Math.floor(Math.random() * (to - from + 1)));
 /** Насколько ниже первого варианта звучит 2в: владелец дважды просил опустить на полтона */
 const SWAP_SHIFT = 2 ** (-2 / 12);
+/** Насколько ниже первого варианта звучит 7в: на полтора тона */
+const COMBO_SHIFT = 2 ** (-3 / 12);
 /** Случайное число в диапазоне */
 const rand = (from: number, to: number) => from + Math.random() * (to - from);
 
@@ -322,9 +324,16 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     variants: [
       (s, k) => s.glass({ f: p(k + 1), dur: 0.5, vol: 0.15 }),
       (s, k) => run(s, 'soft', [p(k), p(k + 2)], 0.05, { dur: 0.5, vol: 0.13 }),
+      // в — на полтора тона ниже первого варианта (COMBO_SHIFT), звон и искры вместе
       (s, k) => {
-        s.glass({ f: p(k + 2), dur: 0.4, vol: 0.12 });
-        s.sparkle({ count: 2 + k, span: 0.15, vol: 0.04, low: 1500 + k * 150 });
+        s.glass({ f: p(k + 2) * COMBO_SHIFT, dur: 0.4, vol: 0.12 });
+        s.sparkle({
+          count: 2 + k,
+          span: 0.15,
+          vol: 0.04,
+          low: (1500 + k * 150) * COMBO_SHIFT,
+          high: 3600 * COMBO_SHIFT,
+        });
       },
     ],
   },
