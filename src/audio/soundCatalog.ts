@@ -16,6 +16,8 @@ export interface SoundEntry {
   steps?: number;
   /** Номер варианта, который владелец выбрал на слух (0 — а, 1 — б, 2 — в…); он пойдёт в игру */
   chosen?: number;
+  /** Выбран, но под сомнением, нужен ли звук вообще: решим, когда услышим его в игре */
+  doubtful?: boolean;
   /** Первые три — а, б, в; дальше — дополнительные варианты (г, д, е…) по образцу понравившегося */
   variants: readonly SoundRecipe[];
 }
@@ -239,6 +241,8 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 4,
     group: 'Ходы и фишки',
     title: 'Приземление фишек',
+    chosen: 5,
+    doubtful: true,
     variants: [
       (s) => s.glass({ f: low(22), dur: 0.08, vol: 0.06 }),
       (s) => {

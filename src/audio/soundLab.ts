@@ -33,8 +33,9 @@ for (const entry of SOUND_CATALOG) {
   entry.variants.forEach((recipe, i) => {
     const button = document.createElement('button');
     const chosen = entry.chosen === i;
-    button.textContent = `${chosen ? '✓' : '▶'} ${entry.id}${LETTERS[i]}`;
-    if (chosen) button.className = 'chosen';
+    button.textContent = `${chosen ? (entry.doubtful ? '?' : '✓') : '▶'} ${entry.id}${LETTERS[i]}`;
+    if (chosen) button.className = entry.doubtful ? 'chosen doubtful' : 'chosen';
+    if (chosen && entry.doubtful) button.title = 'Выбран, но под сомнением, нужен ли звук';
     button.addEventListener('click', () => {
       const s = getSynth();
       const steps = entry.steps ?? 1;
