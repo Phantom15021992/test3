@@ -569,6 +569,17 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
       // а — тяжёлый хлопок и долгая россыпь камней во все стороны
       (s) => {
         s.noise({ dur: 0.35, vol: 1, filter: 'lowpass', f: 420, f2: 120, q: 0.8 });
+        // Объём, как у 13в: низкий рокот медленно стихает под камнями
+        s.noise({
+          dur: 1,
+          vol: 1.1,
+          filter: 'lowpass',
+          f: 380,
+          f2: 90,
+          q: 0.7,
+          at: 0.03,
+          attack: 0.04,
+        });
         pebbles(s, Math.floor(rand(14, 20)), 0.7, 900, 2600, 0.72, 0.04);
         s.sparkle({ count: 8, span: 0.6, at: 0.08, vol: 0.08 });
       },
