@@ -1,6 +1,8 @@
 // Синтез коротких звуков игры через Web Audio: без файлов, всё из генераторов и шума.
-// Фишки в игре — кристаллы, поэтому основа — стеклянный звон: несколько негармоничных обертонов,
-// как у бокала или колокольчика, быстрая атака и долгое затухание. Время — в секундах от «сейчас».
+// Фишки в игре — кристаллы, поэтому основа — звон: несколько негармоничных обертонов, быстрая атака
+// и долгое затухание. Чтобы звук не казался электронным: у звона есть щелчок удара, каждый обертон
+// раздвоен на два почти равных тона (живые биения, как у настоящего стекла), верх мягко срезан,
+// и всё звучит в небольшой «комнате» (реверберация). Время — в секундах от «сейчас».
 
 export type Wave = OscillatorType;
 
@@ -38,13 +40,19 @@ const GLASS: readonly (readonly [number, number])[] = [
   [5.4, 0.18],
   [8.93, 0.08],
 ];
-/** Колокольчик мягче: обертоны ближе к гармоническим и тише */
-const BELL: readonly (readonly [number, number])[] = [
+/** Мягкий звук — как маримба из камня: верхние обертоны далеко и быстро гаснут, звук тёплый */
+const SOFT: readonly (readonly [number, number])[] = [
   [1, 1],
-  [2, 0.3],
-  [3.01, 0.12],
-  [4.2, 0.05],
+  [3.93, 0.22],
+  [9.24, 0.05],
 ];
+/** Обертон раздваивается на два тона, разнесённых на эту долю: слышны медленные биения */
+const BEAT_SPREAD = 0.0025;
+/** Отзвук комнаты: длина и доля «мокрого» сигнала */
+const REVERB_SECONDS = 1.3;
+const REVERB_WET = 0.22;
+/** Выше этой частоты звук мягко срезан: резкий верх и делал звуки «компьютерными» */
+const TOP_CUT = 6500;
 
 /** Нота по номеру полутона от ля первой октавы (0 — 440 Гц) */
 export const note = (semitones: number) => 440 * 2 ** (semitones / 12);
@@ -62,7 +70,36 @@ export class Synth {
     comp.ratio.value = 4;
     this.out = ctx.createGain();
     this.out.gain.value = 0.7;
-    this.out.connect(comp).connect(ctx.destination);
+    const top = ctx.createBiquadFilter();
+    top.type = 'lowpass';
+    top.frequency.value = TOP_CUT;
+    top.Q.value = 0.5;
+    this.out.connect(top);
+    top.connect(comp);
+    const reverb = ctx.createConvolver();
+    reverb.buffer = this.room();
+    const wet = ctx.createGain();
+    wet.gain.value = REVERB_WET;
+    top.connect(reverb).connect(wet).connect(comp);
+    comp.connect(ctx.destination);
+  }
+
+  /** Отклик небольшой комнаты: затухающий шум, высокие гаснут быстрее */
+  private room(): AudioBuffer {
+    const rate = this.ctx.sampleRate;
+    const length = Math.round(rate * REVERB_SECONDS);
+    const buffer = this.ctx.createBuffer(2, length, rate);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = buffer.getChannelData(ch);
+      let smooth = 0;
+      for (let i = 0; i < length; i++) {
+        const t = i / length;
+        // Сглаживание шума усиливается к концу: хвост отзвука темнее начала
+        smooth += (Math.random() * 2 - 1 - smooth) * (0.9 - t * 0.75);
+        data[i] = smooth * (1 - t) ** 3;
+      }
+    }
+    return buffer;
   }
 
   set volume(value: number) {
@@ -110,32 +147,74 @@ export class Synth {
     osc.stop(t + dur + 0.02);
   }
 
-  /** Звон из обертонов: высокие гаснут быстрее, как у настоящего стекла */
+  /**
+   * Звон из обертонов: высокие гаснут быстрее, каждый раздвоен ради живых биений, а в начале —
+   * короткий щелчок удара. decay — во сколько раз быстрее гаснет каждый следующий обертон
+   */
   private partials(
     partials: readonly (readonly [number, number])[],
-    { f, f2, dur, vol = 0.3, at = 0, attack = 0.003, pan = 0 }: ToneOptions,
+    { f, f2, dur, vol = 0.3, at = 0, attack = 0.002, pan = 0 }: ToneOptions,
+    decay: number,
+    strike: number,
   ): void {
-    partials.forEach(([ratio, level], i) =>
-      this.tone({
-        f: f * ratio,
-        f2: f2 === undefined ? undefined : f2 * ratio,
-        dur: dur / (1 + i * 0.6),
-        vol: vol * level,
-        at,
-        attack,
-        pan,
-      }),
-    );
+    partials.forEach(([ratio, level], i) => {
+      for (const side of [-1, 1]) {
+        const spread = 1 + side * BEAT_SPREAD * (0.6 + Math.random() * 0.8);
+        this.tone({
+          f: f * ratio * spread,
+          f2: f2 === undefined ? undefined : f2 * ratio * spread,
+          dur: dur / (1 + i * decay),
+          vol: (vol * level) / 2,
+          at,
+          attack,
+          pan,
+        });
+      }
+    });
+    this.noise({
+      dur: 0.02,
+      vol: vol * strike,
+      at,
+      filter: 'bandpass',
+      f: Math.min(f * 3, 5000),
+      q: 1.2,
+      pan,
+    });
   }
 
   /** Хрустальный звон (бокал) */
   glass(options: ToneOptions): void {
-    this.partials(GLASS, options);
+    this.partials(GLASS, options, 0.6, 0.35);
   }
 
-  /** Мягкий колокольчик */
-  bell(options: ToneOptions): void {
-    this.partials(BELL, options);
+  /** Мягкий тёплый звон, как у маримбы из камня */
+  soft(options: ToneOptions): void {
+    this.partials(SOFT, options, 2.5, 0.5);
+  }
+
+  /** Подъём воздуха (или спад, falling): «волшебный» нарастающий шорох вместо скользящего тона */
+  swell({
+    dur,
+    vol = 0.12,
+    at = 0,
+    falling = false,
+  }: {
+    dur: number;
+    vol?: number;
+    at?: number;
+    falling?: boolean;
+  }): void {
+    const [from, to] = falling ? [2200, 400] : [400, 2200];
+    this.noise({
+      dur,
+      vol,
+      at,
+      filter: 'bandpass',
+      f: from,
+      f2: to,
+      q: 1.5,
+      attack: falling ? 0.02 : dur * 0.7,
+    });
   }
 
   /** Шум с фильтром: шорох, хруст, свист */
@@ -167,8 +246,8 @@ export class Synth {
   sparkle({
     count = 6,
     span = 0.4,
-    low = 2500,
-    high = 6500,
+    low = 1400,
+    high = 3600,
     vol = 0.08,
     at = 0,
     dur = 0.25,
@@ -186,13 +265,13 @@ export class Synth {
 
   /** Осколки стекла: хрусткий шум и звонкие обломки */
   shatter({ vol = 0.3, at = 0, dur = 0.5, size = 1 } = {}): void {
-    this.noise({ dur: dur * 0.6, vol: vol * 0.8, at, filter: 'highpass', f: 2500 / size, q: 0.7 });
-    this.noise({ dur: dur * 0.25, vol: vol * 0.6, at, filter: 'bandpass', f: 1200 / size, q: 1.5 });
+    this.noise({ dur: dur * 0.6, vol: vol * 0.6, at, filter: 'bandpass', f: 2200 / size, q: 0.8 });
+    this.noise({ dur: dur * 0.25, vol: vol * 0.6, at, filter: 'bandpass', f: 900 / size, q: 1.5 });
     this.sparkle({
       count: Math.round(8 * size),
       span: dur * 0.5,
-      low: 1800 / size,
-      high: 7000,
+      low: 1100 / size,
+      high: 3800,
       vol: vol * 0.3,
       at,
       dur: dur * 0.5,
