@@ -14,9 +14,10 @@ export interface SoundEntry {
   group: string;
   /** Сколько шагов проиграть подряд в лаборатории (комбо, звёзды); по умолчанию один */
   steps?: number;
-  /** Вариант, который владелец выбрал на слух (0 — а, 1 — б, 2 — в); он пойдёт в игру */
-  chosen?: 0 | 1 | 2;
-  variants: readonly [SoundRecipe, SoundRecipe, SoundRecipe];
+  /** Номер варианта, который владелец выбрал на слух (0 — а, 1 — б, 2 — в…); он пойдёт в игру */
+  chosen?: number;
+  /** Первые три — а, б, в; дальше — дополнительные варианты (г, д, е…) по образцу понравившегося */
+  variants: readonly SoundRecipe[];
 }
 
 /** Пентатоника от до третьей октавы: из неё звучит всё «хорошее» — ноты не спорят друг с другом */
@@ -39,6 +40,11 @@ function run(
     s[kind]({ f, dur: opts.dur ?? 0.5, vol: opts.vol ?? 0.22, at: (opts.at ?? 0) + i * gap }),
   );
 }
+
+/** Случайная нота пентатоники из диапазона [from, to]: частые звуки каждый раз звучат чуть иначе */
+const anyNote = (from: number, to: number) => p(from + Math.floor(Math.random() * (to - from + 1)));
+/** Случайное число в диапазоне */
+const rand = (from: number, to: number) => from + Math.random() * (to - from);
 
 /** Глухой удар снизу — основа взрывов и тяжёлых предметов */
 function thump(s: Synth, f: number, dur: number, vol = 0.5, at = 0) {
@@ -81,6 +87,64 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
       (s) => {
         whoosh(s, 2000, 6000, 0.18, 0.1);
         s.sparkle({ count: 3, span: 0.12, vol: 0.05, at: 0.06 });
+      },
+      // г — шорох пониже и мягче, блёсток меньше и они ниже
+      (s) => {
+        const to = rand(2200, 3200);
+        whoosh(s, 900, to, rand(0.14, 0.2), 0.09);
+        s.sparkle({ count: 2, span: 0.1, low: 1200, high: 2600, vol: 0.05, at: 0.07 });
+      },
+      // д — шорох в случайную сторону (вверх или вниз) и одна тихая нота-искра
+      (s) => {
+        const up = Math.random() < 0.5;
+        whoosh(s, up ? 1500 : 5000, up ? 5000 : 1500, rand(0.15, 0.2), 0.09);
+        s.glass({
+          f: anyNote(4, 8),
+          dur: 0.25,
+          vol: 0.06,
+          at: rand(0.06, 0.1),
+          pan: rand(-0.4, 0.4),
+        });
+      },
+      // е — искристый шлейф: блёстки одна за другой, всё выше, как будто кристалл проскользил
+      (s) => {
+        whoosh(s, 1800, 4500, 0.16, 0.06);
+        const start = Math.floor(rand(3, 6));
+        [0, 1, 2, 3].forEach((i) =>
+          s.glass({
+            f: p(start + i),
+            dur: 0.18,
+            vol: 0.04 + Math.random() * 0.02,
+            at: 0.03 + i * rand(0.025, 0.04),
+            pan: -0.3 + i * 0.2,
+          }),
+        );
+      },
+      // ж — два кристалла коснулись друг друга: два коротких звона на близких случайных нотах
+      (s) => {
+        whoosh(s, 1600, 4200, 0.14, 0.06);
+        const n = Math.floor(rand(4, 8));
+        s.glass({ f: p(n), dur: 0.22, vol: 0.07, at: 0.07, pan: -0.2 });
+        s.glass({
+          f: p(n + (Math.random() < 0.5 ? 1 : 2)),
+          dur: 0.26,
+          vol: 0.06,
+          at: 0.07 + rand(0.02, 0.05),
+          pan: 0.2,
+        });
+      },
+      // з — почти один воздух: лёгкий шорох с горстью тихих искр, самый незаметный
+      (s) => {
+        whoosh(s, rand(2200, 2800), rand(5000, 6500), rand(0.12, 0.18), 0.08);
+        s.sparkle({
+          count: Math.floor(rand(2, 5)),
+          span: 0.14,
+          low: 1800,
+          high: 3400,
+          vol: 0.035,
+          at: 0.04,
+          dur: 0.18,
+        });
       },
     ],
   },

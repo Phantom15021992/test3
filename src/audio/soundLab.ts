@@ -4,7 +4,7 @@ import { Synth } from './synth';
 // Страница отбора звуков (sound-lab.html, только npm run dev): у каждого действия кнопки вариантов.
 // Звуки, которые растут по шагам (комбо, звёзды), проигрываются всей цепочкой.
 
-const LETTERS = ['а', 'б', 'в'];
+const LETTERS = ['а', 'б', 'в', 'г', 'д', 'е', 'ж', 'з', 'и', 'к'];
 const STEP_GAP_MS = 380;
 
 let synth: Synth | null = null;
