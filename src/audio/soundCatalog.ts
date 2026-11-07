@@ -163,6 +163,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 3,
     group: 'Ходы и фишки',
     title: 'Неверный обмен (откат)',
+    chosen: 3,
     variants: [
       (s) => {
         s.glass({ f: low(10), dur: 0.15, vol: 0.12 });
