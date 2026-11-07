@@ -344,6 +344,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 8,
     group: 'Ходы и фишки',
     title: 'Перемешивание поля',
+    chosen: 1,
     variants: [
       // Владелец попросил медленнее: все времена растянуты в SHUFFLE_SLOW раз
       (s) => {
