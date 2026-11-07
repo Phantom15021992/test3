@@ -77,6 +77,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 2,
     group: 'Ходы и фишки',
     title: 'Обмен фишек',
+    chosen: 2,
     variants: [
       (s) => {
         s.glass({ f: p(2), dur: 0.2, vol: 0.12 });
