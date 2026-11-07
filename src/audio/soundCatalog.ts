@@ -320,6 +320,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 7,
     group: 'Ходы и фишки',
     title: 'Комбо в каскаде (тон растёт с каждым шагом)',
+    chosen: 2,
     steps: 6,
     variants: [
       (s, k) => s.glass({ f: p(k + 1), dur: 0.5, vol: 0.15 }),
