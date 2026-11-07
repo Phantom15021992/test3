@@ -49,6 +49,8 @@ const anyNote = (from: number, to: number) => p(from + Math.floor(Math.random() 
 const SWAP_SHIFT = 2 ** (-2 / 12);
 /** Насколько ниже первого варианта звучит 7в: владелец дважды просил ниже на полтора тона — всего на три тона */
 const COMBO_SHIFT = 2 ** (-6 / 12);
+/** Во сколько раз медленнее звучит перемешивание поля, чем в первых вариантах */
+const SHUFFLE_SLOW = 1.6;
 /** Случайное число в диапазоне */
 const rand = (from: number, to: number) => from + Math.random() * (to - from);
 
@@ -343,21 +345,26 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     group: 'Ходы и фишки',
     title: 'Перемешивание поля',
     variants: [
+      // Владелец попросил медленнее: все времена растянуты в SHUFFLE_SLOW раз
       (s) => {
-        whoosh(s, 800, 4000, 0.6, 0.14);
-        run(s, 'glass', [p(6), p(3), p(5), p(1), p(4), p(2)], 0.08, {
-          dur: 0.3,
+        whoosh(s, 800, 4000, 0.6 * SHUFFLE_SLOW, 0.14);
+        run(s, 'glass', [p(6), p(3), p(5), p(1), p(4), p(2)], 0.08 * SHUFFLE_SLOW, {
+          dur: 0.3 * SHUFFLE_SLOW,
           vol: 0.08,
-          at: 0.1,
+          at: 0.1 * SHUFFLE_SLOW,
         });
       },
       (s) => {
-        whoosh(s, 600, 2500, 0.5, 0.12);
-        run(s, 'soft', [p(1), p(4), p(2), p(5), p(3)], 0.09, { dur: 0.35, vol: 0.09, at: 0.1 });
+        whoosh(s, 600, 2500, 0.5 * SHUFFLE_SLOW, 0.12);
+        run(s, 'soft', [p(1), p(4), p(2), p(5), p(3)], 0.09 * SHUFFLE_SLOW, {
+          dur: 0.35 * SHUFFLE_SLOW,
+          vol: 0.09,
+          at: 0.1 * SHUFFLE_SLOW,
+        });
       },
       (s) => {
-        whoosh(s, 1500, 7000, 0.7, 0.12);
-        s.sparkle({ count: 14, span: 0.7, vol: 0.05 });
+        whoosh(s, 1500, 7000, 0.7 * SHUFFLE_SLOW, 0.12);
+        s.sparkle({ count: 14, span: 0.7 * SHUFFLE_SLOW, vol: 0.05 });
       },
     ],
   },
