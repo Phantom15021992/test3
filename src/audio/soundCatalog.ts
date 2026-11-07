@@ -43,6 +43,8 @@ function run(
 
 /** Случайная нота пентатоники из диапазона [from, to]: частые звуки каждый раз звучат чуть иначе */
 const anyNote = (from: number, to: number) => p(from + Math.floor(Math.random() * (to - from + 1)));
+/** Множитель частоты на полтона ниже */
+const SEMITONE_DOWN = 2 ** (-1 / 12);
 /** Случайное число в диапазоне */
 const rand = (from: number, to: number) => from + Math.random() * (to - from);
 
@@ -84,9 +86,17 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
         whoosh(s, 1200, 3000, 0.16, 0.08);
         s.soft({ f: p(3), dur: 0.25, vol: 0.12, at: 0.08 });
       },
+      // в — на полтона ниже первого варианта: шорох и искры умножены на SEMITONE_DOWN
       (s) => {
-        whoosh(s, 2000, 6000, 0.18, 0.1);
-        s.sparkle({ count: 3, span: 0.12, vol: 0.05, at: 0.06 });
+        whoosh(s, 2000 * SEMITONE_DOWN, 6000 * SEMITONE_DOWN, 0.18, 0.1);
+        s.sparkle({
+          count: 3,
+          span: 0.12,
+          low: 1400 * SEMITONE_DOWN,
+          high: 3600 * SEMITONE_DOWN,
+          vol: 0.05,
+          at: 0.06,
+        });
       },
       // г — шорох пониже и мягче, блёсток меньше и они ниже
       (s) => {
