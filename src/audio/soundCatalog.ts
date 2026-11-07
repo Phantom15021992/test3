@@ -495,13 +495,12 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
         );
         s.sparkle({ count: 3, span: 0.2, vol: 0.04 });
       },
-      // е — калимба вверх: три тёплые ноты, как маленькое «та-да»
+      // е — калимба вверх: три тёплые ноты, как маленькое «та-да»; без хрустальных искр (владелец убрал)
       (s) => {
         const start = Math.floor(rand(0, 3));
         [0, 2, 4].forEach((step, i) =>
           s.kalimba({ f: p(start + step) / 2, dur: 0.55, vol: 0.14, at: i * 0.08 }),
         );
-        s.sparkle({ count: 3, span: 0.2, at: 0.16, vol: 0.04 });
       },
     ],
   },
