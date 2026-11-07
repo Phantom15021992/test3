@@ -452,15 +452,56 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 10,
     group: 'Спецфишки',
     title: 'Появление спецфишки',
+    // Полностью новый набор: прежние варианты не подошли. Ниже, с искрами, каждый раз чуть разные
     variants: [
+      // а — «зарядка»: четыре мягкие ноты быстро вверх и искры на вершине
       (s) => {
-        s.glass({ f: p(4), f2: p(9), dur: 0.3, vol: 0.12 });
-        s.glass({ f: p(9), dur: 0.7, vol: 0.14, at: 0.25 });
+        const start = Math.floor(rand(0, 3));
+        [0, 1, 2, 3].forEach((i) =>
+          s.soft({ f: p(start + i) / 2, dur: 0.35, vol: 0.12, at: i * 0.05 }),
+        );
+        s.sparkle({ count: 5, span: 0.25, at: 0.18, vol: 0.05 });
       },
-      (s) => run(s, 'soft', [p(4), p(6), p(9)], 0.04, { dur: 0.8, vol: 0.13 }),
+      // б — «вспышка силы»: мягкий глухой толчок, низкий звон и искры
       (s) => {
-        s.swell({ dur: 0.4, vol: 0.12 });
-        s.sparkle({ count: 10, span: 0.5, at: 0.2, vol: 0.05 });
+        s.noise({ dur: 0.12, vol: 0.2, filter: 'lowpass', f: 300 });
+        s.glass({ f: anyNote(0, 3) / 2, dur: 0.8, vol: 0.18, at: 0.02 });
+        s.sparkle({ count: 6, span: 0.35, at: 0.05, vol: 0.05 });
+      },
+      // в — волшебный аккорд: три ноты звона разом, каждый раз от другой ноты
+      (s) => {
+        const root = Math.floor(rand(0, 3));
+        [0, 2, 4].forEach((step, i) =>
+          s.glass({
+            f: p(root + step) / 2,
+            dur: 0.9,
+            vol: 0.1,
+            at: i * 0.012,
+            pan: -0.3 + i * 0.3,
+          }),
+        );
+        s.sparkle({ count: 6, span: 0.4, at: 0.08, vol: 0.045 });
+      },
+      // г — кристалл засиял: звон мягко разгорается, вокруг всё больше искр
+      (s) => {
+        s.glass({ f: anyNote(2, 5) / 2, dur: 1, vol: 0.16, attack: 0.08 });
+        s.sparkle({ count: 9, span: 0.6, at: 0.05, vol: 0.05 });
+      },
+      // д — звон с эхом: одна нота и два её тихих повтора
+      (s) => {
+        const f = anyNote(3, 7) / 2;
+        [0, 1, 2].forEach((i) =>
+          s.glass({ f, dur: 0.6, vol: 0.16 * 0.55 ** i, at: i * 0.16, pan: [0, -0.4, 0.4][i] }),
+        );
+        s.sparkle({ count: 3, span: 0.2, vol: 0.04 });
+      },
+      // е — калимба вверх: три тёплые ноты, как маленькое «та-да»
+      (s) => {
+        const start = Math.floor(rand(0, 3));
+        [0, 2, 4].forEach((step, i) =>
+          s.kalimba({ f: p(start + step) / 2, dur: 0.55, vol: 0.14, at: i * 0.08 }),
+        );
+        s.sparkle({ count: 3, span: 0.2, at: 0.16, vol: 0.04 });
       },
     ],
   },
@@ -468,6 +509,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 11,
     group: 'Спецфишки',
     title: 'Ракета',
+    chosen: 2,
     variants: [
       (s) => {
         s.noise({ dur: 0.5, vol: 0.2, filter: 'highpass', f: 800, f2: 6000, q: 0.8, attack: 0.02 });
