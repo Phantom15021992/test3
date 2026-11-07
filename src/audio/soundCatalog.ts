@@ -286,6 +286,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 5,
     group: 'Ходы и фишки',
     title: 'Совпадение: ячейка 2 уровня',
+    chosen: 2,
     variants: [
       (s) => run(s, 'glass', [p(2), p(4)], 0.06, { dur: 0.45, vol: 0.16 }),
       (s) => run(s, 'soft', [p(0), p(2), p(4)], 0.05, { dur: 0.5, vol: 0.14 }),
@@ -299,16 +300,17 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 6,
     group: 'Ходы и фишки',
     title: 'Объединение: ячейка 3 уровня',
+    chosen: 2,
     variants: [
       (s) => {
         run(s, 'glass', [p(0), p(2), p(4), p(5)], 0.06, { dur: 0.8, vol: 0.16 });
         s.sparkle({ count: 5, span: 0.3, at: 0.2, vol: 0.05 });
       },
       (s) => run(s, 'soft', [p(0), p(3), p(5), p(8)], 0.07, { dur: 0.9, vol: 0.15 }),
+      // в — без шороха (владелец убрал): звон сразу, без паузы, которую раньше занимал шорох
       (s) => {
-        s.swell({ dur: 0.35, vol: 0.16 });
-        s.glass({ f: p(7), dur: 0.9, vol: 0.16, at: 0.3 });
-        s.sparkle({ count: 8, span: 0.6, at: 0.25, vol: 0.05 });
+        s.glass({ f: p(7), dur: 0.9, vol: 0.16 });
+        s.sparkle({ count: 8, span: 0.6, at: 0.03, vol: 0.05 });
       },
     ],
   },
