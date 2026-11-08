@@ -47,6 +47,13 @@ const SOFT: readonly (readonly [number, number])[] = [
   [9.24, 0.05],
 ];
 /** Калимба (пальцевое пианино): основной тон и высокий обертон язычка, который быстро гаснет */
+/** Металл (звено цепи): обертоны гуще и выше, чем у стекла, звон короче и суше */
+const METAL: readonly (readonly [number, number])[] = [
+  [1, 1],
+  [2.32, 0.7],
+  [4.25, 0.45],
+  [6.63, 0.25],
+];
 const KALIMBA: readonly (readonly [number, number])[] = [
   [1, 1],
   [5.4, 0.16],
@@ -198,6 +205,11 @@ export class Synth {
   }
 
   /** Калимба: тёплый щипок металлического язычка — приятный и не «кристальный» */
+  /** Металлический звяк: звено цепи, гвоздь, монета */
+  metal(options: ToneOptions): void {
+    this.partials(METAL, options, 1.4, 0.7);
+  }
+
   kalimba(options: ToneOptions): void {
     this.partials(KALIMBA, options, 8, 0.25);
   }
