@@ -1,4 +1,4 @@
-import { note, type Synth } from './synth';
+import { CHAIN_LINK_MODES, note, type Synth } from './synth';
 
 // Каталог звуков-кандидатов для отбора в лаборатории (sound-lab.html, только npm run dev).
 // У каждого действия три варианта одного «кристального» характера, в одном порядке:
@@ -130,55 +130,39 @@ function glassShards(
   }
 }
 
-/** Большая тяжёлая цепь: высота звеньев (две октавы ниже), длина звона, частота и громкость ударов */
-const CHAIN_PITCH = 0.25;
-const CHAIN_RING = 1.8;
-const CHAIN_HITS = 0.7;
-const CHAIN_SPAN = 1.3;
-/** Низкий звон слышится тише — громкость поднята */
-const CHAIN_LOUD = 2;
-
 /**
- * Звяканье цепи: hits крошечных ударов звеньев друг о друга за span секунд. shape сдвигает удары
- * к началу (больше — гуще в начале, 1 — ровно). У каждого удара своя высота призвона, громкость и сторона
+ * Встряхнутая цепь по образцу владельца: удары звеньев со средней частотой rate в секунду
+ * (промежутки 4–30 мс вразнобой), громкость нарастает к концу и обрывается (falling — наоборот,
+ * громко в начале и затихает). Звено звенит тесной гроздью частот low–high (CHAIN_LINK_MODES)
  */
-function chainRattle(
+function shakenChain(
   s: Synth,
-  {
-    hits = 12,
-    span = 0.2,
-    low = 3200,
-    high = 8000,
-    ring = 0.06,
-    vol = 0.04,
-    shape = 1.4,
-    at = 0,
-  } = {},
+  { dur = 0.75, rate = 60, low = 11000, high = 14000, vol = 0.05, falling = false, at = 0 } = {},
 ) {
-  // Большая увесистая цепь (по просьбе владельца): звенья на две октавы ниже, звенят дольше,
-  // бьются реже, и под каждым ударом — глухой «тук» тяжёлого железа
-  const count = Math.max(1, Math.round(hits * CHAIN_HITS));
-  const length = span * CHAIN_SPAN;
-  for (let i = 0; i < count; i++) {
-    const t = Math.random() ** shape * length;
-    const level = vol * rand(0.4, 1) * (1 - (t / length) * 0.5);
-    const pan = rand(-0.6, 0.6);
+  let t = 0;
+  while (t < dur) {
+    const p = t / dur;
+    // Нарастание к концу и резкий обрыв в последние 15%; при falling — зеркально
+    const shape = falling ? (1 - p) ** 1.3 : p < 0.85 ? 0.15 + p ** 1.2 : (1 - p) / 0.15;
     s.clank({
-      f: rand(low, high) * CHAIN_PITCH,
-      ring: ring * CHAIN_RING * rand(0.6, 1.3),
-      vol: level * CHAIN_LOUD,
+      f: rand(low, high),
+      ring: rand(0.02, 0.05),
+      vol: vol * shape * rand(0.4, 1),
       at: at + t,
-      pan,
+      pan: rand(-0.6, 0.6),
+      modes: CHAIN_LINK_MODES,
+      clickFrom: 6000,
     });
+    // Тихий телесный отзвук звена пониже: в образце его около 3% энергии, но на слух он заметен
     s.noise({
-      dur: 0.05,
-      vol: level * 3,
+      dur: 0.025,
+      vol: vol * shape * 1.5,
       at: at + t,
-      filter: 'lowpass',
-      f: rand(180, 280),
-      q: 1,
-      pan,
+      filter: 'bandpass',
+      f: rand(900, 2000),
+      q: 1.5,
     });
+    t += (1 / rate) * rand(0.35, 1.8);
   }
 }
 
@@ -1115,37 +1099,23 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 20,
     group: 'Препятствия',
     title: 'Сундук: снято звено цепи',
-    // Настоящая цепь: не «ноты», а десятки крошечных ударов металла о металл с коротким высоким
-    // призвоном (Synth.clank), сбитых в кучки, как при тряске. Прежние варианты убраны
+    // По образцу владельца (metal-chain.mp3): ~60 ударов звеньев в секунду (обычно через 9–13 мс),
+    // громкость нарастает ~0,6 с и обрывается за 0,1 с; звон звеньев — гроздь частот 11–14 кГц.
+    // Прежние варианты убраны
     variants: [
-      // а — цепь встряхнули: две-три кучки звяканья
+      // а — как в образце: цепь встряхнули, звяканье нарастает и обрывается
+      (s) => shakenChain(s, { dur: rand(0.7, 0.8) }),
+      // б — короче, для частого действия в игре
+      (s) => shakenChain(s, { dur: rand(0.4, 0.5) }),
+      // в — наоборот: громко в начале и затихает, как цепь бросили
+      (s) => shakenChain(s, { dur: rand(0.6, 0.7), falling: true }),
+      // г — та же цепь крупнее: звон ниже (7–10 кГц), удары чуть реже
+      (s) => shakenChain(s, { dur: rand(0.7, 0.8), low: 7000, high: 10000, rate: 45 }),
+      // д — два коротких рывка подряд
       (s) => {
-        let at = 0;
-        for (let i = 0; i < Math.floor(rand(2, 4)); i++) {
-          chainRattle(s, { hits: Math.floor(rand(8, 14)), span: rand(0.06, 0.1), at });
-          at += rand(0.09, 0.14);
-        }
-      },
-      // б — цепь упала: густой звон в начале, потом звенья досыпаются всё реже
-      (s) => {
-        s.noise({ dur: 0.05, vol: 0.15, filter: 'lowpass', f: 500, q: 0.8 });
-        chainRattle(s, { hits: Math.floor(rand(30, 40)), span: 0.45, shape: 2.2 });
-      },
-      // в — одно звено соскочило: короткое звяканье и лёгкий проскок
-      (s) => chainRattle(s, { hits: Math.floor(rand(5, 8)), span: 0.12 }),
-      // г — цепь протащили: ровное долгое звяканье
-      (s) => chainRattle(s, { hits: Math.floor(rand(32, 42)), span: 0.55, shape: 1, vol: 0.03 }),
-      // д — тяжёлая цепь: звенья крупнее (ниже) и глухой лязг
-      (s) => {
-        s.noise({ dur: 0.08, vol: 0.2, filter: 'lowpass', f: 420, q: 0.8 });
-        chainRattle(s, {
-          hits: Math.floor(rand(14, 20)),
-          span: 0.3,
-          low: 1800,
-          high: 4200,
-          ring: 0.09,
-          vol: 0.05,
-        });
+        const first = rand(0.28, 0.34);
+        shakenChain(s, { dur: first });
+        shakenChain(s, { dur: rand(0.3, 0.36), at: first + rand(0.05, 0.1) });
       },
     ],
   },

@@ -61,6 +61,16 @@ const CLANK_MODES: readonly (readonly [number, number])[] = [
   [2.47, 0.55],
   [3.11, 0.4],
 ];
+/**
+ * Звено настоящей цепи (по разбору образца владельца): звон — тесная гроздь частот около 11–14 кГц
+ * и слабый призвон пониже. Доли от основной частоты и громкости
+ */
+export const CHAIN_LINK_MODES: readonly (readonly [number, number])[] = [
+  [1, 1],
+  [1.06, 0.85],
+  [1.13, 0.7],
+  [0.55, 0.25],
+];
 /** Калимба (пальцевое пианино): основной тон и высокий обертон язычка, который быстро гаснет */
 const KALIMBA: readonly (readonly [number, number])[] = [
   [1, 1],
@@ -243,12 +253,18 @@ export class Synth {
     vol = 0.1,
     at = 0,
     pan = 0,
+    modes = CLANK_MODES,
+    clickFrom = 4000,
   }: {
     f: number;
     ring?: number;
     vol?: number;
     at?: number;
     pan?: number;
+    /** Призвоны: доли от f и громкости. У мелких звеньев настоящей цепи — тесная гроздь (CHAIN_LINK_MODES) */
+    modes?: readonly (readonly [number, number])[];
+    /** С какой частоты слышен щелчок удара */
+    clickFrom?: number;
   }): void {
     const t = this.start(at);
     const source = this.ctx.createBufferSource();
@@ -263,12 +279,12 @@ export class Synth {
     // Жёсткий сухой щелчок удара, сам по себе, мимо резонаторов: металл о металл звучит резко
     const click = this.ctx.createBiquadFilter();
     click.type = 'highpass';
-    click.frequency.value = 4000;
+    click.frequency.value = clickFrom;
     const clickGain = this.ctx.createGain();
     clickGain.gain.value = vol * 1.5;
     hit.connect(click).connect(clickGain).connect(panner);
-    for (const [ratio, level] of CLANK_MODES) {
-      const freq = Math.min(f * ratio, 12000);
+    for (const [ratio, level] of modes) {
+      const freq = Math.min(f * ratio, 16000);
       // Добротность из времени звона: резонатор с Q звенит примерно Q / (π·f) секунд
       const q = Math.min((Math.PI * freq * ring) / 2, 900);
       const filter = this.ctx.createBiquadFilter();
