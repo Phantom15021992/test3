@@ -712,6 +712,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     group: 'Спецфишки',
     title: 'Радуга',
     chosen: 0,
+    doubtful: true,
     variants: [
       (s) => rainbowSound(s),
       (s) =>
@@ -801,6 +802,8 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
   {
     id: 16,
     code: '16.4',
+    chosen: 0,
+    doubtful: true,
     group: 'Спецфишки',
     title: 'Комбо: радуга + ракета',
     variants: [
@@ -814,6 +817,8 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
   {
     id: 16,
     code: '16.5',
+    chosen: 0,
+    doubtful: true,
     group: 'Спецфишки',
     title: 'Комбо: радуга + бомба',
     variants: [
@@ -827,6 +832,8 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
   {
     id: 16,
     code: '16.6',
+    chosen: 0,
+    doubtful: true,
     group: 'Спецфишки',
     title: 'Комбо: радуга + радуга (всё поле)',
     variants: [
@@ -880,6 +887,8 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
   {
     id: 16,
     code: '16.10',
+    chosen: 0,
+    doubtful: true,
     group: 'Спецфишки',
     title: 'Комбо: мега-бомба + радуга',
     variants: [
