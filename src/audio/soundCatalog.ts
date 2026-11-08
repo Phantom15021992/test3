@@ -752,6 +752,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
   {
     id: 16,
     code: '16.1',
+    chosen: 0,
     group: 'Спецфишки',
     title: 'Комбо: ракета + ракета (крест)',
     variants: [
