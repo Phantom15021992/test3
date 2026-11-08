@@ -128,9 +128,9 @@ export class GameScene extends Phaser.Scene {
     gems?: boolean;
   }): void {
     this.gems = data.gems ?? false;
-    // Тестовый уровень — по правилам Детского, без билета: в общую таблицу и статистику не идёт
+    // Тестовый уровень — по правилам Лёгкого (4 цвета: синий, жёлтый, красный, зелёный), без билета: в общую таблицу и статистику не идёт
     this.difficulty = this.gems
-      ? DIFFICULTIES[0]!
+      ? DIFFICULTIES[1]!
       : (DIFFICULTIES.find((d) => d.id === data.difficulty) ?? DIFFICULTIES[2]);
     this.ticket = this.gems ? null : (data.ticket ?? null);
     this.level = this.gems ? null : (data.level ?? null);
