@@ -765,6 +765,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
   {
     id: 16,
     code: '16.3',
+    chosen: 0,
     group: 'Спецфишки',
     title: 'Комбо: бомба + бомба (взрыв 5×5)',
     variants: [
