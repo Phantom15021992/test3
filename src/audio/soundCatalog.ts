@@ -670,6 +670,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 15,
     group: 'Спецфишки',
     title: 'Манипулятор',
+    chosen: 2,
     variants: [
       (s) => {
         s.glass({ f: p(3), f2: p(6), dur: 0.25, vol: 0.12 });
