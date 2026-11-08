@@ -136,9 +136,14 @@ export class GameScene extends Phaser.Scene {
     this.level = this.gems ? null : (data.level ?? null);
   }
 
-  /** Кристаллы и плитка клетки грузятся только для тестового уровня: остальной игре они не нужны */
+  /** Фишки-кристаллы — в кампании и на тестовом уровне; свободная игра по-прежнему с кружками */
+  private get crystals(): boolean {
+    return this.gems || this.level !== null;
+  }
+
+  /** Лист кристаллов грузится только там, где они нужны */
   preload(): void {
-    if (!this.gems) return;
+    if (!this.crystals) return;
     for (const { key, path } of CRYSTAL_FILES) {
       if (!this.textures.exists(key)) this.load.image(key, path);
     }
@@ -179,9 +184,9 @@ export class GameScene extends Phaser.Scene {
     const originX = boxLeft + (boxSize - cellSize * cols) / 2;
     const originY = boxTop + (boxSize - cellSize * rows) / 2;
     this.view = new BoardView(this, originX, originY, cellSize);
-    this.view.gems = this.gems;
-    // Кристаллы тестового уровня перекрашиваются в три цвета до первой отрисовки поля
-    if (this.gems) createCrystalTextures(this);
+    this.view.gems = this.crystals;
+    // Лист кристаллов режется на фишки до первой отрисовки поля
+    if (this.crystals) createCrystalTextures(this);
     if (this.level?.coalLayers) this.view.coalLayers = this.level.coalLayers;
     this.view.render(this.session.board);
     this.refreshIce();
