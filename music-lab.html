@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Музыкальная лаборатория</title>
+    <style>
+      body {
+        margin: 0;
+        background: #1b1f2e;
+        color: #e8ecf8;
+        font: 15px/1.4 sans-serif;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        background: #1b1f2e;
+        padding: 12px 16px;
+        border-bottom: 1px solid #333a52;
+        z-index: 1;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 6px;
+      }
+      header p {
+        margin: 0;
+        color: #9aa3bd;
+        font-size: 13px;
+      }
+      main {
+        padding: 8px 16px 40px;
+        max-width: 760px;
+      }
+      h2 {
+        font-size: 16px;
+        color: #9aa3bd;
+        margin: 22px 0 8px;
+        font-weight: 500;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 0;
+        border-bottom: 1px solid #262c40;
+        flex-wrap: wrap;
+      }
+      .title {
+        flex: 1 1 220px;
+      }
+      .num {
+        color: #9aa3bd;
+        display: inline-block;
+        min-width: 26px;
+      }
+      button {
+        background: #2a3150;
+        color: #e8ecf8;
+        border: 1px solid #4a5684;
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 14px;
+        cursor: pointer;
+        min-width: 56px;
+      }
+      button:hover {
+        background: #343d63;
+      }
+      button:active {
+        transform: scale(0.97);
+      }
+      button.chosen {
+        background: #2f5a3c;
+        border-color: #6fcf8a;
+      }
+      .len {
+        color: #9aa3bd;
+        font-size: 13px;
+      }
+      #now {
+        margin-top: 6px;
+        color: #e8ecf8;
+      }
+      label {
+        font-size: 13px;
+        color: #9aa3bd;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Музыкальная лаборатория</h1>
+      <p>
+        Назови номер композиции (например «М2» или «У4»). «Конец и переход» — последние 20 секунд и
+        начало следующей; «по кругу» — та же композиция заново. Громкость:
+        <input id="volume" type="range" min="0" max="1" step="0.05" value="0.6" />
+        <button id="stop">■ стоп</button>
+      </p>
+      <p id="now">Тишина</p>
+    </header>
+    <main id="list"></main>
+    <script type="module" src="/src/audio/musicLab.ts"></script>
+  </body>
+</html>
