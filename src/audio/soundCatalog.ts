@@ -104,11 +104,8 @@ function fingerSnap(s: Synth, at: number) {
   s.noise({ dur: 0.05, vol: 0.15, at, filter: 'bandpass', f: 900, q: 3 });
 }
 
-/** Треск льда: очень короткий резкий хлопок с яркой серединой — так лопается лёд */
-function iceCrack(s: Synth, at = 0, vol = 1) {
-  s.noise({ dur: 0.035, vol: 0.18 * vol, at, filter: 'highpass', f: 1400, q: 0.7 });
-  s.noise({ dur: 0.02, vol: 0.15 * vol, at, filter: 'bandpass', f: rand(2600, 3400), q: 2 });
-}
+/** Озёрный треск — на две октавы ниже первой версии */
+const LAKE_DEPTH = 0.25;
 
 /**
  * Озёрное «пиу-у»: звон, который быстро скользит сверху вниз. Узкий полосовой шум даёт ему
@@ -118,21 +115,35 @@ function lakeZing(
   s: Synth,
   { from = 3000, to = 300, dur = 0.5, vol = 1, at = 0, pan = 0, echo = false } = {},
 ) {
+  // Владелец попросил глубже и на две октавы ниже: частоты умножены на LAKE_DEPTH, раскат дольше,
+  // под «пиу» — низкий гул; низкое звучит тише, поэтому громкость выше
+  const low = from * LAKE_DEPTH;
+  const end = to * LAKE_DEPTH;
+  const long = dur * 1.3;
   const repeats = echo ? [1, 0.35, 0.12] : [1];
   repeats.forEach((level, i) => {
-    const t = at + i * 0.17;
+    const t = at + i * 0.2;
     s.noise({
-      dur,
-      vol: 0.9 * vol * level,
+      dur: long,
+      vol: 2.2 * vol * level,
       at: t,
       filter: 'bandpass',
-      f: from,
-      f2: to,
-      q: 18,
-      attack: 0.004,
+      f: low,
+      f2: end,
+      q: 14,
+      attack: 0.006,
       pan,
     });
-    s.tone({ f: from, f2: to, dur, vol: 0.035 * vol * level, at: t, attack: 0.004, pan });
+    s.tone({ f: low, f2: end, dur: long, vol: 0.09 * vol * level, at: t, attack: 0.006, pan });
+    s.noise({
+      dur: long * 0.8,
+      vol: 0.35 * vol * level,
+      at: t,
+      filter: 'lowpass',
+      f: 110,
+      q: 0.8,
+      pan,
+    });
   });
 }
 
@@ -1058,9 +1069,11 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
         lakeZing(s, { from: rand(3000, 3600), to: 200, dur: 0.8, echo: true });
         s.noise({ dur: 0.35, vol: 0.2, filter: 'lowpass', f: 140, q: 0.8, at: 0.02 });
       },
-      // д — резкий треск рядом, а за ним озёрное «пиу»
+      // д — глухой треск рядом, а за ним озёрное «пиу»
       (s) => {
-        iceCrack(s);
+        // Треск на две октавы ниже, глухой: не тонкий щелчок, а удар по толстому льду
+        s.noise({ dur: 0.06, vol: 0.35, filter: 'bandpass', f: rand(650, 850), q: 1.2 });
+        s.noise({ dur: 0.08, vol: 0.3, filter: 'lowpass', f: 300, q: 0.8 });
         lakeZing(s, { from: rand(2400, 3000), to: 300, dur: 0.45, at: 0.03 });
       },
     ],
