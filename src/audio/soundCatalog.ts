@@ -1288,6 +1288,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 30,
     group: 'Итоги и интерфейс',
     title: 'Конец игры / новый рекорд',
+    chosen: 1,
     variants: [
       (s) => {
         run(s, 'glass', [p(0), p(2), p(4), p(5), p(7)], 0.09, { dur: 1, vol: 0.14 });
