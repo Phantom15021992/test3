@@ -56,6 +56,12 @@ export function attemptWallet(levelId: number): number {
   return floorWallet(Math.ceil(levelId / FLOOR_SIZE)) + (loadRecord(LEVEL_SPENT_KEY)[levelId] ?? 0);
 }
 
+/**
+ * Все уровни кампании открыты сразу, без прохождения по порядку (по просьбе владельца). false —
+ * снова строго по порядку (isLevelOpen). Карта всё равно открывается на этаже, до которого игрок дошёл
+ */
+export const ALL_LEVELS_OPEN = true;
+
 /** Уровни открываются строго по порядку: нужен пройденный предыдущий */
 export function isLevelOpen(levelId: number, stars: LevelStars): boolean {
   return levelId === 1 || (stars[levelId - 1] ?? 0) > 0;

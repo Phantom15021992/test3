@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { FLOOR_SIZE, floorOf } from '../core/level';
 import { FLOORS } from '../levels';
-import { floorWallet, isLevelOpen, loadLevelStars } from '../storage/progress';
+import { ALL_LEVELS_OPEN, floorWallet, isLevelOpen, loadLevelStars } from '../storage/progress';
 import { levelNumber } from '../ui/levelText';
 import { TransferDialog } from '../ui/TransferDialog';
 import {
@@ -64,8 +64,8 @@ export class LevelMapScene extends Phaser.Scene {
       const x = centerX + (column - (COLUMNS - 1) / 2) * COLUMN_STEP;
       const y = FIRST_ROW_Y + Math.floor(i / COLUMNS) * ROW_STEP;
       const earned = stars[level.id] ?? 0;
-      // В dev-режиме открыты все уровни: так их можно смотреть, не проходя по порядку
-      const open = import.meta.env.DEV || isLevelOpen(level.id, stars);
+      // Все уровни открыты сразу (ALL_LEVELS_OPEN); в dev-режиме — всегда, чтобы смотреть их без прохождения
+      const open = ALL_LEVELS_OPEN || import.meta.env.DEV || isLevelOpen(level.id, stars);
 
       const number = this.add
         .text(0, -20, levelNumber(level), {
