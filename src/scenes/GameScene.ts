@@ -94,7 +94,7 @@ export class GameScene extends Phaser.Scene {
   /** Ширина, в которую должна поместиться строка целей */
   private goalsWidth = 0;
   private briefingText: Phaser.GameObjects.Text | null = null;
-  /** Звёзды условий — отдельной колонкой, чтобы надписи после них начинались с одной линии */
+  /** Звёзды условий — отдельной колонкой по правому краю, чтобы надписи после них начинались с одной линии */
   private briefingStars: Phaser.GameObjects.Text | null = null;
   private briefingCenterX = 0;
   private briefingWidth = 0;
@@ -250,7 +250,7 @@ export class GameScene extends Phaser.Scene {
       const y = boxBottom + LEVEL_GOALS_Y_OFFSET;
       this.briefingCenterX = centerX;
       this.briefingWidth = boxSize;
-      this.briefingStars = this.add.text(0, y, '', style);
+      this.briefingStars = this.add.text(0, y, '', { ...style, align: 'right' });
       this.briefingText = this.add.text(0, y, '', style);
       this.setBriefing(this.level);
       this.refreshGoals();
