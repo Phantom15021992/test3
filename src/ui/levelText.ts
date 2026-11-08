@@ -151,7 +151,8 @@ export function levelBriefing(level: Level, session?: LevelSession): string {
   };
   return [
     `★ Выполнить задание${session?.goalsDone ? DONE : ''}`,
-    ...level.stars.map((task) => `★ ${starTaskText(task)}${progress(task)}`),
+    // Перед условием — сколько звёзд оно приносит: ★, ★★, ★★★
+    ...level.stars.map((task, i) => `${'★'.repeat(i + 2)} ${starTaskText(task)}${progress(task)}`),
   ].join('\n');
 }
 
