@@ -136,9 +136,12 @@ function rocketSound(s: Synth, { at = 0, pan = 0, size = 1 }: SpecialOptions = {
 }
 
 /** Две ракеты внахлёст с разницей ROCKET_PAIR_GAP — так звучит ракета во всех комбо (по просьбе владельца) */
-function rocketPair(s: Synth, { at = 0, size = 1 }: SpecialOptions = {}) {
+function rocketPair(
+  s: Synth,
+  { at = 0, size = 1, gap = ROCKET_PAIR_GAP }: SpecialOptions & { gap?: number } = {},
+) {
   rocketSound(s, { at, pan: -0.5, size });
-  rocketSound(s, { at: at + ROCKET_PAIR_GAP, pan: 0.5, size });
+  rocketSound(s, { at: at + gap, pan: 0.5, size });
 }
 
 /** Бомба (выбран 12в): глухой удар и россыпь искр */
@@ -753,8 +756,8 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     title: 'Комбо: ракета + ракета (крест)',
     variants: [
       (s) => {
-        // Две ракеты внахлёст: одна слева, другая справа через 0,1 с
-        rocketPair(s);
+        // Две ракеты внахлёст: одна слева, другая справа через 0,2 с (у других комбо — 0,1)
+        rocketPair(s, { gap: 0.2 });
       },
     ],
   },
