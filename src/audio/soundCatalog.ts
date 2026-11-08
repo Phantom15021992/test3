@@ -1128,6 +1128,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 21,
     group: 'Препятствия',
     title: 'Сундук открыт / сломан',
+    chosen: 0,
     variants: [
       (s) => {
         s.noise({ dur: 0.15, vol: 0.2, filter: 'lowpass', f: 600 });
@@ -1147,6 +1148,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 22,
     group: 'Препятствия',
     title: 'Золото найдено',
+    chosen: 1,
     variants: [
       (s) => run(s, 'glass', [p(9), p(12)], 0.07, { dur: 0.6, vol: 0.13 }),
       (s) => run(s, 'soft', [p(7), p(9), p(12)], 0.06, { dur: 0.6, vol: 0.12 }),
