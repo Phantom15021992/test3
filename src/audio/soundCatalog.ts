@@ -1306,6 +1306,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 31,
     group: 'Итоги и интерфейс',
     title: 'Кнопка в меню',
+    chosen: 1,
     variants: [
       (s) => s.glass({ f: low(19), dur: 0.12, vol: 0.1 }),
       (s) => s.soft({ f: low(15), dur: 0.18, vol: 0.12 }),
