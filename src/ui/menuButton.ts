@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { playSound } from '../audio/gameSounds';
 import { UI_BUTTON_COLOR, UI_PANEL_COLOR, UI_TEXT_COLOR } from '../view/palette';
 
 export const MENU_BUTTON_WIDTH = 560;
@@ -25,7 +26,10 @@ export function createMenuButton(
   const hit = scene.add
     .zone(0, 0, width, height)
     .setInteractive({ useHandCursor: true })
-    .on('pointerup', onClick);
+    .on('pointerup', () => {
+      playSound('button');
+      onClick();
+    });
   return scene.add.container(x, y, [bg, ...content, hit]);
 }
 

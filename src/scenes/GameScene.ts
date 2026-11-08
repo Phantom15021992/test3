@@ -24,7 +24,7 @@ import {
 import { isBonusTarget, type AimedBonus, type BonusType } from '../core/bonus';
 import { strongestMove, type HintKind } from '../core/hint';
 import { areAdjacent, isValidSwap } from '../core/moves';
-import type { ChoiceOption, ResolveStep } from '../core/resolve';
+import type { ChoiceOption, Move, ResolveStep } from '../core/resolve';
 import { floorOf, type Level } from '../core/level';
 import { LevelSession } from '../core/levelSession';
 import { GameSession, type PlayerMove } from '../core/session';
@@ -55,6 +55,9 @@ import {
   SPARKLE_SHEET_PATH,
 } from '../view/sparkleGems';
 import { debugSeed, startGame } from './startGame';
+import { playCues, playSound, playStars } from '../audio/gameSounds';
+import { StepSoundTracker, type ProgressView } from '../audio/stepSounds';
+import { addSoundToggle } from '../ui/soundToggle';
 
 const BOARD_MARGIN = 40;
 /** Верх строки целей под полем и зазор до описания звёзд под ней */
@@ -63,6 +66,9 @@ const LEVEL_BRIEFING_GAP = 12;
 /** Шрифт строки целей и самый мелкий, до которого он уменьшается, если цели не помещаются в ширину */
 const GOALS_FONT_SIZE = 30;
 const GOALS_MIN_FONT_SIZE = 18;
+
+/** Сколько ходов должно остаться, чтобы прозвучало предупреждение о последних ходах */
+const LAST_MOVES_WARNING = 5;
 
 /** Режим ввода: обычный, выбор цвета (радуга / мега-бомба + радуга), выбор клеток манипулятором */
 type Mode =
@@ -188,6 +194,8 @@ export class GameScene extends Phaser.Scene {
         color: UI_TEXT_COLOR,
       })
       .setOrigin(0.5);
+    // Справа от заголовка — выключатель звука
+    addSoundToggle(this, this.scale.width - 30, boxTop - 275);
     const hudStyle = { fontFamily: 'sans-serif', fontSize: '34px', color: UI_TEXT_COLOR };
     this.scoreText = this.add.text(centerX - 100, boxTop - 205, '', hudStyle).setOrigin(0.5);
     this.movesText = this.add.text(centerX + 115, boxTop - 205, '', hudStyle).setOrigin(0.5);
@@ -287,6 +295,7 @@ export class GameScene extends Phaser.Scene {
     const hint = strongestMove(this.session);
     if (!hint) return;
     this.view.showHint(hint.cells);
+    playSound('hint');
     this.hintText.setText(HINT_TEXTS[hint.kind]);
   }
 
@@ -485,6 +494,7 @@ export class GameScene extends Phaser.Scene {
     if (!isValidSwap(board, a, b)) {
       // Показываем, что так нельзя: туда и обратно
       this.busy = true;
+      playSound('invalid');
       await this.view.swap(a, b);
       await this.view.swap(a, b);
       this.busy = false;
@@ -504,7 +514,7 @@ export class GameScene extends Phaser.Scene {
     this.updateMoves();
     this.updateBonusShop();
     this.setSelected(null);
-    await this.animate(steps);
+    await this.animate(steps, move);
     await this.ensureMoves();
     if (this.session.isOver) {
       await (this.session instanceof LevelSession
@@ -519,10 +529,15 @@ export class GameScene extends Phaser.Scene {
   /** Сцена анимирует шаги партии и отвечает на выборы */
   private async animate(
     steps: Generator<ResolveStep, void, ChoiceOption | undefined>,
+    move: Move | null = null,
   ): Promise<void> {
+    // Поле партии меняется только в конце хода, поэтому здесь оно ещё прежнее — по нему и слушаем
+    const sounds = new StepSoundTracker(this.session.board, this.progressView());
+    playCues(sounds.begin(move));
     let next = steps.next();
     while (!next.done) {
       const step = next.value;
+      playCues(sounds.step(step, this.progressView()));
       let answer: ChoiceOption | undefined;
       switch (step.kind) {
         case 'swap':
@@ -565,6 +580,7 @@ export class GameScene extends Phaser.Scene {
     await this.animate(session.finale());
     this.hintText.setText('');
     if (!this.gems) this.sendResult(session.score - scoreBeforeFinale);
+    playSound('gameOver');
     new GameOverDialog(this).show(
       session.score,
       this.difficulty,
@@ -592,6 +608,9 @@ export class GameScene extends Phaser.Scene {
       this.hintText.setText('');
     }
     this.saveLevelResult(session);
+    if (session.stars > 0)
+      playStars(session.stars, (delay, fn) => this.time.delayedCall(delay, fn));
+    else playSound('lose');
     new LevelResultDialog(this).show(session, {
       onRetry: () => this.scene.restart({ level }),
       onMap: () => this.scene.start('LevelMap', this.mapData()),
@@ -667,6 +686,7 @@ export class GameScene extends Phaser.Scene {
   private async ensureMoves(): Promise<void> {
     if (!this.session.shuffleIfStuck()) return;
     this.hintText.setText('Ходов нет — перемешиваем поле');
+    playSound('shuffle');
     await this.view.shuffle(this.session.board);
     this.hintText.setText(hintFor(this.mode));
   }
@@ -687,6 +707,7 @@ export class GameScene extends Phaser.Scene {
     if (!(this.session instanceof LevelSession)) return;
     const piece = this.session.aimBonus(bonus, at);
     if (!piece) return;
+    playSound('buy');
     this.setMode({ type: 'idle' });
     this.busy = true;
     this.updateBonusShop();
@@ -696,6 +717,7 @@ export class GameScene extends Phaser.Scene {
 
   private async playBought(bonus: BonusType, move: PlayerMove): Promise<void> {
     if (!(this.session instanceof LevelSession) || !this.session.payBonus(bonus)) return;
+    playSound('buy');
     this.setMode({ type: 'idle' });
     await this.play(move);
   }
@@ -707,6 +729,7 @@ export class GameScene extends Phaser.Scene {
     if (this.mode.type !== 'idle') return;
     const placed = this.session.buy(type);
     if (!placed) return;
+    playSound('buy');
     this.busy = true;
     this.updateScore();
     this.setSelected(null);
@@ -742,6 +765,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private setSelected(pos: Position | null): void {
+    if (pos && (!this.selected || !samePos(pos, this.selected))) playSound('select');
     this.selected = pos;
     this.view.select(pos);
     const cell = pos && getCell(this.session.board, pos);
@@ -754,7 +778,25 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateMoves(): void {
-    this.movesText.setText(`Ходы: ${levelMoveLimit(this.session, MOVE_LIMIT)}`);
+    const left = levelMoveLimit(this.session, MOVE_LIMIT);
+    this.movesText.setText(`Ходы: ${left}`);
+    if (left === LAST_MOVES_WARNING && this.session.moves > 0) playSound('lastMoves');
+  }
+
+  /** Прогресс уровня для звуков: по разнице между шагами слышно лёд, золото и выполненные цели */
+  private progressView(): ProgressView | null {
+    const { session } = this;
+    if (!(session instanceof LevelSession)) return null;
+    const { level } = session;
+    const done =
+      level.goals.filter((goal) => session.goalValue(goal) >= goal.count).length +
+      level.stars.filter((task) => session.starTaskValue(task) >= task.count).length;
+    return {
+      iceLeft: session.ice.flat().reduce((sum, hits) => sum + hits, 0),
+      iceBroken: session.progress.ice,
+      gold: session.progress.gold,
+      done,
+    };
   }
 
   private updateBonusShop(): void {

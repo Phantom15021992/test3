@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { addSoundToggle } from '../ui/soundToggle';
 import { DIFFICULTIES, type Difficulty } from '../core/config';
 import { loadLeaderboard, type LeaderboardEntry } from '../storage/leaderboard';
 import { fetchRecords, remoteConfig, wakeGameServer } from '../storage/remoteLeaderboard';
@@ -42,6 +43,8 @@ export class MenuScene extends Phaser.Scene {
         color: UI_TEXT_COLOR,
       })
       .setOrigin(0.5);
+    // Выключатель звука — справа на уровне заголовка
+    addSoundToggle(this, this.scale.width - 30, TITLE_Y);
 
     createMenuButton(this, centerX, LEVELS_BUTTON_Y, [menuButtonLabel(this, 'Кампания')], () => {
       if (!this.starting) this.scene.start('LevelMap');
