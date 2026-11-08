@@ -712,6 +712,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 17,
     group: 'Спецфишки',
     title: 'Покупка спецфишки',
+    chosen: 0,
     variants: [
       (s) => run(s, 'glass', [p(7), p(10)], 0.09, { dur: 0.5, vol: 0.13 }),
       (s) => run(s, 'soft', [p(5), p(7), p(10)], 0.06, { dur: 0.6, vol: 0.12 }),
