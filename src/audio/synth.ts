@@ -303,6 +303,64 @@ export class Synth {
     });
   }
 
+  /**
+   * Зернистая текстура, рассчитанная по отсчётам: тихий шум, по которому бегут частые мелкие всплески
+   * (density в секунду, каждый гаснет за 2–6 мс), — так звучит снег или песок под давлением.
+   * Громкость сначала нарастает за attack (снег продавливают), потом спадает к концу. body —
+   * доля ровного шума под всплесками: чем больше, тем мягче и «пушистее»
+   */
+  texture({
+    dur,
+    vol = 0.3,
+    at = 0,
+    density = 180,
+    body = 0.3,
+    attack = 0.06,
+    f = 1400,
+    pan = 0,
+  }: {
+    dur: number;
+    vol?: number;
+    at?: number;
+    density?: number;
+    body?: number;
+    attack?: number;
+    /** Частота, выше которой звук приглушён: ниже — глуше */
+    f?: number;
+    pan?: number;
+  }): void {
+    const rate = this.ctx.sampleRate;
+    const length = Math.round(dur * rate);
+    const buffer = this.ctx.createBuffer(1, length, rate);
+    const data = buffer.getChannelData(0);
+    let burst = 0;
+    let decay = 0;
+    const chance = density / rate;
+    for (let i = 0; i < length; i++) {
+      if (Math.random() < chance) {
+        burst = 0.5 + Math.random() * 0.5;
+        decay = Math.exp(-1 / (rate * (0.002 + Math.random() * 0.004)));
+      }
+      burst *= decay;
+      const t = i / length;
+      const press = Math.min(1, t / Math.max(attack / dur, 0.001)) * (1 - t) ** 1.5;
+      data[i] = (Math.random() * 2 - 1) * (body + burst) * press;
+    }
+    const t0 = this.start(at);
+    const source = this.ctx.createBufferSource();
+    source.buffer = buffer;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = f;
+    filter.Q.value = 0.6;
+    const gain = this.ctx.createGain();
+    gain.gain.value = vol;
+    const panner = this.ctx.createStereoPanner();
+    panner.pan.value = pan;
+    source.connect(filter).connect(gain).connect(panner).connect(this.out);
+    source.start(t0);
+  }
+
   private whiteNoise(): AudioBuffer {
     if (!this.noiseBuffer) {
       const length = this.ctx.sampleRate * 2;

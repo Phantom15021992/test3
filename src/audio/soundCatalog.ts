@@ -104,38 +104,6 @@ function fingerSnap(s: Synth, at: number) {
   s.noise({ dur: 0.05, vol: 0.15, at, filter: 'bandpass', f: 900, q: 3 });
 }
 
-/**
- * Хруст снега: много крошечных щелчков вразнобой за dur секунд — сначала гуще, к концу реже,
- * как снег проминается под ногой. low/high — диапазон частот щелчков
- */
-function snowCrunch(
-  s: Synth,
-  {
-    grains = 20,
-    dur = 0.16,
-    low = 1100,
-    high = 3200,
-    vol = 0.36,
-    at = 0,
-    shape = 1.6,
-    grain = 0.012,
-  } = {},
-) {
-  for (let i = 0; i < grains; i++) {
-    // Степень shape сдвигает щелчки к началу: хруст резкий в начале и стихает (1 — ровно по всей длине)
-    const t = Math.random() ** shape * dur;
-    s.noise({
-      dur: rand(grain * 0.35, grain),
-      vol: vol * rand(0.4, 1) * (1 - (t / dur) * 0.6),
-      at: at + t,
-      filter: 'bandpass',
-      f: rand(low, high),
-      q: rand(1.5, 4),
-      pan: rand(-0.4, 0.4),
-    });
-  }
-}
-
 /** Глухой удар снизу — основа взрывов и тяжёлых предметов */
 function thump(s: Synth, f: number, dur: number, vol = 0.5, at = 0) {
   // Удар — больше шум, чем тон: чистый низкий синус звучит как электронная «бочка»
@@ -950,77 +918,72 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
   {
     id: 18,
     group: 'Препятствия',
-    title: 'Удар по льду (хруст снега)',
-    // Вокруг 18б (рыхлый мягкий снег) — он был ближе всего, но «не то»; прежние варианты убраны
+    title: 'Удар по льду (приминание снега)',
+    // Приминание рыхлого снега: не отдельные щелчки, а зернистая текстура под давлением
+    // (Synth.texture) — громкость нарастает, пока снег продавливают, и спадает. Прежние варианты убраны
     variants: [
-      // а — как 18б, но глубже и дольше: снег проминается медленнее
+      // а — короткое приминание ладонью
+      (s) =>
+        s.texture({
+          dur: rand(0.17, 0.21),
+          vol: 0.5,
+          density: 220,
+          body: 0.3,
+          attack: 0.05,
+          f: 1600,
+        }),
+      // б — медленно продавили: дольше и плавнее
+      (s) =>
+        s.texture({
+          dur: rand(0.3, 0.36),
+          vol: 0.5,
+          density: 160,
+          body: 0.3,
+          attack: 0.14,
+          f: 1300,
+        }),
+      // в — совсем пушистый снег: мягче и глуше, зёрен меньше
+      (s) =>
+        s.texture({
+          dur: rand(0.23, 0.27),
+          vol: 0.55,
+          density: 90,
+          body: 0.5,
+          attack: 0.08,
+          f: 1000,
+        }),
+      // г — продавили до плотного слоя: в конце короткий глухой дожим
       (s) => {
-        s.noise({ dur: 0.2, vol: 0.252, filter: 'lowpass', f: 550 });
-        snowCrunch(s, {
-          grains: Math.floor(rand(26, 34)),
-          dur: 0.28,
-          low: 500,
-          high: 1500,
-          vol: 0.612,
-          grain: 0.016,
+        s.texture({
+          dur: rand(0.22, 0.26),
+          vol: 0.5,
+          density: 180,
+          body: 0.3,
+          attack: 0.1,
+          f: 1300,
         });
+        s.noise({ dur: 0.06, vol: 0.12, filter: 'lowpass', f: 450, at: 0.17 });
       },
-      // б — плотный сжатый снег: щелчки сливаются в сплошное мягкое «хррш»
+      // д — двумя ладонями: два приминания внахлёст, второе ниже
       (s) => {
-        s.noise({ dur: 0.18, vol: 0.18, filter: 'lowpass', f: 650 });
-        snowCrunch(s, {
-          grains: Math.floor(rand(44, 56)),
-          dur: 0.22,
-          low: 650,
-          high: 1800,
-          vol: 0.432,
-          shape: 1.2,
-          grain: 0.018,
+        s.texture({
+          dur: 0.18,
+          vol: 0.45,
+          density: 200,
+          body: 0.3,
+          attack: 0.05,
+          f: 1600,
+          pan: -0.3,
         });
-      },
-      // в — снежок: мягкий глухой удар и короткий плотный хруст
-      (s) => {
-        s.noise({ dur: 0.1, vol: 0.54, filter: 'lowpass', f: 420 });
-        snowCrunch(s, {
-          grains: Math.floor(rand(18, 24)),
-          dur: 0.12,
-          low: 600,
-          high: 1600,
-          vol: 0.54,
-          grain: 0.014,
-        });
-      },
-      // г — снег сжали в ладони: хруст, крошечная пауза и короткий дожим
-      (s) => {
-        snowCrunch(s, {
-          grains: Math.floor(rand(18, 24)),
-          dur: 0.15,
-          low: 700,
-          high: 2000,
-          vol: 0.576,
-          grain: 0.014,
-        });
-        snowCrunch(s, {
-          grains: Math.floor(rand(8, 12)),
-          dur: 0.08,
-          low: 600,
-          high: 1700,
-          vol: 0.432,
-          at: rand(0.19, 0.23),
-          grain: 0.014,
-        });
-      },
-      // д — хруст нарастает и стихает ровно, без резкого начала, как шаг по глубокому снегу
-      (s) => {
-        s.noise({ dur: 0.24, vol: 0.18, filter: 'lowpass', f: 600, attack: 0.08 });
-        snowCrunch(s, {
-          grains: Math.floor(rand(28, 36)),
-          dur: 0.24,
-          low: 650,
-          high: 1900,
-          vol: 0.54,
-          shape: 1,
-          grain: 0.016,
+        s.texture({
+          dur: 0.2,
+          vol: 0.4,
+          density: 170,
+          body: 0.35,
+          attack: 0.06,
+          f: 1150,
+          pan: 0.3,
+          at: rand(0.1, 0.14),
         });
       },
     ],
