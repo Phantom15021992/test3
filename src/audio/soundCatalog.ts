@@ -120,6 +120,9 @@ function whoosh(s: Synth, from: number, to: number, dur: number, vol = 0.15, at 
 // Комбо двух спецфишек (16.x) собираются из них, поэтому это функции с размером: size 1 — звук
 // ровно как выбран в лаборатории, больше — взрыв крупнее, ниже и дольше.
 
+/** Разница между двумя ракетами в комбо, с */
+const ROCKET_PAIR_GAP = 0.1;
+
 interface SpecialOptions {
   at?: number;
   pan?: number;
@@ -130,6 +133,12 @@ interface SpecialOptions {
 function rocketSound(s: Synth, { at = 0, pan = 0, size = 1 }: SpecialOptions = {}) {
   whoosh(s, 2000 / size, 8000 / size, 0.5 * size, 0.15, at, pan);
   s.sparkle({ count: Math.round(10 * size), span: 0.5 * size, vol: 0.04, at });
+}
+
+/** Две ракеты внахлёст с разницей ROCKET_PAIR_GAP — так звучит ракета во всех комбо (по просьбе владельца) */
+function rocketPair(s: Synth, { at = 0, size = 1 }: SpecialOptions = {}) {
+  rocketSound(s, { at, pan: -0.5, size });
+  rocketSound(s, { at: at + ROCKET_PAIR_GAP, pan: 0.5, size });
 }
 
 /** Бомба (выбран 12в): глухой удар и россыпь искр */
@@ -744,9 +753,8 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     title: 'Комбо: ракета + ракета (крест)',
     variants: [
       (s) => {
-        // Две ракеты разлетаются в разные стороны: одна слева, другая справа и чуть позже
-        rocketSound(s, { pan: -0.6 });
-        rocketSound(s, { pan: 0.6, at: 0.05, size: 1.1 });
+        // Две ракеты внахлёст: одна слева, другая справа через 0,1 с
+        rocketPair(s);
       },
     ],
   },
@@ -758,7 +766,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     variants: [
       (s) => {
         bombSound(s);
-        rocketSound(s, { at: 0.03 });
+        rocketPair(s, { at: 0.03 });
       },
     ],
   },
@@ -792,9 +800,9 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     title: 'Комбо: радуга + ракета',
     variants: [
       (s) => {
-        // Радуга превращает фишки в ракеты — и они разлетаются одна за другой
+        // Радуга превращает фишки в ракеты — две ракеты внахлёст
         rainbowSound(s, { gap: 0.035 });
-        [-0.6, 0.6, 0].forEach((pan, i) => rocketSound(s, { at: 0.3 + i * 0.12, pan, size: 0.8 }));
+        rocketPair(s, { at: 0.3, size: 0.8 });
       },
     ],
   },
@@ -833,7 +841,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     variants: [
       (s) => {
         megaSound(s);
-        rocketSound(s, { at: 0.03, size: 1.2 });
+        rocketPair(s, { at: 0.03, size: 1.2 });
       },
     ],
   },
