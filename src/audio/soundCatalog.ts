@@ -104,6 +104,12 @@ function fingerSnap(s: Synth, at: number) {
   s.noise({ dur: 0.05, vol: 0.15, at, filter: 'bandpass', f: 900, q: 3 });
 }
 
+/** Треск льда: очень короткий резкий хлопок с яркой серединой — так лопается лёд */
+function iceCrack(s: Synth, at = 0, vol = 1) {
+  s.noise({ dur: 0.035, vol: 0.18 * vol, at, filter: 'highpass', f: 1400, q: 0.7 });
+  s.noise({ dur: 0.02, vol: 0.15 * vol, at, filter: 'bandpass', f: rand(2600, 3400), q: 2 });
+}
+
 /** Глухой удар снизу — основа взрывов и тяжёлых предметов */
 function thump(s: Synth, f: number, dur: number, vol = 0.5, at = 0) {
   // Удар — больше шум, чем тон: чистый низкий синус звучит как электронная «бочка»
@@ -993,15 +999,81 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 19,
     group: 'Препятствия',
     title: 'Лёд сломан',
+    // Ломка льда: резкий треск, затем осыпь (та же зернистая текстура, что у снега 18б) и звон кусочков.
+    // Прежние варианты убраны
     variants: [
-      (s) => s.shatter({ vol: 0.22, dur: 0.45, size: 0.8 }),
+      // а — треск и осыпь: лёд лопнул и осыпался мелкой крошкой, пара льдинок звякнула
       (s) => {
-        s.noise({ dur: 0.2, vol: 0.18, filter: 'highpass', f: 2000 });
-        run(s, 'soft', [low(24), low(20)], 0.05, { dur: 0.3, vol: 0.06 });
+        iceCrack(s);
+        s.texture({
+          dur: rand(0.28, 0.34),
+          vol: 0.45,
+          density: 260,
+          body: 0.15,
+          attack: 0.01,
+          f: 3200,
+          at: 0.02,
+        });
+        s.sparkle({ count: 3, span: 0.2, at: 0.05, vol: 0.05, dur: 0.18 });
       },
+      // б — лёд раскололся на куски: треск, глухой удар и несколько звонких кусков
       (s) => {
-        s.noise({ dur: 0.15, vol: 0.15, filter: 'highpass', f: 3500 });
-        s.sparkle({ count: 8, span: 0.3, vol: 0.05 });
+        iceCrack(s);
+        s.noise({ dur: 0.08, vol: 0.3, filter: 'lowpass', f: 320, at: 0.01 });
+        [0, 1, 2].forEach((i) =>
+          s.glass({
+            f: anyNote(0, 6),
+            dur: 0.22,
+            vol: 0.06,
+            at: 0.04 + i * rand(0.04, 0.08),
+            pan: rand(-0.5, 0.5),
+          }),
+        );
+      },
+      // в — тонкий лёд хрустнул: несколько быстрых трещин подряд и лёгкая крошка
+      (s) => {
+        let at = 0;
+        for (let i = 0; i < Math.floor(rand(3, 5)); i++) {
+          iceCrack(s, at, 0.7 - i * 0.12);
+          at += rand(0.03, 0.06);
+        }
+        s.texture({
+          dur: 0.2,
+          vol: 0.3,
+          density: 220,
+          body: 0.12,
+          attack: 0.01,
+          f: 3400,
+          at: 0.03,
+        });
+      },
+      // г — лёд треснул и рассыпался искрами
+      (s) => {
+        iceCrack(s);
+        s.texture({
+          dur: 0.22,
+          vol: 0.35,
+          density: 240,
+          body: 0.15,
+          attack: 0.01,
+          f: 3000,
+          at: 0.02,
+        });
+        s.sparkle({ count: Math.floor(rand(7, 10)), span: 0.4, at: 0.04, vol: 0.05 });
+      },
+      // д — глубокая трещина: лёд сначала тихо скрипнул, потом лопнул и осыпался
+      (s) => {
+        s.noise({ dur: 0.18, vol: 0.16, filter: 'bandpass', f: 420, f2: 260, q: 7, attack: 0.05 });
+        iceCrack(s, 0.16);
+        s.texture({
+          dur: 0.26,
+          vol: 0.42,
+          density: 250,
+          body: 0.15,
+          attack: 0.01,
+          f: 3000,
+          at: 0.18,
+        });
       },
     ],
   },
