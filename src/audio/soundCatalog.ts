@@ -135,6 +135,10 @@ function glassShards(
  * (промежутки 4–30 мс вразнобой), громкость нарастает к концу и обрывается (falling — наоборот,
  * громко в начале и затихает). Звено звенит тесной гроздью частот low–high (CHAIN_LINK_MODES)
  */
+/** Цепь после разбора образца: на октаву ниже и на 25% громче (по просьбе владельца) */
+const CHAIN_PITCH = 0.5;
+const CHAIN_LOUD = 1.25;
+
 function shakenChain(
   s: Synth,
   { dur = 0.75, rate = 60, low = 11000, high = 14000, vol = 0.05, falling = false, at = 0 } = {},
@@ -145,21 +149,21 @@ function shakenChain(
     // Нарастание к концу и резкий обрыв в последние 15%; при falling — зеркально
     const shape = falling ? (1 - p) ** 1.3 : p < 0.85 ? 0.15 + p ** 1.2 : (1 - p) / 0.15;
     s.clank({
-      f: rand(low, high),
+      f: rand(low, high) * CHAIN_PITCH,
       ring: rand(0.02, 0.05),
-      vol: vol * shape * rand(0.4, 1),
+      vol: vol * CHAIN_LOUD * shape * rand(0.4, 1),
       at: at + t,
       pan: rand(-0.6, 0.6),
       modes: CHAIN_LINK_MODES,
-      clickFrom: 6000,
+      clickFrom: 6000 * CHAIN_PITCH,
     });
     // Тихий телесный отзвук звена пониже: в образце его около 3% энергии, но на слух он заметен
     s.noise({
       dur: 0.025,
-      vol: vol * shape * 1.5,
+      vol: vol * CHAIN_LOUD * shape * 1.5,
       at: at + t,
       filter: 'bandpass',
-      f: rand(900, 2000),
+      f: rand(900, 2000) * CHAIN_PITCH,
       q: 1.5,
     });
     t += (1 / rate) * rand(0.35, 1.8);
