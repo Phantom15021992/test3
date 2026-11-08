@@ -1197,6 +1197,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 25,
     group: 'Препятствия',
     title: 'Уголь разбит',
+    chosen: 0,
     variants: [
       (s) => {
         thump(s, 110, 0.4, 0.45);
