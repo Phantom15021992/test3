@@ -9,7 +9,8 @@ import {
   type SparkleColor,
 } from './sparkleGems';
 
-// Кристаллы тестового уровня — второй набор художника (public/assets/crystals): 1 уровень — неогранённый
+// Кристаллы тестового уровня. Сейчас — третий набор художника: лист со всеми цветами (CRYSTAL_SHEET, ниже).
+// Второй набор (public/assets/crystals/level1–3): 1 уровень — неогранённый
 // камень, 2 — грубый кристалл, 3 — огранённый самоцвет. Нарисованы синими, красный и зелёный получаются
 // той же перекраской, что у ромба (HUE_MAPS). По образцу художника: фишка занимает ~84% клетки, у 1 уровня
 // сияния нет, у 2 — мягкий белый ореол, у 3 — ярче; поле — ровный синий фон с полупрозрачными плитками клеток.
@@ -17,12 +18,51 @@ import {
 /** Плитка клетки под фишкой */
 export const CRYSTAL_CELL = 'crystal-cell';
 
-export const CRYSTAL_FILES: readonly { key: string; path: string }[] = [
-  { key: 'crystal-src-1', path: 'assets/crystals/level1.png' },
-  { key: 'crystal-src-2', path: 'assets/crystals/level2.png' },
-  { key: 'crystal-src-3', path: 'assets/crystals/level3.webp' },
-  { key: CRYSTAL_CELL, path: 'assets/crystals/cell.png' },
+/**
+ * Третий набор художника: один лист 3×5 (gems-sheet.webp) — уровни по столбцам, цвета по строкам, на
+ * прозрачном фоне, сияние уже нарисовано. Лист режется при загрузке уровня. false возвращает второй набор (синие
+ * кристаллы с перекраской)
+ */
+export const CRYSTAL_SHEET = true;
+const SHEET_KEY = 'crystal-sheet';
+
+export const CRYSTAL_FILES: readonly { key: string; path: string }[] = CRYSTAL_SHEET
+  ? [
+      { key: SHEET_KEY, path: 'assets/crystals/gems-sheet.webp' },
+      { key: CRYSTAL_CELL, path: 'assets/crystals/cell.png' },
+    ]
+  : [
+      { key: 'crystal-src-1', path: 'assets/crystals/level1.png' },
+      { key: 'crystal-src-2', path: 'assets/crystals/level2.png' },
+      { key: 'crystal-src-3', path: 'assets/crystals/level3.webp' },
+      { key: CRYSTAL_CELL, path: 'assets/crystals/cell.png' },
+    ];
+
+/** Строки листа сверху вниз */
+const SHEET_ROWS = ['red', 'blue', 'green', 'orange', 'yellow'] as const;
+type SheetColor = (typeof SHEET_ROWS)[number];
+/**
+ * Цвет палитры игры (синий, жёлтый, красный, зелёный, фиолетовый, оранжевый, голубой) → строка листа.
+ * Фиолетового и голубого на листе нет — пока синие
+ */
+const SHEET_BY_PALETTE: readonly SheetColor[] = [
+  'blue',
+  'yellow',
+  'red',
+  'green',
+  'blue',
+  'orange',
+  'blue',
 ];
+const SHEET_STAR_TINTS: Record<SheetColor, number> = {
+  red: 0xffd0b8,
+  blue: 0xa8f4ff,
+  green: 0xb8ffd0,
+  orange: 0xffdcb0,
+  yellow: 0xfff4b0,
+};
+/** Нарисованное сияние «дышит»: поверх фишки проступает его копия — у 1 уровня сияния нет */
+const SHEET_GLOWS: Record<1 | 2 | 3, number> = { 1: 0, 2: 0.45, 3: 0.65 };
 
 /**
  * Синее поле с плитками клеток, как на образце художника. Владелец вернул тёмную шахматку, как у всей
@@ -56,12 +96,17 @@ interface Layer {
   bodySize: number;
 }
 const layers = new Map<string, Layer>();
-const bodyKey = (level: number, color: SparkleColor) => `crystal-${color}-${level}`;
-const glowKey = (level: number, color: SparkleColor) => `crystal-glow-${color}-${level}`;
+const bodyKey = (level: number, color: string) => `crystal-${color}-${level}`;
+const glowKey = (level: number, color: string) => `crystal-glow-${color}-${level}`;
 
-/** Перекрашивает фишки в три цвета и готовит ореолы; картинки должны быть уже загружены */
+/** Готовит фишки из картинок: режет лист или перекрашивает второй набор; картинки должны быть уже загружены */
 export function createCrystalTextures(scene: Phaser.Scene): void {
   if (layers.size > 0 && scene.textures.exists(bodyKey(3, 'red'))) return;
+  if (CRYSTAL_SHEET) {
+    cutSheet(scene);
+    drawStar(scene);
+    return;
+  }
   for (const level of [1, 2, 3] as const) {
     const source = scene.textures.get(`crystal-src-${level}`).getSourceImage() as HTMLImageElement;
     const base = document.createElement('canvas');
@@ -93,6 +138,128 @@ export function createCrystalTextures(scene: Phaser.Scene): void {
     }
   }
   drawStar(scene);
+}
+
+function addTexture(scene: Phaser.Scene, key: string, canvas: HTMLCanvasElement) {
+  if (scene.textures.exists(key)) scene.textures.remove(key);
+  scene.textures.addCanvas(key, canvas);
+}
+
+/**
+ * Режет лист третьего набора на фишки. Фон листа уже прозрачный, сияние нарисовано полупрозрачным —
+ * фишки берутся как есть, ищутся по пустым полосам между ними
+ */
+function cutSheet(scene: Phaser.Scene): void {
+  const source = scene.textures.get(SHEET_KEY).getSourceImage() as HTMLImageElement;
+  const sheet = document.createElement('canvas');
+  sheet.width = source.width;
+  sheet.height = source.height;
+  const sctx = sheet.getContext('2d', { willReadFrequently: true })!;
+  sctx.drawImage(source, 0, 0);
+  const pixels = sctx.getImageData(0, 0, sheet.width, sheet.height).data;
+  // Ряды и столбцы листа неровные: фишки ищутся по прозрачным просветам между ними
+  const rows = inkSpans(sheet.height, (y) =>
+    countInk(pixels, sheet.width, 0, sheet.width, y, 'row'),
+  );
+  if (rows.length !== SHEET_ROWS.length) throw new Error(`На листе ${rows.length} рядов фишек`);
+  SHEET_ROWS.forEach((color, row) => {
+    const [top, bottom] = rows[row]!;
+    // Сияния соседних фишек в ряду бывают сомкнуты: столбцы делятся по самому пустому месту у трети ширины
+    const ink = (x: number) => countInk(pixels, sheet.width, top, bottom, x, 'col');
+    const cut = (around: number) => {
+      let best = around;
+      for (let x = around - SHEET_SEARCH; x <= around + SHEET_SEARCH; x++)
+        if (ink(x) < ink(best)) best = x;
+      return best;
+    };
+    const bounds = [
+      0,
+      cut(Math.round(sheet.width / 3)),
+      cut(Math.round((sheet.width * 2) / 3)),
+      sheet.width,
+    ];
+    const cols = [0, 1, 2].map((i): [number, number] => {
+      const spans = inkSpans(bounds[i + 1]! - bounds[i]!, (x) => ink(bounds[i]! + x));
+      const first = spans[0];
+      const last = spans[spans.length - 1];
+      if (!first || !last) throw new Error(`В ряду ${row + 1} листа нет фишки ${i + 1}`);
+      return [bounds[i]! + first[0], bounds[i]! + last[1]];
+    });
+    for (const level of [1, 2, 3] as const) {
+      const [left, right] = cols[level - 1]!;
+      const sx = Math.max(0, left - SHEET_MARGIN);
+      const sy = Math.max(0, top - SHEET_MARGIN);
+      const cellW = Math.min(sheet.width, right + SHEET_MARGIN) - sx;
+      const cellH = Math.min(sheet.height, bottom + SHEET_MARGIN) - sy;
+      const canvas = document.createElement('canvas');
+      canvas.width = cellW;
+      canvas.height = cellH;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+      ctx.drawImage(sheet, sx, sy, cellW, cellH, 0, 0, cellW, cellH);
+      // Размер и центр фишки — по плотной части (без сияния), иначе фишки с сиянием были бы мельче
+      const box = opaqueBox(canvas, 250);
+      const key = bodyKey(level, color);
+      addTexture(scene, key, canvas);
+      layers.set(key, {
+        originX: (box.x + box.w / 2) / cellW,
+        originY: (box.y + box.h / 2) / cellH,
+        bodySize: Math.max(box.w, box.h),
+      });
+      if (SHEET_GLOWS[level] > 0) addTexture(scene, glowKey(level, color), glowOnly(canvas));
+    }
+  });
+}
+
+/** Пиксель листа «закрашен», если он заметно непрозрачен */
+const INK_ALPHA = 12;
+/** Запас вокруг найденной фишки, чтобы не срезать край сияния */
+const SHEET_MARGIN = 4;
+/** Насколько далеко от трети ширины искать просвет между фишками ряда */
+const SHEET_SEARCH = 90;
+
+function countInk(
+  d: Uint8ClampedArray,
+  width: number,
+  from: number,
+  to: number,
+  at: number,
+  dir: 'row' | 'col',
+): number {
+  let count = 0;
+  for (let k = from; k < to; k++) {
+    const i = dir === 'row' ? (at * width + k) * 4 : (k * width + at) * 4;
+    if (d[i + 3]! > INK_ALPHA) count++;
+  }
+  return count;
+}
+
+/** Участки, где есть рисунок, разделённые пустыми полосами (короткие — шум сжатия — отбрасываются) */
+function inkSpans(length: number, ink: (at: number) => number): [number, number][] {
+  const spans: [number, number][] = [];
+  let start = -1;
+  for (let at = 0; at <= length; at++) {
+    const has = at < length && ink(at) > 2;
+    if (has && start < 0) start = at;
+    if (!has && start >= 0) {
+      if (at - start > 20) spans.push([start, at]);
+      start = -1;
+    }
+  }
+  return spans;
+}
+
+/** Одно сияние: полупрозрачная часть картинки, без плотной фишки */
+function glowOnly(canvas: HTMLCanvasElement): HTMLCanvasElement {
+  const copy = document.createElement('canvas');
+  copy.width = canvas.width;
+  copy.height = canvas.height;
+  const ctx = copy.getContext('2d')!;
+  ctx.drawImage(canvas, 0, 0);
+  const image = ctx.getImageData(0, 0, copy.width, copy.height);
+  const d = image.data;
+  for (let i = 3; i < d.length; i += 4) if (d[i]! >= 240) d[i] = 0;
+  ctx.putImageData(image, 0, 0);
+  return copy;
 }
 
 /**
@@ -161,7 +328,7 @@ function medianHue(canvas: HTMLCanvasElement): number {
 }
 
 /** Непрозрачная часть картинки: у файлов разные поля, а вписывать в клетку нужно сам камень */
-function opaqueBox(canvas: HTMLCanvasElement) {
+function opaqueBox(canvas: HTMLCanvasElement, threshold = 128) {
   const { width, height } = canvas;
   const data = canvas.getContext('2d')!.getImageData(0, 0, width, height).data;
   let minX = width;
@@ -170,7 +337,7 @@ function opaqueBox(canvas: HTMLCanvasElement) {
   let maxY = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      if (data[(y * width + x) * 4 + 3]! < 128) continue;
+      if (data[(y * width + x) * 4 + 3]! < threshold) continue;
       minX = Math.min(minX, x);
       maxX = Math.max(maxX, x);
       minY = Math.min(minY, y);
@@ -213,19 +380,46 @@ export function addCrystal(
   y: number,
   size: number,
 ): Phaser.GameObjects.Container {
-  const color = SPARKLE_COLORS[colorIndex] ?? SPARKLE_COLORS[0];
+  const color = CRYSTAL_SHEET
+    ? (SHEET_BY_PALETTE[colorIndex] ?? 'blue')
+    : (SPARKLE_COLORS[colorIndex] ?? SPARKLE_COLORS[0]);
+  const tint = CRYSTAL_SHEET
+    ? SHEET_STAR_TINTS[color as SheetColor]
+    : STAR_TINTS[color as SparkleColor];
   const layer = layers.get(bodyKey(level, color))!;
   const scale = size / layer.bodySize;
   const container = scene.add.container(x, y);
   const phase = Math.random() * PULSE_MS;
   const [glowFrom, glowTo] = GLOWS[level];
-  if (glowTo > 0) {
+  const body = scene.add
+    .image(0, 0, bodyKey(level, color))
+    .setOrigin(layer.originX, layer.originY)
+    .setScale(scale);
+  container.add(body);
+  if (CRYSTAL_SHEET && SHEET_GLOWS[level] > 0) {
+    // Нарисованное сияние дышит: поверх фишки то проступает, то гаснет его копия
+    const glow = scene.add
+      .image(0, 0, glowKey(level, color))
+      .setOrigin(layer.originX, layer.originY)
+      .setScale(scale)
+      .setAlpha(0);
+    container.add(glow);
+    scene.tweens.add({
+      targets: glow,
+      alpha: SHEET_GLOWS[level],
+      duration: PULSE_MS,
+      delay: phase,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  } else if (!CRYSTAL_SHEET && glowTo > 0) {
     const glow = scene.add
       .image(0, 0, glowKey(level, color))
       .setOrigin(layer.originX, layer.originY)
       .setScale(scale * 1.08)
       .setAlpha(glowFrom);
-    container.add(glow);
+    container.addAt(glow, 0);
     scene.tweens.add({
       targets: glow,
       alpha: glowTo,
@@ -237,11 +431,6 @@ export function addCrystal(
       ease: 'Sine.easeInOut',
     });
   }
-  const body = scene.add
-    .image(0, 0, bodyKey(level, color))
-    .setOrigin(layer.originX, layer.originY)
-    .setScale(scale);
-  container.add(body);
   // Камень 1 уровня не сияет — только чуть покачивается; кристаллы еле заметно «дышат»
   scene.tweens.add({
     targets: body,
@@ -262,7 +451,7 @@ export function addCrystal(
     timers.add(timer);
   };
   for (let i = 0; i < SPARKLES[level]; i++) {
-    const star = scene.add.image(0, 0, STAR_KEY).setScale(0).setAlpha(0).setTint(STAR_TINTS[color]);
+    const star = scene.add.image(0, 0, STAR_KEY).setScale(0).setAlpha(0).setTint(tint);
     container.add(star);
     const twinkle = () => {
       if (!star.active) return;
