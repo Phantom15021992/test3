@@ -1241,6 +1241,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 27,
     group: 'Итоги и интерфейс',
     title: 'Цель или задача на звезду выполнена',
+    chosen: 1,
     variants: [
       (s) => run(s, 'glass', [p(4), p(7), p(9)], 0.08, { dur: 0.7, vol: 0.14 }),
       (s) => run(s, 'soft', [p(3), p(5), p(8)], 0.08, { dur: 0.8, vol: 0.13 }),
