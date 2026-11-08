@@ -46,14 +46,22 @@ const SOFT: readonly (readonly [number, number])[] = [
   [3.93, 0.22],
   [9.24, 0.05],
 ];
-/** Калимба (пальцевое пианино): основной тон и высокий обертон язычка, который быстро гаснет */
-/** Металл (звено цепи): обертоны гуще и выше, чем у стекла, звон короче и суше */
+/** Металл (гвоздь, монета): обертоны гуще и выше, чем у стекла, звон короче и суше */
 const METAL: readonly (readonly [number, number])[] = [
   [1, 1],
   [2.32, 0.7],
   [4.25, 0.45],
   [6.63, 0.25],
 ];
+/** Призвон звена цепи: несоразмерные высоты резонаторов (доли от основной) и их громкости */
+const CLANK_MODES: readonly (readonly [number, number])[] = [
+  [1, 1],
+  [1.43, 0.85],
+  [1.83, 0.7],
+  [2.47, 0.55],
+  [3.11, 0.4],
+];
+/** Калимба (пальцевое пианино): основной тон и высокий обертон язычка, который быстро гаснет */
 const KALIMBA: readonly (readonly [number, number])[] = [
   [1, 1],
   [5.4, 0.16],
@@ -63,6 +71,8 @@ const BEAT_SPREAD = 0.0025;
 /** Отзвук комнаты: длина и доля «мокрого» сигнала */
 const REVERB_SECONDS = 1.3;
 const REVERB_WET = 0.22;
+/** У металла отзвука почти нет: он звучит сухо */
+const BRIGHT_REVERB_WET = 0.05;
 /** Выше этой частоты звук мягко срезан: резкий верх и делал звуки «компьютерными» */
 const TOP_CUT = 6500;
 
@@ -72,6 +82,11 @@ export const note = (semitones: number) => 440 * 2 ** (semitones / 12);
 export class Synth {
   readonly ctx: AudioContext;
   readonly out: GainNode;
+  /**
+   * Яркий путь для металла: мимо среза высоких частот и почти без отзвука комнаты. Звон металла живёт
+   * выше 6 кГц, и со срезом и отзвуком цепь звучала как мягкий хрусталь
+   */
+  readonly bright: GainNode;
   private noiseBuffer: AudioBuffer | null = null;
 
   constructor(ctx: AudioContext = new AudioContext()) {
@@ -93,6 +108,13 @@ export class Synth {
     const wet = ctx.createGain();
     wet.gain.value = REVERB_WET;
     top.connect(reverb).connect(wet).connect(comp);
+    this.bright = ctx.createGain();
+    this.bright.gain.value = this.out.gain.value;
+    this.bright.connect(comp);
+    const brightWet = ctx.createGain();
+    brightWet.gain.value = BRIGHT_REVERB_WET;
+    this.bright.connect(reverb);
+    reverb.connect(brightWet).connect(comp);
     comp.connect(ctx.destination);
   }
 
@@ -116,6 +138,7 @@ export class Synth {
 
   set volume(value: number) {
     this.out.gain.value = value;
+    this.bright.gain.value = value;
   }
 
   private start(at = 0) {
@@ -204,12 +227,64 @@ export class Synth {
     this.partials(SOFT, options, 2.5, 0.5);
   }
 
-  /** Калимба: тёплый щипок металлического язычка — приятный и не «кристальный» */
-  /** Металлический звяк: звено цепи, гвоздь, монета */
+  /** Металлический звяк: гвоздь, монета */
   metal(options: ToneOptions): void {
     this.partials(METAL, options, 1.4, 0.7);
   }
 
+  /**
+   * Удар металла о металл, как у звена настоящей цепи: щелчок в несколько миллисекунд проходит через
+   * узкие резонаторы на высоких частотах и коротко звенит. Высоты у резонаторов несоразмерные, поэтому
+   * звук шумный, «без ноты», как у настоящего железа. f — основная частота призвона, ring — как долго звенит
+   */
+  clank({
+    f,
+    ring = 0.06,
+    vol = 0.1,
+    at = 0,
+    pan = 0,
+  }: {
+    f: number;
+    ring?: number;
+    vol?: number;
+    at?: number;
+    pan?: number;
+  }): void {
+    const t = this.start(at);
+    const source = this.ctx.createBufferSource();
+    source.buffer = this.whiteNoise();
+    const hit = this.ctx.createGain();
+    hit.gain.setValueAtTime(1, t);
+    hit.gain.exponentialRampToValueAtTime(0.001, t + 0.004);
+    source.connect(hit);
+    const panner = this.ctx.createStereoPanner();
+    panner.pan.value = pan;
+    panner.connect(this.bright);
+    // Жёсткий сухой щелчок удара, сам по себе, мимо резонаторов: металл о металл звучит резко
+    const click = this.ctx.createBiquadFilter();
+    click.type = 'highpass';
+    click.frequency.value = 4000;
+    const clickGain = this.ctx.createGain();
+    clickGain.gain.value = vol * 1.5;
+    hit.connect(click).connect(clickGain).connect(panner);
+    for (const [ratio, level] of CLANK_MODES) {
+      const freq = Math.min(f * ratio, 12000);
+      // Добротность из времени звона: резонатор с Q звенит примерно Q / (π·f) секунд
+      const q = Math.min((Math.PI * freq * ring) / 2, 900);
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = freq;
+      filter.Q.value = q;
+      const gain = this.ctx.createGain();
+      // Узкий резонатор пропускает мало энергии короткого щелчка — громкость возмещается по добротности
+      gain.gain.value = vol * level * Math.sqrt(q) * 18;
+      hit.connect(filter).connect(gain).connect(panner);
+    }
+    source.start(t);
+    source.stop(t + 0.01);
+  }
+
+  /** Калимба: тёплый щипок металлического язычка — приятный и не «кристальный» */
   kalimba(options: ToneOptions): void {
     this.partials(KALIMBA, options, 8, 0.25);
   }

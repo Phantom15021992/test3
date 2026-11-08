@@ -131,21 +131,30 @@ function glassShards(
 }
 
 /**
- * Звенья цепи звякают друг о друга: links металлических звяков вразнобой за span секунд, сначала гуще,
- * к концу реже; у каждого звена своя высота и сторона
+ * Звяканье цепи: hits крошечных ударов звеньев друг о друга за span секунд. shape сдвигает удары
+ * к началу (больше — гуще в начале, 1 — ровно). У каждого удара своя высота призвона, громкость и сторона
  */
 function chainRattle(
   s: Synth,
-  { links = 5, span = 0.3, low = 900, high = 2000, vol = 0.1, at = 0 } = {},
+  {
+    hits = 12,
+    span = 0.2,
+    low = 3200,
+    high = 8000,
+    ring = 0.06,
+    vol = 0.04,
+    shape = 1.4,
+    at = 0,
+  } = {},
 ) {
-  for (let i = 0; i < links; i++) {
-    const t = i === 0 ? 0 : Math.random() ** 1.4 * span;
-    s.metal({
+  for (let i = 0; i < hits; i++) {
+    const t = Math.random() ** shape * span;
+    s.clank({
       f: rand(low, high),
-      dur: rand(0.12, 0.25),
-      vol: vol * rand(0.6, 1) * (1 - (t / span) * 0.4),
+      ring: ring * rand(0.6, 1.3),
+      vol: vol * rand(0.4, 1) * (1 - (t / span) * 0.5),
       at: at + t,
-      pan: rand(-0.5, 0.5),
+      pan: rand(-0.6, 0.6),
     });
   }
 }
@@ -1039,7 +1048,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 19,
     group: 'Препятствия',
     title: 'Лёд сломан',
-    chosen: 4,
+    chosen: 0,
     // Разбитое стекло: резкий удар, вспышка яркого шума и россыпь звонких осколков вразнобой.
     // Прежние варианты (озёрный треск) убраны
     variants: [
@@ -1083,39 +1092,38 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 20,
     group: 'Препятствия',
     title: 'Сундук: снято звено цепи',
-    // Звук цепи: звенья звякают друг о друга (металлический тембр Synth.metal), каждый раз по-новому.
-    // Прежние варианты убраны
+    // Настоящая цепь: не «ноты», а десятки крошечных ударов металла о металл с коротким высоким
+    // призвоном (Synth.clank), сбитых в кучки, как при тряске. Прежние варианты убраны
     variants: [
-      // а — звено соскочило: два-три звяка подряд
-      (s) => chainRattle(s, { links: Math.floor(rand(2, 4)), span: 0.12 }),
-      // б — цепь звякнула и упала: звенья сыплются, всё реже
-      (s) => chainRattle(s, { links: Math.floor(rand(6, 9)), span: 0.38 }),
-      // в — тяжёлая цепь: звенья ниже и глухой лязг под ними
+      // а — цепь встряхнули: две-три кучки звяканья
       (s) => {
-        s.noise({ dur: 0.07, vol: 0.25, filter: 'lowpass', f: 450, q: 0.8 });
+        let at = 0;
+        for (let i = 0; i < Math.floor(rand(2, 4)); i++) {
+          chainRattle(s, { hits: Math.floor(rand(8, 14)), span: rand(0.06, 0.1), at });
+          at += rand(0.09, 0.14);
+        }
+      },
+      // б — цепь упала: густой звон в начале, потом звенья досыпаются всё реже
+      (s) => {
+        s.noise({ dur: 0.05, vol: 0.15, filter: 'lowpass', f: 500, q: 0.8 });
+        chainRattle(s, { hits: Math.floor(rand(30, 40)), span: 0.45, shape: 2.2 });
+      },
+      // в — одно звено соскочило: короткое звяканье и лёгкий проскок
+      (s) => chainRattle(s, { hits: Math.floor(rand(5, 8)), span: 0.12 }),
+      // г — цепь протащили: ровное долгое звяканье
+      (s) => chainRattle(s, { hits: Math.floor(rand(32, 42)), span: 0.55, shape: 1, vol: 0.03 }),
+      // д — тяжёлая цепь: звенья крупнее (ниже) и глухой лязг
+      (s) => {
+        s.noise({ dur: 0.08, vol: 0.2, filter: 'lowpass', f: 420, q: 0.8 });
         chainRattle(s, {
-          links: Math.floor(rand(4, 6)),
-          span: 0.25,
-          low: 650,
-          high: 1300,
-          vol: 0.12,
+          hits: Math.floor(rand(14, 20)),
+          span: 0.3,
+          low: 1800,
+          high: 4200,
+          ring: 0.09,
+          vol: 0.05,
         });
       },
-      // г — цепь лопнула: резкий металлический щелчок и звенья разлетелись
-      (s) => {
-        s.noise({ dur: 0.03, vol: 0.16, filter: 'bandpass', f: 2600, q: 3 });
-        s.metal({ f: rand(1500, 1800), dur: 0.25, vol: 0.08 });
-        chainRattle(s, { links: Math.floor(rand(4, 6)), span: 0.3, at: 0.05 });
-      },
-      // д — тонкая цепочка: лёгкий частый перезвон мелких звеньев
-      (s) =>
-        chainRattle(s, {
-          links: Math.floor(rand(7, 11)),
-          span: 0.25,
-          low: 1800,
-          high: 3200,
-          vol: 0.06,
-        }),
     ],
   },
   {
