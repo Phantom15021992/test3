@@ -1180,6 +1180,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 24,
     group: 'Препятствия',
     title: 'Уголь: снят слой',
+    chosen: 0,
     variants: [
       (s) => {
         s.noise({ dur: 0.12, vol: 0.22, filter: 'lowpass', f: 500 });
