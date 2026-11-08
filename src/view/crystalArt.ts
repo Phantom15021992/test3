@@ -68,7 +68,7 @@ export function createCrystalTextures(scene: Phaser.Scene): void {
     const shift = BLUE_HUE - medianHue(base);
     for (const color of SPARKLE_COLORS) {
       const map = HUE_MAPS[color];
-      const body = recolor(base, map && ((hue) => map(hue + shift)));
+      const body = tone(recolor(base, map && ((hue) => map(hue + shift))), TONES[color]);
       const key = bodyKey(level, color);
       if (scene.textures.exists(key)) scene.textures.remove(key);
       scene.textures.addCanvas(key, body);
@@ -87,6 +87,42 @@ export function createCrystalTextures(scene: Phaser.Scene): void {
     }
   }
   drawStar(scene);
+}
+
+/**
+ * Яркость и насыщенность фишек по цветам (доли от рисунка) — по просьбе владельца: синие на 30% темнее,
+ * зелёные и красные на 50% темнее и на 20% бледнее
+ */
+const TONES: Record<SparkleColor, { value: number; saturation: number }> = {
+  blue: { value: 0.7, saturation: 1 },
+  green: { value: 0.5, saturation: 0.8 },
+  red: { value: 0.5, saturation: 0.8 },
+};
+
+/** Меняет яркость (V) и насыщенность (S) каждого пикселя; прозрачность не трогает */
+function tone(
+  canvas: HTMLCanvasElement,
+  { value, saturation }: { value: number; saturation: number },
+) {
+  // Всегда на копии: для синего перекраска отдаёт сам исходник, а он нужен и другим цветам
+  const copy = document.createElement('canvas');
+  copy.width = canvas.width;
+  copy.height = canvas.height;
+  const ctx = copy.getContext('2d')!;
+  ctx.drawImage(canvas, 0, 0);
+  const image = ctx.getImageData(0, 0, copy.width, copy.height);
+  const d = image.data;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] === 0) continue;
+    const max = Math.max(d[i]!, d[i + 1]!, d[i + 2]!);
+    // В HSV: насыщенность — расстояние до серого той же яркости, яркость — множитель всего пикселя
+    for (let k = 0; k < 3; k++) {
+      const channel = d[i + k]!;
+      d[i + k] = (max - (max - channel) * saturation) * value;
+    }
+  }
+  ctx.putImageData(image, 0, 0);
+  return copy;
 }
 
 /** Оттенок синего тела на прежнем листе: от него считаются HUE_MAPS */
