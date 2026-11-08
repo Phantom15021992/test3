@@ -1273,6 +1273,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 29,
     group: 'Итоги и интерфейс',
     title: 'Поражение',
+    chosen: 1,
     variants: [
       (s) => run(s, 'glass', [low(10), low(8), low(5), low(3)], 0.22, { dur: 0.8, vol: 0.13 }),
       (s) => run(s, 'soft', [low(7), low(3), low(0)], 0.28, { dur: 0.9, vol: 0.14 }),
