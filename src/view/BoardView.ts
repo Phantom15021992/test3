@@ -28,13 +28,18 @@ import {
 } from './palette';
 import { chestParts, iceImage, obstacleImage, setCoalArt } from './obstacleArt';
 import { drawPiece } from './pieceArt';
-import { addSparkleObject, SPARKLE_COLORS, type SparkleKind } from './sparkleGems';
+import {
+  addCrystal,
+  CRYSTAL_CELL,
+  CRYSTAL_CELL_ALPHA,
+  CRYSTAL_CELL_SHARE,
+  CRYSTAL_FIELD_COLOR,
+  CRYSTAL_PIECE_SHARE,
+} from './crystalArt';
 import { drawTileShape } from './tileArt';
 
-/** Тестовый уровень: 1 уровень — камень, 2 — ромб, 3 — кристалл */
-const GEM_KINDS: readonly SparkleKind[] = ['stone', 'rhombus', 'crystal'];
-/** Ширина камня в клетке: ореол и лучи выходят за неё, поэтому тело меньше клетки */
-const GEM_CELL_SHARE = 0.72;
+/** Поле тестового уровня чуть шире клеток: синий фон выступает каймой, как на образце художника */
+const CRYSTAL_FIELD_PAD = 0.12;
 
 type TileSprite = Phaser.GameObjects.Container;
 
@@ -62,6 +67,7 @@ export class BoardView {
   coalLayers: number = COAL_MAX_LAYERS;
   /** Тестовый уровень с экрана правил: фишки — анимированные камень, ромб и кристалл (лист грузит GameScene) */
   gems = false;
+  private readonly plateLayer: Phaser.GameObjects.Container;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -70,6 +76,8 @@ export class BoardView {
     readonly cellSize: number,
   ) {
     this.background = scene.add.graphics();
+    // Плитки клеток тестового уровня — свой слой сразу над фоном: под фишками и их ореолами
+    this.plateLayer = scene.add.container(0, 0);
     this.iceLayer = scene.add.container(0, 0);
     this.selection = scene.add.graphics().setDepth(1);
     this.highlight = scene.add.graphics().setDepth(1);
@@ -96,19 +104,37 @@ export class BoardView {
     );
 
     this.background.clear();
+    this.plateLayer.removeAll(true);
     this.sprites = board.map((row, r) =>
       row.map((cell, c) => {
         if (cell?.kind === 'hole') return null;
         const x = this.originX + c * this.cellSize;
         const y = this.originY + r * this.cellSize;
-        this.background.fillStyle((r + c) % 2 === 0 ? BOARD_CELL_DARK : BOARD_CELL_LIGHT);
-        this.background.fillRect(x, y, this.cellSize, this.cellSize);
+        if (this.gems) this.drawCrystalCell(x, y);
+        else {
+          this.background.fillStyle((r + c) % 2 === 0 ? BOARD_CELL_DARK : BOARD_CELL_LIGHT);
+          this.background.fillRect(x, y, this.cellSize, this.cellSize);
+        }
         if (isCoal(cell)) {
           if (cell.top === r && cell.left === c) this.addCoal(cell.top, cell.left, cell.layers);
           return null;
         }
         return cell ? this.createSprite(cell, { row: r, col: c }) : null;
       }),
+    );
+  }
+
+  /** Клетка тестового уровня: синий фон с каймой и полупрозрачная плитка, как на образце художника */
+  private drawCrystalCell(x: number, y: number): void {
+    const pad = this.cellSize * CRYSTAL_FIELD_PAD;
+    this.background.fillStyle(CRYSTAL_FIELD_COLOR);
+    this.background.fillRect(x - pad, y - pad, this.cellSize + pad * 2, this.cellSize + pad * 2);
+    const size = this.cellSize * CRYSTAL_CELL_SHARE;
+    this.plateLayer.add(
+      this.scene.add
+        .image(x + this.cellSize / 2, y + this.cellSize / 2, CRYSTAL_CELL)
+        .setDisplaySize(size, size)
+        .setAlpha(CRYSTAL_CELL_ALPHA),
     );
   }
 
@@ -364,9 +390,9 @@ export class BoardView {
       const name = cell.kind === 'item' ? 'crown' : cell.kind;
       children = [obstacleImage(this.scene, name, this.cellSize)];
     } else if (cell.kind === 'tile' && this.gems) {
-      const kind = GEM_KINDS[cell.level - 1] ?? 'stone';
-      const color = SPARKLE_COLORS[cell.color] ?? SPARKLE_COLORS[0];
-      children = [addSparkleObject(this.scene, kind, 0, 0, this.cellSize * GEM_CELL_SHARE, color)];
+      children = [
+        addCrystal(this.scene, cell.level, cell.color, 0, 0, this.cellSize * CRYSTAL_PIECE_SHARE),
+      ];
     } else if (cell.kind === 'tile') {
       const body = this.scene.add.graphics();
       this.drawTile(body, cell);

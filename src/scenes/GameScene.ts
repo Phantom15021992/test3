@@ -47,13 +47,7 @@ import {
 } from '../ui/levelText';
 import { HIGHLIGHT_COLOR, UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
 import { BoardView } from '../view/BoardView';
-import {
-  createSparkleTextures,
-  RHOMBUS_SHEET,
-  RHOMBUS_SHEET_PATH,
-  SPARKLE_SHEET,
-  SPARKLE_SHEET_PATH,
-} from '../view/sparkleGems';
+import { CRYSTAL_FILES, createCrystalTextures } from '../view/crystalArt';
 import { debugSeed, startGame } from './startGame';
 import { playCues, playSound, playStars } from '../audio/gameSounds';
 import { StepSoundTracker, type ProgressView } from '../audio/stepSounds';
@@ -135,11 +129,12 @@ export class GameScene extends Phaser.Scene {
     this.level = this.gems ? null : (data.level ?? null);
   }
 
-  /** Листы с кристаллом, ромбом и камнем грузятся только для тестового уровня: остальной игре они не нужны */
+  /** Кристаллы и плитка клетки грузятся только для тестового уровня: остальной игре они не нужны */
   preload(): void {
     if (!this.gems) return;
-    if (!this.textures.exists(SPARKLE_SHEET)) this.load.image(SPARKLE_SHEET, SPARKLE_SHEET_PATH);
-    if (!this.textures.exists(RHOMBUS_SHEET)) this.load.image(RHOMBUS_SHEET, RHOMBUS_SHEET_PATH);
+    for (const { key, path } of CRYSTAL_FILES) {
+      if (!this.textures.exists(key)) this.load.image(key, path);
+    }
   }
 
   create(): void {
@@ -178,8 +173,8 @@ export class GameScene extends Phaser.Scene {
     const originY = boxTop + (boxSize - cellSize * rows) / 2;
     this.view = new BoardView(this, originX, originY, cellSize);
     this.view.gems = this.gems;
-    // Фишки тестового уровня — слои с листа художника: их нужно нарезать до первой отрисовки поля
-    if (this.gems) createSparkleTextures(this);
+    // Кристаллы тестового уровня перекрашиваются в три цвета до первой отрисовки поля
+    if (this.gems) createCrystalTextures(this);
     if (this.level?.coalLayers) this.view.coalLayers = this.level.coalLayers;
     this.view.render(this.session.board);
     this.refreshIce();

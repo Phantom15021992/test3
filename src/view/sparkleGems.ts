@@ -25,14 +25,14 @@ const BLUE_HUE = 233;
  * зелёный ~150° (мятный), блики — в салатовые. Разброс оттенков у красного вдвое уже: иначе голубые
  * блики становятся фиолетовыми
  */
-const HUE_MAPS: Record<SparkleColor, ((hue: number) => number) | null> = {
+export const HUE_MAPS: Record<SparkleColor, ((hue: number) => number) | null> = {
   blue: null,
   green: (hue) => 150 + (hue - BLUE_HUE) * 1.15,
   red: (hue) => 345 + (hue - BLUE_HUE) * 0.5,
 };
 
 /** Блёстки в тон камню */
-const STAR_TINTS: Record<SparkleColor, number> = {
+export const STAR_TINTS: Record<SparkleColor, number> = {
   blue: 0xa8f4ff,
   green: 0xd8ffb0,
   red: 0xffc8dc,
@@ -83,7 +83,7 @@ const OUTLINE_ALPHA = 150;
 /** Контур нарисован от руки — расширяем его, чтобы заливка снаружи не протекала в щели */
 const OUTLINE_GROW = 3;
 
-const STAR_KEY = 'sparkle-star';
+export const STAR_KEY = 'sparkle-star';
 
 interface Layer {
   key: string;
@@ -100,7 +100,7 @@ const layerKey = (color: SparkleColor, name: string, part: 'body' | 'halo') =>
   `sparkle-${color}-${name}-${part}`;
 
 /** Копия слоя в другом цвете: оттенок меняется, яркость и насыщенность остаются */
-function recolor(
+export function recolor(
   source: HTMLCanvasElement,
   map: ((hue: number) => number) | null,
 ): HTMLCanvasElement {
@@ -322,7 +322,7 @@ function eraseStar(
 }
 
 /** Блёстка — четырёхлучевая звёздочка, как на рисунке */
-function drawStar(scene: Phaser.Scene): void {
+export function drawStar(scene: Phaser.Scene): void {
   if (scene.textures.exists(STAR_KEY)) return;
   const size = 64;
   const c = size / 2;
