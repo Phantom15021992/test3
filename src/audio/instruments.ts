@@ -15,13 +15,13 @@ export interface NoteRequest {
   pan: number;
 }
 
-type Play = (ctx: AudioContext, out: AudioNode, note: NoteRequest) => void;
+type Play = (ctx: BaseAudioContext, out: AudioNode, note: NoteRequest) => void;
 
 const freqOf = (midi: number) => 440 * 2 ** ((midi - 69) / 12);
 
 /** Узлы панорамы общие на выход и положение: у партии оно одно, а узел на каждую ноту дорог телефону */
 const panners = new WeakMap<AudioNode, Map<number, StereoPannerNode>>();
-function panned(ctx: AudioContext, out: AudioNode, pan: number): AudioNode {
+function panned(ctx: BaseAudioContext, out: AudioNode, pan: number): AudioNode {
   if (pan === 0) return out;
   let byPan = panners.get(out);
   if (!byPan) {
@@ -85,7 +85,7 @@ function biquad(
 
 /** Огибающая: атака, затухание до уровня sustain за decay, отпускание release после конца ноты */
 function adsr(
-  ctx: AudioContext,
+  ctx: BaseAudioContext,
   out: AudioNode,
   t: number,
   peak: number,
@@ -108,7 +108,7 @@ function adsr(
 }
 
 let noise: AudioBuffer | null = null;
-function noiseBuffer(ctx: AudioContext): AudioBuffer {
+function noiseBuffer(ctx: BaseAudioContext): AudioBuffer {
   if (!noise || noise.sampleRate !== ctx.sampleRate) {
     noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const d = noise.getChannelData(0);
@@ -118,7 +118,7 @@ function noiseBuffer(ctx: AudioContext): AudioBuffer {
 }
 
 function noiseBurst(
-  ctx: AudioContext,
+  ctx: BaseAudioContext,
   out: AudioNode,
   t: number,
   {
@@ -147,7 +147,7 @@ function noiseBurst(
 }
 
 function osc(
-  ctx: AudioContext,
+  ctx: BaseAudioContext,
   type: OscillatorType,
   f: number,
   t: number,
@@ -174,16 +174,18 @@ interface StringModel {
   damping: number;
 }
 
-const STRINGS: Record<'guitar' | 'harp' | 'bass', StringModel> = {
+const STRINGS: Record<'guitar' | 'harp' | 'bass' | 'pizz', StringModel> = {
   guitar: { seconds: 2.6, t60: 3.2, brightness: 0.45, damping: 0.5 },
   harp: { seconds: 3.4, t60: 4.5, brightness: 0.6, damping: 0.42 },
   bass: { seconds: 2.2, t60: 2.4, brightness: 0.15, damping: 0.5 },
+  /** Пиццикато — щипок смычковой струны: короткий, глухой */
+  pizz: { seconds: 1.2, t60: 0.7, brightness: 0.35, damping: 0.5 },
 };
 
 const stringCache = new Map<string, { buffer: AudioBuffer; rate: number }>();
 
 /** Звук струны заранее: шум в петле задержки длиной в период; высоту точно подгоняет скорость проигрывания */
-function stringBuffer(ctx: AudioContext, model: keyof typeof STRINGS, midi: number) {
+function stringBuffer(ctx: BaseAudioContext, model: keyof typeof STRINGS, midi: number) {
   const key = `${model}:${midi}:${ctx.sampleRate}`;
   const cached = stringCache.get(key);
   if (cached) return cached;
@@ -276,7 +278,7 @@ function pianoWave(ctx: BaseAudioContext): PeriodicWave {
  * Фортепиано: две чуть расстроенные струны (живые биения) за фильтром, который темнеет после удара, —
  * у настоящего рояля верхние обертоны гаснут быстрее основного тона
  */
-const piano: Play = (ctx, out, { t, midi, dur, vel, pan }) => {
+const pianoSynth: Play = (ctx, out, { t, midi, dur, vel, pan }) => {
   const f = freqOf(midi);
   const dest = panned(ctx, out, pan);
   const sustainTime = 3.2 * (220 / f) ** 0.45;
@@ -313,6 +315,58 @@ const piano: Play = (ctx, out, { t, midi, dur, vel, pan }) => {
   });
 };
 
+/**
+ * Записи нот фортепиано: каждая нота один раз проигрывается в OfflineAudioContext, дальше звучит запись.
+ * Петля фортепиано — шестнадцатые, и собирать каждую ноту из генераторов и фильтров телефону тяжело
+ */
+const PIANO_SAMPLE_VEL = 0.8;
+const pianoSamples = new Map<string, AudioBuffer | 'pending'>();
+
+function pianoSample(ctx: BaseAudioContext, midi: number): AudioBuffer | null {
+  const key = `${midi}:${ctx.sampleRate}`;
+  const ready = pianoSamples.get(key);
+  if (ready instanceof AudioBuffer) return ready;
+  if (ready === 'pending' || typeof OfflineAudioContext === 'undefined') return null;
+  pianoSamples.set(key, 'pending');
+  const seconds = Math.min(5, 1.5 * 3.2 * (220 / freqOf(midi)) ** 0.45 + 0.3);
+  const offline = new OfflineAudioContext(1, Math.ceil(ctx.sampleRate * seconds), ctx.sampleRate);
+  pianoSynth(offline, offline.destination, {
+    t: 0,
+    midi,
+    dur: seconds,
+    vel: PIANO_SAMPLE_VEL,
+    pan: 0,
+  });
+  offline
+    .startRendering()
+    .then((buffer) => pianoSamples.set(key, buffer))
+    .catch(() => pianoSamples.delete(key));
+  return null;
+}
+
+/** Заранее записать ноты фортепиано, которые понадобятся композиции */
+export function preparePiano(ctx: BaseAudioContext, midis: Iterable<number>): void {
+  for (const midi of midis) pianoSample(ctx, midi);
+}
+
+const pianoPlay: Play = (ctx, out, note) => {
+  const sample = pianoSample(ctx, note.midi);
+  if (!sample) {
+    pianoSynth(ctx, out, note);
+    return;
+  }
+  const { t, dur, vel, pan } = note;
+  const src = ctx.createBufferSource();
+  src.buffer = sample;
+  const g = ctx.createGain();
+  g.gain.value = vel / PIANO_SAMPLE_VEL;
+  // Отпускание клавиши: демпфер глушит струну за четверть секунды
+  g.gain.setTargetAtTime(0.0001, t + dur, 0.25 / 3);
+  src.connect(g).connect(panned(ctx, out, pan));
+  src.start(t);
+  src.stop(Math.min(t + sample.duration, t + dur + 0.4));
+};
+
 // --- Смычковые и флейта --------------------------------------------------------------------------
 
 function bowed({
@@ -321,16 +375,18 @@ function bowed({
   voices,
   attack,
   vibrato,
+  release = 0.9,
 }: {
   gain: number;
   cutoff: number;
   voices: number;
   attack: number;
   vibrato: number;
+  /** Отпускание: у долгих нот смычок затихает плавно, у спиккато — сразу */
+  release?: number;
 }): Play {
   return (ctx, out, { t, midi, dur, vel, pan }) => {
     const f = freqOf(midi);
-    const release = 0.9;
     const end = t + dur + release;
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
@@ -347,16 +403,19 @@ function bowed({
       dur,
     });
     filter.connect(hp).connect(env);
-    // Вибрато вступает не сразу, как у живого исполнителя
-    const lfo = osc(ctx, 'sine', 5 + Math.random() * 0.6, t, end + 0.05);
-    const depth = ctx.createGain();
-    depth.gain.setValueAtTime(0, t);
-    depth.gain.linearRampToValueAtTime(f * vibrato, t + Math.min(0.6, dur));
-    lfo.connect(depth);
+    // Вибрато вступает не сразу, как у живого исполнителя; у коротких нот его нет — и генератора тоже
+    let depth: GainNode | null = null;
+    if (vibrato > 0) {
+      const lfo = osc(ctx, 'sine', 5 + Math.random() * 0.6, t, end + 0.05);
+      depth = ctx.createGain();
+      depth.gain.setValueAtTime(0, t);
+      depth.gain.linearRampToValueAtTime(f * vibrato, t + Math.min(0.6, dur));
+      lfo.connect(depth);
+    }
     for (let v = 0; v < voices; v++) {
       const detune = voices === 1 ? 0 : ((v / (voices - 1)) * 2 - 1) * 0.004;
       const o = osc(ctx, 'sawtooth', f * (1 + detune), t, end + 0.05);
-      depth.connect(o.frequency);
+      depth?.connect(o.frequency);
       const g = ctx.createGain();
       g.gain.value = 1 / voices;
       o.connect(g).connect(filter);
@@ -497,7 +556,7 @@ const rim: Play = (ctx, out, { t, vel, pan }) => {
 /** Шумовые удары запекаются заранее: тарелочка и шейкер звучат десятки раз за такт */
 const noiseHits = new Map<string, AudioBuffer>();
 function noiseHit(
-  ctx: AudioContext,
+  ctx: BaseAudioContext,
   key: string,
   {
     dur,
@@ -525,7 +584,13 @@ function noiseHit(
   return buffer;
 }
 
-function playHit(ctx: AudioContext, out: AudioNode, buffer: AudioBuffer, t: number, vol: number) {
+function playHit(
+  ctx: BaseAudioContext,
+  out: AudioNode,
+  buffer: AudioBuffer,
+  t: number,
+  vol: number,
+) {
   const src = ctx.createBufferSource();
   src.buffer = buffer;
   const g = ctx.createGain();
@@ -576,12 +641,23 @@ const tom: Play = (ctx, out, { t, vel, pan, midi }) => {
 };
 
 export const INSTRUMENTS: Record<Instrument, Play> = {
-  piano,
+  piano: pianoPlay,
   guitar: plucked('guitar', 0.45, false),
   harp: plucked('harp', 0.38, true),
   bass: plucked('bass', 0.45, false),
   strings: bowed({ gain: 0.1, cutoff: 1800, voices: 2, attack: 0.5, vibrato: 0.003 }),
   cello: bowed({ gain: 0.34, cutoff: 1500, voices: 2, attack: 0.12, vibrato: 0.005 }),
+  violin: bowed({ gain: 0.2, cutoff: 3000, voices: 2, attack: 0.09, vibrato: 0.006 }),
+  /** Спиккато: короткие отрывистые удары смычком — ритм струнной группы */
+  spiccato: bowed({
+    gain: 0.16,
+    cutoff: 2400,
+    voices: 1,
+    attack: 0.012,
+    vibrato: 0,
+    release: 0.12,
+  }),
+  pizz: plucked('pizz', 0.5, false),
   flute,
   marimba: mallet(
     [

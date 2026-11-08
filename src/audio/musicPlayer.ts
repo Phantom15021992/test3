@@ -1,4 +1,4 @@
-import { INSTRUMENTS } from './instruments';
+import { INSTRUMENTS, preparePiano } from './instruments';
 import { renderTrack, trackLength, type MusicEvent, type Track } from './musicScore';
 
 // Проигрыватель музыки: ноты композиции ставятся в Web Audio с запасом вперёд, по таймеру.
@@ -90,6 +90,8 @@ export class MusicPlayer {
     if (!events) {
       events = renderTrack(track);
       this.rendered.set(track.id, events);
+      // Ноты фортепиано записываются заранее, пока звучит начало композиции
+      preparePiano(this.ctx, new Set(events.filter((e) => e.inst === 'piano').map((e) => e.midi)));
     }
     return events;
   }

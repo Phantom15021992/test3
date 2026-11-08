@@ -617,6 +617,134 @@ const FINAL_GLEAM = levelTrack({
   },
 });
 
+// --- Новоклассицизм ------------------------------------------------------------------------------
+
+/**
+ * Петля фортепиано: шестнадцатые по звукам аккорда, левая рука — бас в ритме 3+3+2. Этот ритм — крючок
+ * всей вещи: его подхватывают тема скрипок, виолончели и спиккато
+ */
+const NEO_LOOP = '1 3 4 3 5 3 4 3 1 3 4 3 5 3 4 3';
+const NEO_LEFT = 'R - - 5 - - 8 -';
+const NEO_A = 'Dm Bb F C';
+const NEO_THEME = `A4:3 F4:3 D5:2 | D5:3 C5:3 Bb4:2 | A4:3 C5:3 F5:2 | E5:3 D5:3 C5:2 |
+  A4:3 F4:3 D5:2 | F5:3 E5:3 D5:2 | C5:3 D5:3 E5:2 | E5:6 r:2`;
+/** Спиккато: отрывистые аккорды струнных в том же ритме 3+3+2, с откликом во второй половине такта */
+const NEO_SPICCATO = 'o . . x . . x . o . . x . x . .';
+
+const NEO_PIANO = (opts: Partial<PatternPart> = {}): Part[] => [
+  pat('arp', 'piano', NEO_LOOP, { vol: 0.42, pan: 0.2, low: 50, ...opts }),
+  pat('bass', 'piano', NEO_LEFT, { vol: 0.4, pan: 0.1, ...opts }),
+];
+
+/**
+ * «Петли» — новоклассицизм, 90 уд/мин: фортепианная петля с самого начала, а струнные вступают
+ * по одной: виолончель долгими нотами → её ритм и тема скрипок → спиккато и пиццикато → всё вместе
+ */
+const LOOPS: Track = {
+  id: 'level-loops',
+  title: 'Петли',
+  kind: 'level',
+  bpm: 90,
+  sections: [
+    { name: 'петля фортепиано', bars: 4, chords: NEO_A, parts: NEO_PIANO() },
+    {
+      name: 'вступает виолончель',
+      bars: 8,
+      chords: NEO_A,
+      parts: [
+        ...NEO_PIANO(),
+        pat('bass', 'cello', 'R - - - - - - -', { vol: 0.55, pan: -0.25 }),
+        pad({ vol: 0.3, from: 4 }),
+      ],
+    },
+    {
+      name: 'тема скрипок',
+      bars: 8,
+      chords: NEO_A,
+      parts: [
+        ...NEO_PIANO(),
+        mel('violin', NEO_THEME, { vol: 0.85, pan: -0.1 }),
+        pat('bass', 'spiccato', 'R . R 8 . R 8 .', { vol: 0.6, pan: -0.25 }),
+        pad({ vol: 0.4 }),
+      ],
+    },
+    {
+      name: 'спиккато',
+      bars: 8,
+      chords: 'Bb F Gm Dm Bb F Gm A',
+      parts: [
+        ...NEO_PIANO({ vol: 0.36 }),
+        mel(
+          'violin',
+          `D5:2 F5:2 D5:2 Bb4:2 | C5:2 A4:2 F4:4 | G4:2 Bb4:2 D5:4 | F5:3 E5:1 D5:4 |
+           D5:2 F5:2 Bb4:2 D5:2 | C5:3 A4:1 C5:2 F5:2 | Bb4:2 D5:2 G4:2 Bb4:2 | C#5:4 E5:4`,
+          { vol: 0.85, pan: -0.1 },
+        ),
+        pat('comp', 'spiccato', NEO_SPICCATO, { vol: 0.5, pan: 0.25, low: 55 }),
+        pat('bass', 'pizz', 'R . . R . . 5 .', { vol: 0.65, pan: -0.2 }),
+        pat('drum', 'tom', 'o . . . . . x . x . . . . . . .', { vol: 0.5 }),
+        pad({ vol: 0.35 }),
+      ],
+    },
+    {
+      name: 'вдох',
+      bars: 4,
+      chords: NEO_A,
+      parts: [
+        ...NEO_PIANO(),
+        mel('violin', 'A5:16 G5:8 E5:8', { vol: 0.45, pan: -0.1 }),
+        pad({ vol: 0.3 }),
+      ],
+    },
+    {
+      name: 'тема во всю силу',
+      bars: 8,
+      chords: NEO_A,
+      parts: [
+        ...NEO_PIANO({ vol: 0.36 }),
+        mel('violin', NEO_THEME, { vol: 0.85, pan: -0.1 }),
+        mel('cello', NEO_THEME, { vol: 0.5, octave: -1, pan: -0.3 }),
+        pat('comp', 'spiccato', NEO_SPICCATO, { vol: 0.5, pan: 0.25, low: 55 }),
+        pat('bass', 'spiccato', 'R R 8 R R 8 R 8 R R 8 R R 8 R 8', { vol: 0.5, pan: -0.25 }),
+        pat('bass', 'pizz', 'R . . R . . 5 .', { vol: 0.6, pan: -0.2 }),
+        pat('drum', 'tom', 'o . . . . . x . x . . . . . . .', { vol: 0.5 }),
+        pad({ vol: 0.4 }),
+      ],
+    },
+    {
+      name: 'кульминация',
+      bars: 8,
+      chords: 'Gm Bb F A Gm Bb Asus4 A',
+      parts: [
+        ...NEO_PIANO({ vol: 0.36 }),
+        mel(
+          'violin',
+          'D5:4 Bb4:4 | F5:4 D5:4 | C5:4 A4:4 | C#5:4 E5:4 | G5:4 F5:2 D5:2 | F5:4 D5:2 Bb4:2 | D5:8 | C#5:8',
+          { vol: 0.9, pan: -0.1 },
+        ),
+        pat('bass', 'cello', NEO_LEFT, { vol: 0.6, pan: -0.3 }),
+        pat('comp', 'spiccato', NEO_SPICCATO, { vol: 0.55, pan: 0.25, low: 55 }),
+        pat('bass', 'pizz', 'R . . R . . 5 .', { vol: 0.6, pan: -0.2 }),
+        pat('drum', 'tom', 'o . . x . . x . o . . x . x . .', { vol: 0.5 }),
+        pat('drum', 'kick', 'x . . . x . . .', { vol: 0.55 }),
+        pad({ vol: 0.5 }),
+      ],
+    },
+    {
+      name: 'окончание',
+      bars: 6,
+      chords: 'Bb C Dm Bb Dm Dm',
+      parts: [
+        ...NEO_PIANO({ until: 5 }),
+        pat('comp', 'piano', 'x - - - - - - -', { vol: 0.45, from: 5 }),
+        mel('violin', 'F5:8 | E5:8 | D5:16 | r:16', { vol: 0.7, pan: -0.1 }),
+        pat('bass', 'cello', 'R - - - - - - -', { vol: 0.5, pan: -0.25 }),
+        pad({ vol: 0.4, until: 5 }),
+      ],
+    },
+  ],
+};
+
 export const MENU_TRACKS: readonly Track[] = [QUIET_CAVE, MOONLIGHT, VALLEY_MORNING];
 export const LEVEL_TRACKS: readonly Track[] = [
   SPARKS,
@@ -625,4 +753,5 @@ export const LEVEL_TRACKS: readonly Track[] = [
   STONE_RHYTHM,
   CRYSTAL_WIND,
   FINAL_GLEAM,
+  LOOPS,
 ];
