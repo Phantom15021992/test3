@@ -90,13 +90,13 @@ export function createCrystalTextures(scene: Phaser.Scene): void {
 }
 
 /**
- * Яркость и насыщенность фишек по цветам (доли от рисунка) — по просьбе владельца: синие на 30% темнее,
- * зелёные и красные на 50% темнее и на 20% бледнее
+ * Яркость и насыщенность фишек по цветам (доли от рисунка) — по просьбе владельца: сначала синие на 30%
+ * темнее, зелёные и красные на 50% темнее и на 20% бледнее, потом яркость всех поднята на 20%
  */
 const TONES: Record<SparkleColor, { value: number; saturation: number }> = {
-  blue: { value: 0.7, saturation: 1 },
-  green: { value: 0.5, saturation: 0.8 },
-  red: { value: 0.5, saturation: 0.8 },
+  blue: { value: 0.84, saturation: 1 },
+  green: { value: 0.6, saturation: 0.8 },
+  red: { value: 0.6, saturation: 0.8 },
 };
 
 /** Меняет яркость (V) и насыщенность (S) каждого пикселя; прозрачность не трогает */
