@@ -919,7 +919,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 18,
     group: 'Препятствия',
     title: 'Удар по льду (приминание снега)',
-    // Приминание рыхлого снега: не отдельные щелчки, а зернистая текстура под давлением
+    // Приминание рыхлого снега (звонче первой версии: срез в 1,8 раза выше, зёрна отчётливее): не отдельные щелчки, а зернистая текстура под давлением
     // (Synth.texture) — громкость нарастает, пока снег продавливают, и спадает. Прежние варианты убраны
     variants: [
       // а — короткое приминание ладонью
@@ -928,9 +928,9 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
           dur: rand(0.17, 0.21),
           vol: 0.5,
           density: 220,
-          body: 0.3,
+          body: 0.22,
           attack: 0.05,
-          f: 1600,
+          f: 2880,
         }),
       // б — медленно продавили: дольше и плавнее
       (s) =>
@@ -938,9 +938,9 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
           dur: rand(0.3, 0.36),
           vol: 0.5,
           density: 160,
-          body: 0.3,
+          body: 0.22,
           attack: 0.14,
-          f: 1300,
+          f: 2340,
         }),
       // в — совсем пушистый снег: мягче и глуше, зёрен меньше
       (s) =>
@@ -948,9 +948,9 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
           dur: rand(0.23, 0.27),
           vol: 0.55,
           density: 90,
-          body: 0.5,
+          body: 0.38,
           attack: 0.08,
-          f: 1000,
+          f: 1800,
         }),
       // г — продавили до плотного слоя: в конце короткий глухой дожим
       (s) => {
@@ -958,9 +958,9 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
           dur: rand(0.22, 0.26),
           vol: 0.5,
           density: 180,
-          body: 0.3,
+          body: 0.22,
           attack: 0.1,
-          f: 1300,
+          f: 2340,
         });
         s.noise({ dur: 0.06, vol: 0.12, filter: 'lowpass', f: 450, at: 0.17 });
       },
@@ -970,18 +970,18 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
           dur: 0.18,
           vol: 0.45,
           density: 200,
-          body: 0.3,
+          body: 0.22,
           attack: 0.05,
-          f: 1600,
+          f: 2880,
           pan: -0.3,
         });
         s.texture({
           dur: 0.2,
           vol: 0.4,
           density: 170,
-          body: 0.35,
+          body: 0.26,
           attack: 0.06,
-          f: 1150,
+          f: 2070,
           pan: 0.3,
           at: rand(0.1, 0.14),
         });
