@@ -24,6 +24,12 @@ export const CRYSTAL_FILES: readonly { key: string; path: string }[] = [
   { key: CRYSTAL_CELL, path: 'assets/crystals/cell.png' },
 ];
 
+/**
+ * Синее поле с плитками клеток, как на образце художника. Владелец вернул тёмную шахматку, как у всей
+ * игры, — синее поле выключено, но осталось в коде: true возвращает его
+ */
+export const CRYSTAL_BLUE_FIELD = false;
+
 /** Фон поля и плитки клеток — как на образце */
 export const CRYSTAL_FIELD_COLOR = 0x6686bd;
 export const CRYSTAL_CELL_ALPHA = 0.6;

@@ -30,6 +30,7 @@ import { chestParts, iceImage, obstacleImage, setCoalArt } from './obstacleArt';
 import { drawPiece } from './pieceArt';
 import {
   addCrystal,
+  CRYSTAL_BLUE_FIELD,
   CRYSTAL_CELL,
   CRYSTAL_CELL_ALPHA,
   CRYSTAL_CELL_SHARE,
@@ -110,7 +111,7 @@ export class BoardView {
         if (cell?.kind === 'hole') return null;
         const x = this.originX + c * this.cellSize;
         const y = this.originY + r * this.cellSize;
-        if (this.gems) this.drawCrystalCell(x, y);
+        if (this.gems && CRYSTAL_BLUE_FIELD) this.drawCrystalCell(x, y);
         else {
           this.background.fillStyle((r + c) % 2 === 0 ? BOARD_CELL_DARK : BOARD_CELL_LIGHT);
           this.background.fillRect(x, y, this.cellSize, this.cellSize);
