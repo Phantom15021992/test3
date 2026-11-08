@@ -642,6 +642,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 14,
     group: 'Спецфишки',
     title: 'Радуга',
+    chosen: 0,
     variants: [
       (s) =>
         run(
