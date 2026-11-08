@@ -1219,6 +1219,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 26,
     group: 'Препятствия',
     title: 'Камень разбит',
+    chosen: 0,
     variants: [
       (s) => {
         s.noise({ dur: 0.25, vol: 0.25, filter: 'bandpass', f: 900, q: 1.2 });
