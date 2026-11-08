@@ -10,6 +10,8 @@ export type SoundRecipe = (s: Synth, step: number) => void;
 
 export interface SoundEntry {
   id: number;
+  /** Подпись в лаборатории вместо номера — у комбо: 16.1, 16.2… */
+  code?: string;
   title: string;
   group: string;
   /** Сколько шагов проиграть подряд в лаборатории (комбо, звёзды); по умолчанию один */
@@ -110,8 +112,96 @@ function thump(s: Synth, f: number, dur: number, vol = 0.5, at = 0) {
 }
 
 /** Шорох движения: шум, фильтр которого скользит */
-function whoosh(s: Synth, from: number, to: number, dur: number, vol = 0.15, at = 0) {
-  s.noise({ dur, vol, at, filter: 'bandpass', f: from, f2: to, q: 2, attack: dur * 0.4 });
+function whoosh(s: Synth, from: number, to: number, dur: number, vol = 0.15, at = 0, pan = 0) {
+  s.noise({ dur, vol, at, filter: 'bandpass', f: from, f2: to, q: 2, attack: dur * 0.4, pan });
+}
+
+// ---------- Выбранные звуки спецфишек ----------
+// Комбо двух спецфишек (16.x) собираются из них, поэтому это функции с размером: size 1 — звук
+// ровно как выбран в лаборатории, больше — взрыв крупнее, ниже и дольше.
+
+interface SpecialOptions {
+  at?: number;
+  pan?: number;
+  size?: number;
+}
+
+/** Ракета (выбран 11в): шорох-полёт и искры */
+function rocketSound(s: Synth, { at = 0, pan = 0, size = 1 }: SpecialOptions = {}) {
+  whoosh(s, 2000 / size, 8000 / size, 0.5 * size, 0.15, at, pan);
+  s.sparkle({ count: Math.round(10 * size), span: 0.5 * size, vol: 0.04, at });
+}
+
+/** Бомба (выбран 12в): глухой удар и россыпь искр */
+function bombSound(s: Synth, { at = 0, pan = 0, size = 1 }: SpecialOptions = {}) {
+  const low = Math.sqrt(size);
+  s.noise({
+    dur: 0.22 * size,
+    vol: 1.6 * Math.min(size, 1.5),
+    at,
+    filter: 'lowpass',
+    f: 300 / low,
+    f2: 110 / low,
+    q: 0.8,
+    pan,
+  });
+  s.sparkle({ count: Math.floor(rand(5, 8) * size), span: 0.4 * size, at: at + 0.04, vol: 0.08 });
+}
+
+/** Мега-бомба (выбран 13а): тяжёлый хлопок, низкий рокот, долгая россыпь камней и искры */
+function megaSound(s: Synth, { at = 0, pan = 0, size = 1 }: SpecialOptions = {}) {
+  const low = Math.sqrt(size);
+  s.noise({
+    dur: 0.35 * size,
+    vol: 1.3 * Math.min(size, 1.4),
+    at,
+    filter: 'lowpass',
+    f: (420 * MEGA_BOOM) / low,
+    f2: (120 * MEGA_BOOM) / low,
+    q: 0.8,
+    pan,
+  });
+  // Объём, как у 13в: низкий рокот медленно стихает под камнями
+  s.noise({
+    dur: Math.min(size, 1.35),
+    vol: 1.4 * Math.min(size, 1.4),
+    filter: 'lowpass',
+    f: (380 * MEGA_BOOM) / low,
+    f2: (90 * MEGA_BOOM) / low,
+    q: 0.7,
+    at: at + 0.03,
+    attack: 0.04,
+  });
+  pebbles(
+    s,
+    Math.floor(rand(14, 20) * size),
+    Math.min(0.7 * size, 1.1),
+    900 * MEGA_OCTAVE,
+    2600 * MEGA_OCTAVE,
+    0.9,
+    at + 0.04,
+  );
+  s.sparkle({
+    count: Math.round(8 * size),
+    span: Math.min(0.6 * size, 1),
+    at: at + 0.08,
+    vol: 0.08,
+  });
+}
+
+/** Радуга (выбран 14а): звон бежит вверх по восьми нотам; octave 0.5 — на октаву ниже */
+function rainbowSound(
+  s: Synth,
+  {
+    at = 0,
+    octave = 1,
+    gap = 0.06,
+    pan = 0,
+  }: { at?: number; octave?: number; gap?: number; pan?: number } = {},
+) {
+  [0, 1, 2, 3, 4, 5, 6, 7].forEach((i) =>
+    s.glass({ f: p(i) * octave, dur: 0.5, vol: 0.1, at: at + i * gap, pan }),
+  );
 }
 
 export const SOUND_CATALOG: readonly SoundEntry[] = [
@@ -522,10 +612,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
         s.noise({ dur: 0.45, vol: 0.2, filter: 'lowpass', f: 500, f2: 2500, attack: 0.05 });
         whoosh(s, 1000, 5000, 0.45, 0.15);
       },
-      (s) => {
-        whoosh(s, 2000, 8000, 0.5, 0.15);
-        s.sparkle({ count: 10, span: 0.5, vol: 0.04 });
-      },
+      (s) => rocketSound(s),
     ],
   },
   {
@@ -548,10 +635,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
         s.glass({ f: anyNote(0, 3) / 2, dur: 0.5, vol: 0.16, at: 0.02 });
       },
       // в — глухой удар («барабан») и россыпь искр; камешки владелец убрал
-      (s) => {
-        s.noise({ dur: 0.22, vol: 1.6, filter: 'lowpass', f: 300, f2: 110, q: 0.8 });
-        s.sparkle({ count: Math.floor(rand(5, 8)), span: 0.4, at: 0.04, vol: 0.08 });
-      },
+      (s) => bombSound(s),
       // г — звонкий взрыв: хлопок и короткий низкий звон осколков
       (s) => {
         s.noise({ dur: 0.15, vol: 0.7, filter: 'lowpass', f: 500, f2: 180, q: 0.8 });
@@ -570,36 +654,9 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     chosen: 0,
     // Новый набор: прежние не подошли. Взрыв кристаллов и камней — без электронного «бума», с разбросом
     variants: [
-      // а — тяжёлый хлопок и долгая россыпь камней во все стороны; удары, рокот и камни на октаву глуше первого варианта
+      // а — тяжёлый хлопок и долгая россыпь камней; удары, рокот и камни на октаву глуше первого варианта
       // (MEGA_OCTAVE), сам взрыв — хлопок и рокот — на пол-октавы выше камней (MEGA_BOOM), искры прежней высоты
-      (s) => {
-        s.noise({
-          dur: 0.35,
-          vol: 1.3,
-          filter: 'lowpass',
-          f: 420 * MEGA_BOOM,
-          f2: 120 * MEGA_BOOM,
-          q: 0.8,
-        });
-        // Объём, как у 13в: низкий рокот медленно стихает под камнями
-        s.noise({
-          dur: 1,
-          vol: 1.4,
-          filter: 'lowpass',
-          f: 380 * MEGA_BOOM,
-          f2: 90 * MEGA_BOOM,
-          q: 0.7,
-          at: 0.03,
-          attack: 0.04,
-        });
-        pebbles(s, Math.floor(rand(14, 20)), 0.7, 900 * MEGA_OCTAVE, 2600 * MEGA_OCTAVE, 0.9, 0.04);
-        s.sparkle({
-          count: 8,
-          span: 0.6,
-          at: 0.08,
-          vol: 0.08,
-        });
-      },
+      (s) => megaSound(s),
       // б — «бах-бах»: двойной удар и осколки после каждого
       (s) => {
         [0, rand(0.14, 0.2)].forEach((at, i) => {
@@ -644,14 +701,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     title: 'Радуга',
     chosen: 0,
     variants: [
-      (s) =>
-        run(
-          s,
-          'glass',
-          [0, 1, 2, 3, 4, 5, 6, 7].map((i) => p(i)),
-          0.06,
-          { dur: 0.5, vol: 0.1 },
-        ),
+      (s) => rainbowSound(s),
       (s) =>
         run(
           s,
@@ -689,22 +739,137 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
   },
   {
     id: 16,
+    code: '16.1',
     group: 'Спецфишки',
-    title: 'Комбо двух спецфишек',
+    title: 'Комбо: ракета + ракета (крест)',
     variants: [
       (s) => {
-        thump(s, 80, 0.8, 0.65);
-        s.shatter({ vol: 0.4, dur: 1.1, size: 1.8 });
-        run(s, 'glass', [p(4), p(7), p(9)], 0.06, { dur: 1, vol: 0.12, at: 0.15 });
+        // Две ракеты разлетаются в разные стороны: одна слева, другая справа и чуть позже
+        rocketSound(s, { pan: -0.6 });
+        rocketSound(s, { pan: 0.6, at: 0.05, size: 1.1 });
       },
+    ],
+  },
+  {
+    id: 16,
+    code: '16.2',
+    group: 'Спецфишки',
+    title: 'Комбо: ракета + бомба',
+    variants: [
       (s) => {
-        thump(s, 70, 0.9, 0.6);
-        run(s, 'soft', [p(0), p(4), p(7), p(9), p(12)], 0.07, { dur: 0.9, vol: 0.12, at: 0.1 });
+        bombSound(s);
+        rocketSound(s, { at: 0.03 });
       },
+    ],
+  },
+  {
+    id: 16,
+    code: '16.3',
+    group: 'Спецфишки',
+    title: 'Комбо: бомба + бомба (взрыв 5×5)',
+    variants: [
       (s) => {
-        thump(s, 90, 0.7, 0.55);
-        s.swell({ dur: 0.6, vol: 0.12 });
-        s.sparkle({ count: 36, span: 1.1, vol: 0.06 });
+        // Больше одной бомбы: удар ниже, дольше и громче, искр больше, и низкий рокот под ним
+        bombSound(s, { size: 1.7 });
+        s.noise({
+          dur: 0.7,
+          vol: 1.3,
+          filter: 'lowpass',
+          f: 320,
+          f2: 90,
+          q: 0.7,
+          at: 0.03,
+          attack: 0.03,
+        });
+      },
+    ],
+  },
+  {
+    id: 16,
+    code: '16.4',
+    group: 'Спецфишки',
+    title: 'Комбо: радуга + ракета',
+    variants: [
+      (s) => {
+        // Радуга превращает фишки в ракеты — и они разлетаются одна за другой
+        rainbowSound(s, { gap: 0.035 });
+        [-0.6, 0.6, 0].forEach((pan, i) => rocketSound(s, { at: 0.3 + i * 0.12, pan, size: 0.8 }));
+      },
+    ],
+  },
+  {
+    id: 16,
+    code: '16.5',
+    group: 'Спецфишки',
+    title: 'Комбо: радуга + бомба',
+    variants: [
+      (s) => {
+        // Радуга превращает фишки в бомбы — и они рвутся одна за другой
+        rainbowSound(s, { gap: 0.035 });
+        [-0.5, 0.5, 0].forEach((pan, i) => bombSound(s, { at: 0.3 + i * 0.13, pan, size: 0.9 }));
+      },
+    ],
+  },
+  {
+    id: 16,
+    code: '16.6',
+    group: 'Спецфишки',
+    title: 'Комбо: радуга + радуга (всё поле)',
+    variants: [
+      (s) => {
+        // Две радуги: звон бежит сразу в двух октавах, и всё поле вспыхивает искрами
+        rainbowSound(s, { pan: -0.3 });
+        rainbowSound(s, { octave: 0.5, at: 0.02, pan: 0.3 });
+        s.sparkle({ count: 20, span: 0.8, at: 0.25, vol: 0.06 });
+      },
+    ],
+  },
+  {
+    id: 16,
+    code: '16.7',
+    group: 'Спецфишки',
+    title: 'Комбо: мега-бомба + ракета (5 строк + 5 столбцов)',
+    variants: [
+      (s) => {
+        megaSound(s);
+        rocketSound(s, { at: 0.03, size: 1.2 });
+      },
+    ],
+  },
+  {
+    id: 16,
+    code: '16.8',
+    group: 'Спецфишки',
+    title: 'Комбо: мега-бомба + бомба (взрыв 7×7)',
+    variants: [
+      (s) => {
+        megaSound(s, { size: 1.25 });
+        bombSound(s, { at: 0.02 });
+      },
+    ],
+  },
+  {
+    id: 16,
+    code: '16.9',
+    group: 'Спецфишки',
+    title: 'Комбо: мега-бомба + мега-бомба (всё поле)',
+    variants: [
+      (s) => {
+        // Самый большой взрыв в игре: больше двух мега-бомб
+        megaSound(s, { size: 1.5 });
+      },
+    ],
+  },
+  {
+    id: 16,
+    code: '16.10',
+    group: 'Спецфишки',
+    title: 'Комбо: мега-бомба + радуга',
+    variants: [
+      (s) => {
+        // Радуга превращает фишки выбранного цвета в бомбы — и они рвутся каскадом
+        rainbowSound(s, { gap: 0.035 });
+        [-0.6, 0.6, -0.2, 0.2].forEach((pan, i) => bombSound(s, { at: 0.3 + i * 0.1, pan }));
       },
     ],
   },

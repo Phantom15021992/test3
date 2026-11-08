@@ -47,12 +47,16 @@ for (const entry of SOUND_CATALOG) {
   row.className = 'row';
   const title = document.createElement('span');
   title.className = 'title';
-  title.innerHTML = `<span class="num">${entry.id}</span>${entry.title}`;
+  title.innerHTML = `<span class="num">${entry.code ?? entry.id}</span>${entry.title}`;
   row.append(title);
   entry.variants.forEach((recipe, i) => {
     const button = document.createElement('button');
     const chosen = entry.chosen === i;
-    button.textContent = `${chosen ? (entry.doubtful ? '?' : '✓') : '▶'} ${entry.id}${LETTERS[i]}`;
+    const label =
+      entry.variants.length === 1
+        ? (entry.code ?? String(entry.id))
+        : `${entry.code ?? entry.id}${LETTERS[i]}`;
+    button.textContent = `${chosen ? (entry.doubtful ? '?' : '✓') : '▶'} ${label}`;
     if (chosen) button.className = entry.doubtful ? 'chosen doubtful' : 'chosen';
     if (chosen && entry.doubtful) button.title = 'Выбран, но под сомнением, нужен ли звук';
     button.addEventListener('click', () => {
