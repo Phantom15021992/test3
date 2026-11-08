@@ -1254,6 +1254,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 28,
     group: 'Итоги и интерфейс',
     title: 'Звезда за уровень (1, 2, 3)',
+    chosen: 1,
     steps: 3,
     variants: [
       (s, k) => {
