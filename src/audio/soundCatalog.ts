@@ -130,6 +130,14 @@ function glassShards(
   }
 }
 
+/** Большая тяжёлая цепь: высота звеньев (две октавы ниже), длина звона, частота и громкость ударов */
+const CHAIN_PITCH = 0.25;
+const CHAIN_RING = 1.8;
+const CHAIN_HITS = 0.7;
+const CHAIN_SPAN = 1.3;
+/** Низкий звон слышится тише — громкость поднята */
+const CHAIN_LOUD = 2;
+
 /**
  * Звяканье цепи: hits крошечных ударов звеньев друг о друга за span секунд. shape сдвигает удары
  * к началу (больше — гуще в начале, 1 — ровно). У каждого удара своя высота призвона, громкость и сторона
@@ -147,14 +155,29 @@ function chainRattle(
     at = 0,
   } = {},
 ) {
-  for (let i = 0; i < hits; i++) {
-    const t = Math.random() ** shape * span;
+  // Большая увесистая цепь (по просьбе владельца): звенья на две октавы ниже, звенят дольше,
+  // бьются реже, и под каждым ударом — глухой «тук» тяжёлого железа
+  const count = Math.max(1, Math.round(hits * CHAIN_HITS));
+  const length = span * CHAIN_SPAN;
+  for (let i = 0; i < count; i++) {
+    const t = Math.random() ** shape * length;
+    const level = vol * rand(0.4, 1) * (1 - (t / length) * 0.5);
+    const pan = rand(-0.6, 0.6);
     s.clank({
-      f: rand(low, high),
-      ring: ring * rand(0.6, 1.3),
-      vol: vol * rand(0.4, 1) * (1 - (t / span) * 0.5),
+      f: rand(low, high) * CHAIN_PITCH,
+      ring: ring * CHAIN_RING * rand(0.6, 1.3),
+      vol: level * CHAIN_LOUD,
       at: at + t,
-      pan: rand(-0.6, 0.6),
+      pan,
+    });
+    s.noise({
+      dur: 0.05,
+      vol: level * 3,
+      at: at + t,
+      filter: 'lowpass',
+      f: rand(180, 280),
+      q: 1,
+      pan,
     });
   }
 }
