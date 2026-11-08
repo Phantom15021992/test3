@@ -110,6 +110,32 @@ function iceCrack(s: Synth, at = 0, vol = 1) {
   s.noise({ dur: 0.02, vol: 0.15 * vol, at, filter: 'bandpass', f: rand(2600, 3400), q: 2 });
 }
 
+/**
+ * Озёрное «пиу-у»: звон, который быстро скользит сверху вниз. Узкий полосовой шум даёт ему
+ * шершавость льда, а тихий тон под ним — звонкость. echo — два затухающих повтора, как эхо над озером
+ */
+function lakeZing(
+  s: Synth,
+  { from = 3000, to = 300, dur = 0.5, vol = 1, at = 0, pan = 0, echo = false } = {},
+) {
+  const repeats = echo ? [1, 0.35, 0.12] : [1];
+  repeats.forEach((level, i) => {
+    const t = at + i * 0.17;
+    s.noise({
+      dur,
+      vol: 0.9 * vol * level,
+      at: t,
+      filter: 'bandpass',
+      f: from,
+      f2: to,
+      q: 18,
+      attack: 0.004,
+      pan,
+    });
+    s.tone({ f: from, f2: to, dur, vol: 0.035 * vol * level, at: t, attack: 0.004, pan });
+  });
+}
+
 /** Глухой удар снизу — основа взрывов и тяжёлых предметов */
 function thump(s: Synth, f: number, dur: number, vol = 0.5, at = 0) {
   // Удар — больше шум, чем тон: чистый низкий синус звучит как электронная «бочка»
@@ -999,81 +1025,43 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 19,
     group: 'Препятствия',
     title: 'Лёд сломан',
-    // Ломка льда: резкий треск, затем осыпь (та же зернистая текстура, что у снега 18б) и звон кусочков.
-    // Прежние варианты убраны
+    // Лёд трескается, как на замёрзшем озере: звонкое «пиу-у» сверху вниз (высокие частоты бегут
+    // по льду быстрее низких и приходят первыми), глухой гул и эхо над озером. Прежние варианты убраны
     variants: [
-      // а — треск и осыпь: лёд лопнул и осыпался мелкой крошкой, пара льдинок звякнула
+      // а — классическое озёрное «пиу-у» и глухой гул под ним
       (s) => {
-        iceCrack(s);
-        s.texture({
-          dur: rand(0.28, 0.34),
-          vol: 0.45,
-          density: 260,
-          body: 0.15,
-          attack: 0.01,
-          f: 3200,
-          at: 0.02,
-        });
-        s.sparkle({ count: 3, span: 0.2, at: 0.05, vol: 0.05, dur: 0.18 });
+        lakeZing(s, { from: rand(2600, 3400), to: rand(280, 360), dur: 0.5 });
+        s.noise({ dur: 0.25, vol: 0.18, filter: 'lowpass', f: 160, q: 0.8, at: 0.01 });
       },
-      // б — лёд раскололся на куски: треск, глухой удар и несколько звонких кусков
+      // б — где-то вдалеке: низкий гул и тихое «пиу» с эхом
       (s) => {
-        iceCrack(s);
-        s.noise({ dur: 0.08, vol: 0.3, filter: 'lowpass', f: 320, at: 0.01 });
-        [0, 1, 2].forEach((i) =>
-          s.glass({
-            f: anyNote(0, 6),
-            dur: 0.22,
-            vol: 0.06,
-            at: 0.04 + i * rand(0.04, 0.08),
-            pan: rand(-0.5, 0.5),
-          }),
-        );
+        s.noise({ dur: 0.4, vol: 0.45, filter: 'lowpass', f: 120, q: 0.8 });
+        lakeZing(s, { from: rand(1800, 2400), to: 250, dur: 0.45, vol: 1.1, at: 0.05, echo: true });
       },
-      // в — тонкий лёд хрустнул: несколько быстрых трещин подряд и лёгкая крошка
+      // в — лёд трещит в нескольких местах: два-три «пиу» подряд, разной высоты
       (s) => {
         let at = 0;
-        for (let i = 0; i < Math.floor(rand(3, 5)); i++) {
-          iceCrack(s, at, 0.7 - i * 0.12);
-          at += rand(0.03, 0.06);
+        for (let i = 0; i < Math.floor(rand(2, 4)); i++) {
+          lakeZing(s, {
+            from: rand(2000, 3600),
+            to: rand(250, 450),
+            dur: rand(0.25, 0.4),
+            vol: rand(1.3, 1.8),
+            at,
+            pan: rand(-0.6, 0.6),
+          });
+          at += rand(0.12, 0.22);
         }
-        s.texture({
-          dur: 0.2,
-          vol: 0.3,
-          density: 220,
-          body: 0.12,
-          attack: 0.01,
-          f: 3400,
-          at: 0.03,
-        });
       },
-      // г — лёд треснул и рассыпался искрами
+      // г — долгий раскат: «пиу-у» тянется дольше и отзывается эхом над озером
+      (s) => {
+        lakeZing(s, { from: rand(3000, 3600), to: 200, dur: 0.8, echo: true });
+        s.noise({ dur: 0.35, vol: 0.2, filter: 'lowpass', f: 140, q: 0.8, at: 0.02 });
+      },
+      // д — резкий треск рядом, а за ним озёрное «пиу»
       (s) => {
         iceCrack(s);
-        s.texture({
-          dur: 0.22,
-          vol: 0.35,
-          density: 240,
-          body: 0.15,
-          attack: 0.01,
-          f: 3000,
-          at: 0.02,
-        });
-        s.sparkle({ count: Math.floor(rand(7, 10)), span: 0.4, at: 0.04, vol: 0.05 });
-      },
-      // д — глубокая трещина: лёд сначала тихо скрипнул, потом лопнул и осыпался
-      (s) => {
-        s.noise({ dur: 0.18, vol: 0.16, filter: 'bandpass', f: 420, f2: 260, q: 7, attack: 0.05 });
-        iceCrack(s, 0.16);
-        s.texture({
-          dur: 0.26,
-          vol: 0.42,
-          density: 250,
-          body: 0.15,
-          attack: 0.01,
-          f: 3000,
-          at: 0.18,
-        });
+        lakeZing(s, { from: rand(2400, 3000), to: 300, dur: 0.45, at: 0.03 });
       },
     ],
   },
