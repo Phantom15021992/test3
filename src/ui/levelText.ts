@@ -144,16 +144,30 @@ const DONE = ' — готово';
  * прогресс задания крупно над полем, а сколько набрано для звёзд, иначе было бы не понять
  */
 export function levelBriefing(level: Level, session?: LevelSession): string {
+  return briefingLines(level, session)
+    .map(({ stars, text }) => `${stars} ${text}`)
+    .join('\n');
+}
+
+/** Строка условий: сколько звёзд она приносит (★, ★★, ★★★) и само условие — на экране это две колонки */
+export interface BriefingLine {
+  stars: string;
+  text: string;
+}
+
+export function briefingLines(level: Level, session?: LevelSession): BriefingLine[] {
   const progress = (task: StarTask) => {
     if (!session) return '';
     const value = session.starTaskValue(task);
     return value >= task.count ? DONE : ` — ${value}/${task.count}`;
   };
   return [
-    `★ Выполнить задание${session?.goalsDone ? DONE : ''}`,
-    // Перед условием — сколько звёзд оно приносит: ★, ★★, ★★★
-    ...level.stars.map((task, i) => `${'★'.repeat(i + 2)} ${starTaskText(task)}${progress(task)}`),
-  ].join('\n');
+    { stars: '★', text: `Выполнить задание${session?.goalsDone ? DONE : ''}` },
+    ...level.stars.map((task, i) => ({
+      stars: '★'.repeat(i + 2),
+      text: `${starTaskText(task)}${progress(task)}`,
+    })),
+  ];
 }
 
 /** Что осталось сделать: для окна поражения, каждая цель на своей строке */

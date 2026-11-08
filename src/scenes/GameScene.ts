@@ -41,7 +41,7 @@ import { remoteConfig, type GameTicket } from '../storage/remoteLeaderboard';
 import {
   GOALS_SEPARATOR,
   goalItems,
-  levelBriefing,
+  briefingLines,
   levelMoveLimit,
   levelTitle,
 } from '../ui/levelText';
@@ -60,6 +60,9 @@ const LEVEL_BRIEFING_GAP = 12;
 /** Шрифт строки целей и самый мелкий, до которого он уменьшается, если цели не помещаются в ширину */
 const GOALS_FONT_SIZE = 30;
 const GOALS_MIN_FONT_SIZE = 18;
+
+/** Промежуток между колонкой звёзд и надписями условий */
+const BRIEFING_COLUMN_GAP = 10;
 
 /** Сколько ходов должно остаться, чтобы прозвучало предупреждение о последних ходах */
 const LAST_MOVES_WARNING = 5;
@@ -91,6 +94,10 @@ export class GameScene extends Phaser.Scene {
   /** Ширина, в которую должна поместиться строка целей */
   private goalsWidth = 0;
   private briefingText: Phaser.GameObjects.Text | null = null;
+  /** Звёзды условий — отдельной колонкой, чтобы надписи после них начинались с одной линии */
+  private briefingStars: Phaser.GameObjects.Text | null = null;
+  private briefingCenterX = 0;
+  private briefingWidth = 0;
   private view!: BoardView;
   private dialog!: ChoiceDialog;
   private scoreText!: Phaser.GameObjects.Text;
@@ -234,15 +241,18 @@ export class GameScene extends Phaser.Scene {
       : null;
     this.goalsWidth = Math.min(boxSize, this.scale.width - 2 * BOARD_MARGIN);
     if (this.level) {
-      this.briefingText = this.add
-        .text(centerX, boxBottom + LEVEL_GOALS_Y_OFFSET, levelBriefing(this.level), {
-          fontFamily: 'sans-serif',
-          fontSize: '24px',
-          color: UI_MUTED_TEXT_COLOR,
-          lineSpacing: 5,
-          wordWrap: { width: boxSize },
-        })
-        .setOrigin(0.5, 0);
+      const style = {
+        fontFamily: 'sans-serif',
+        fontSize: '24px',
+        color: UI_MUTED_TEXT_COLOR,
+        lineSpacing: 5,
+      };
+      const y = boxBottom + LEVEL_GOALS_Y_OFFSET;
+      this.briefingCenterX = centerX;
+      this.briefingWidth = boxSize;
+      this.briefingStars = this.add.text(0, y, '', style);
+      this.briefingText = this.add.text(0, y, '', style);
+      this.setBriefing(this.level);
       this.refreshGoals();
       this.add
         .text(30, boxTop - 275, '← Карта', {
@@ -318,7 +328,32 @@ export class GameScene extends Phaser.Scene {
   private refreshGoals(): void {
     if (!(this.session instanceof LevelSession)) return;
     this.layoutGoals(goalItems(this.session));
-    this.briefingText?.setText(levelBriefing(this.session.level, this.session));
+    this.setBriefing(this.session.level, this.session);
+  }
+
+  /**
+   * Условия звёзд — две колонки: звёзды слева, надписи справа с одной линии. Перенесённое условие
+   * занимает несколько строк, поэтому в колонку звёзд под ним встают пустые строки; блок — по центру
+   */
+  private setBriefing(level: Level, session?: LevelSession): void {
+    const stars = this.briefingStars;
+    const text = this.briefingText;
+    if (!stars || !text) return;
+    const lines = briefingLines(level, session);
+    stars.setText(lines.map((line) => line.stars).join('\n'));
+    text.setWordWrapWidth(this.briefingWidth - stars.width - BRIEFING_COLUMN_GAP);
+    const starRows: string[] = [];
+    const textRows: string[] = [];
+    for (const line of lines) {
+      const wrapped = text.getWrappedText(line.text);
+      textRows.push(...wrapped);
+      starRows.push(line.stars, ...wrapped.slice(1).map(() => ''));
+    }
+    stars.setText(starRows.join('\n'));
+    text.setWordWrapWidth(null).setText(textRows.join('\n'));
+    const left = this.briefingCenterX - (stars.width + BRIEFING_COLUMN_GAP + text.width) / 2;
+    stars.setX(left);
+    text.setX(left + stars.width + BRIEFING_COLUMN_GAP);
   }
 
   /**
@@ -339,6 +374,7 @@ export class GameScene extends Phaser.Scene {
       text.setFontSize(size);
     }
     this.briefingText?.setY(text.y + text.height + LEVEL_BRIEFING_GAP);
+    this.briefingStars?.setY(text.y + text.height + LEVEL_BRIEFING_GAP);
   }
 
   /** Только для отладки: подменить поле */
