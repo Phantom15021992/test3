@@ -104,47 +104,30 @@ function fingerSnap(s: Synth, at: number) {
   s.noise({ dur: 0.05, vol: 0.15, at, filter: 'bandpass', f: 900, q: 3 });
 }
 
-/** Озёрный треск — на две октавы ниже первой версии */
-const LAKE_DEPTH = 0.25;
+/** Удар по стеклу: щелчок и вспышка яркого шума — момент, когда стекло лопается */
+function glassHit(s: Synth, vol = 0.5, dur = 0.16, f = 3000) {
+  s.noise({ dur: 0.012, vol: vol * 0.3, filter: 'highpass', f: 2500, q: 0.7 });
+  s.noise({ dur, vol: vol * 0.5, filter: 'bandpass', f, f2: f * 0.6, q: 0.9, at: 0.004 });
+}
 
 /**
- * Озёрное «пиу-у»: звон, который быстро скользит сверху вниз. Узкий полосовой шум даёт ему
- * шершавость льда, а тихий тон под ним — звонкость. echo — два затухающих повтора, как эхо над озером
+ * Осколки стекла: короткие звонкие «динь» вразнобой. Сначала их много, к концу всё реже — как будто
+ * осколки разлетелись и последние ещё падают. Каждый раз высота и порядок другие
  */
-function lakeZing(
+function glassShards(
   s: Synth,
-  { from = 3000, to = 300, dur = 0.5, vol = 1, at = 0, pan = 0, echo = false } = {},
+  { count = 12, span = 0.4, low = 1800, high = 4200, vol = 0.05, at = 0 } = {},
 ) {
-  // Владелец попросил глубже и на две октавы ниже: частоты умножены на LAKE_DEPTH, раскат дольше,
-  // под «пиу» — низкий гул; низкое звучит тише, поэтому громкость выше
-  const low = from * LAKE_DEPTH;
-  const end = to * LAKE_DEPTH;
-  const long = dur * 1.3;
-  const repeats = echo ? [1, 0.35, 0.12] : [1];
-  repeats.forEach((level, i) => {
-    const t = at + i * 0.2;
-    s.noise({
-      dur: long,
-      vol: 2.2 * vol * level,
-      at: t,
-      filter: 'bandpass',
-      f: low,
-      f2: end,
-      q: 14,
-      attack: 0.006,
-      pan,
+  for (let i = 0; i < count; i++) {
+    const t = Math.random() ** 1.8 * span;
+    s.glass({
+      f: rand(low, high),
+      dur: rand(0.08, 0.22),
+      vol: vol * rand(0.5, 1) * (1 - (t / span) * 0.5),
+      at: at + 0.01 + t,
+      pan: rand(-0.7, 0.7),
     });
-    s.tone({ f: low, f2: end, dur: long, vol: 0.09 * vol * level, at: t, attack: 0.006, pan });
-    s.noise({
-      dur: long * 0.8,
-      vol: 0.35 * vol * level,
-      at: t,
-      filter: 'lowpass',
-      f: 110,
-      q: 0.8,
-      pan,
-    });
-  });
+  }
 }
 
 /** Глухой удар снизу — основа взрывов и тяжёлых предметов */
@@ -1036,45 +1019,43 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 19,
     group: 'Препятствия',
     title: 'Лёд сломан',
-    // Лёд трескается, как на замёрзшем озере: звонкое «пиу-у» сверху вниз (высокие частоты бегут
-    // по льду быстрее низких и приходят первыми), глухой гул и эхо над озером. Прежние варианты убраны
+    chosen: 4,
+    // Разбитое стекло: резкий удар, вспышка яркого шума и россыпь звонких осколков вразнобой.
+    // Прежние варианты (озёрный треск) убраны
     variants: [
-      // а — классическое озёрное «пиу-у» и глухой гул под ним
+      // а — бокал разбился: удар, звон и россыпь мелких осколков
       (s) => {
-        lakeZing(s, { from: rand(2600, 3400), to: rand(280, 360), dur: 0.5 });
-        s.noise({ dur: 0.25, vol: 0.18, filter: 'lowpass', f: 160, q: 0.8, at: 0.01 });
+        glassHit(s, 0.5);
+        glassShards(s, { count: Math.floor(rand(10, 15)), span: 0.4 });
       },
-      // б — где-то вдалеке: низкий гул и тихое «пиу» с эхом
+      // б — разбилось окно: тяжёлый удар, долгий звон и осколки, падающие следом
       (s) => {
-        s.noise({ dur: 0.4, vol: 0.45, filter: 'lowpass', f: 120, q: 0.8 });
-        lakeZing(s, { from: rand(1800, 2400), to: 250, dur: 0.45, vol: 1.1, at: 0.05, echo: true });
+        s.noise({ dur: 0.1, vol: 0.4, filter: 'lowpass', f: 320, q: 0.8 });
+        glassHit(s, 0.7, 0.32);
+        glassShards(s, { count: Math.floor(rand(16, 22)), span: 0.7, vol: 0.06 });
       },
-      // в — лёд трещит в нескольких местах: два-три «пиу» подряд, разной высоты
+      // в — разбилась маленькая стекляшка: короткий звонкий щелчок и пара осколков
       (s) => {
-        let at = 0;
-        for (let i = 0; i < Math.floor(rand(2, 4)); i++) {
-          lakeZing(s, {
-            from: rand(2000, 3600),
-            to: rand(250, 450),
-            dur: rand(0.25, 0.4),
-            vol: rand(1.3, 1.8),
-            at,
-            pan: rand(-0.6, 0.6),
-          });
-          at += rand(0.12, 0.22);
-        }
+        glassHit(s, 0.35, 0.1);
+        glassShards(s, { count: Math.floor(rand(4, 7)), span: 0.2, vol: 0.06 });
       },
-      // г — долгий раскат: «пиу-у» тянется дольше и отзывается эхом над озером
+      // г — стекло осыпалось: удар, хрусткая крошка и осколки
       (s) => {
-        lakeZing(s, { from: rand(3000, 3600), to: 200, dur: 0.8, echo: true });
-        s.noise({ dur: 0.35, vol: 0.2, filter: 'lowpass', f: 140, q: 0.8, at: 0.02 });
+        glassHit(s, 0.45);
+        s.texture({ dur: 0.3, vol: 0.4, density: 280, body: 0.1, attack: 0.01, f: 4500, at: 0.02 });
+        glassShards(s, { count: Math.floor(rand(8, 12)), span: 0.35 });
       },
-      // д — глухой треск рядом, а за ним озёрное «пиу»
+      // д — стекло пониже и глуше: толстое стекло, осколки крупнее
       (s) => {
-        // Треск на две октавы ниже, глухой: не тонкий щелчок, а удар по толстому льду
-        s.noise({ dur: 0.06, vol: 0.35, filter: 'bandpass', f: rand(650, 850), q: 1.2 });
-        s.noise({ dur: 0.08, vol: 0.3, filter: 'lowpass', f: 300, q: 0.8 });
-        lakeZing(s, { from: rand(2400, 3000), to: 300, dur: 0.45, at: 0.03 });
+        s.noise({ dur: 0.08, vol: 0.35, filter: 'lowpass', f: 400, q: 0.8 });
+        glassHit(s, 0.45, 0.2, 1800);
+        glassShards(s, {
+          count: Math.floor(rand(8, 12)),
+          span: 0.45,
+          low: 900,
+          high: 2400,
+          vol: 0.08,
+        });
       },
     ],
   },
