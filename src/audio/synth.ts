@@ -284,6 +284,77 @@ export class Synth {
     source.stop(t + 0.01);
   }
 
+  /**
+   * Скрежет металла о металл или камень — трение «прилипание-срыв»: металл цепляется и срывается
+   * rate раз в секунду (с разбросом), каждый срыв — крошечный удар, а удары раскачивают резонансы
+   * металла около f. rate и f могут меняться за звук (rate2, f2): быстрее тащат — чаще срывы и выше
+   * призвук. ring — как долго звенят резонансы. Звук идёт ярким путём: металлу нужен верх
+   */
+  scrape({
+    dur,
+    vol = 0.2,
+    at = 0,
+    rate = 80,
+    rate2 = rate,
+    f = 700,
+    f2 = f,
+    ring = 0.03,
+    grit = 0.25,
+    attack = 0.05,
+    pan = 0,
+  }: {
+    dur: number;
+    vol?: number;
+    at?: number;
+    rate?: number;
+    rate2?: number;
+    f?: number;
+    f2?: number;
+    ring?: number;
+    /** Доля ровного шершавого шума трения под срывами */
+    grit?: number;
+    attack?: number;
+    pan?: number;
+  }): void {
+    const sampleRate = this.ctx.sampleRate;
+    const length = Math.round(dur * sampleRate);
+    const buffer = this.ctx.createBuffer(1, length, sampleRate);
+    const data = buffer.getChannelData(0);
+    let next = 0;
+    let burst = 0;
+    for (let i = 0; i < length; i++) {
+      const p = i / length;
+      if (i >= next) {
+        // Следующий срыв: средний шаг по текущей скорости и разброс ±40%, как у настоящего трения
+        const current = rate + (rate2 - rate) * p;
+        next = i + Math.round((sampleRate / current) * (0.6 + Math.random() * 0.8));
+        burst = 0.4 + Math.random() * 0.6;
+      }
+      burst *= 0.985;
+      const envelope = Math.min(1, (p * dur) / Math.max(attack, 0.001)) * Math.min(1, (1 - p) * 6);
+      data[i] = (Math.random() * 2 - 1) * (burst + grit) * envelope;
+    }
+    const t = this.start(at);
+    const source = this.ctx.createBufferSource();
+    source.buffer = buffer;
+    const panner = this.ctx.createStereoPanner();
+    panner.pan.value = pan;
+    panner.connect(this.bright);
+    for (const [ratio, level] of CLANK_MODES) {
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(f * ratio, t);
+      filter.frequency.linearRampToValueAtTime(f2 * ratio, t + dur);
+      const q = Math.min((Math.PI * f * ratio * ring) / 2, 300);
+      filter.Q.value = q;
+      const gain = this.ctx.createGain();
+      // Узкий резонатор пропускает мало энергии — громкость возмещается по добротности
+      gain.gain.value = vol * level * Math.sqrt(q) * 5;
+      source.connect(filter).connect(gain).connect(panner);
+    }
+    source.start(t);
+  }
+
   /** Калимба: тёплый щипок металлического язычка — приятный и не «кристальный» */
   kalimba(options: ToneOptions): void {
     this.partials(KALIMBA, options, 8, 0.25);

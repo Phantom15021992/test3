@@ -1185,6 +1185,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 23,
     group: 'Препятствия',
     title: 'Корона дошла до дна',
+    chosen: 1,
     variants: [
       (s) => {
         run(s, 'glass', [p(0), p(3), p(5), p(8)], 0.1, { dur: 0.9, vol: 0.15 });
@@ -1337,6 +1338,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 32,
     group: 'Итоги и интерфейс',
     title: 'Последние ходы (осталось 5)',
+    chosen: 1,
     variants: [
       (s) => run(s, 'glass', [low(12), low(10), low(12), low(10)], 0.13, { dur: 0.25, vol: 0.1 }),
       (s) => run(s, 'soft', [low(8), low(8)], 0.2, { dur: 0.35, vol: 0.12 }),
