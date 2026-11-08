@@ -104,6 +104,29 @@ function fingerSnap(s: Synth, at: number) {
   s.noise({ dur: 0.05, vol: 0.15, at, filter: 'bandpass', f: 900, q: 3 });
 }
 
+/**
+ * Хруст снега: много крошечных щелчков вразнобой за dur секунд — сначала гуще, к концу реже,
+ * как снег проминается под ногой. low/high — диапазон частот щелчков
+ */
+function snowCrunch(
+  s: Synth,
+  { grains = 20, dur = 0.16, low = 1100, high = 3200, vol = 0.36, at = 0 } = {},
+) {
+  for (let i = 0; i < grains; i++) {
+    // Квадрат случайного числа сдвигает щелчки к началу: хруст резкий в начале и стихает
+    const t = Math.random() ** 1.6 * dur;
+    s.noise({
+      dur: rand(0.004, 0.012),
+      vol: vol * rand(0.4, 1) * (1 - (t / dur) * 0.6),
+      at: at + t,
+      filter: 'bandpass',
+      f: rand(low, high),
+      q: rand(1.5, 4),
+      pan: rand(-0.4, 0.4),
+    });
+  }
+}
+
 /** Глухой удар снизу — основа взрывов и тяжёлых предметов */
 function thump(s: Synth, f: number, dur: number, vol = 0.5, at = 0) {
   // Удар — больше шум, чем тон: чистый низкий синус звучит как электронная «бочка»
@@ -918,20 +941,50 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
   {
     id: 18,
     group: 'Препятствия',
-    title: 'Удар по льду (трещина)',
+    title: 'Удар по льду (хруст снега)',
+    // Вместо удара по льду — хруст снега (по просьбе владельца), каждый раз чуть разный
     variants: [
+      // а — короткий хруст, как один шаг по снегу
+      (s) => snowCrunch(s, { grains: Math.floor(rand(16, 24)), dur: 0.16 }),
+      // б — рыхлый мягкий снег: ниже, глуше, с мягким «пф» под хрустом
       (s) => {
-        s.noise({ dur: 0.08, vol: 0.18, filter: 'highpass', f: 3000 });
-        s.glass({ f: low(20), dur: 0.2, vol: 0.06 });
+        s.noise({ dur: 0.14, vol: 0.12, filter: 'lowpass', f: 700 });
+        snowCrunch(s, {
+          grains: Math.floor(rand(20, 28)),
+          dur: 0.2,
+          low: 700,
+          high: 2000,
+          vol: 0.32,
+        });
       },
+      // в — морозный скрип: плотный хруст и тонкий скрип сверху
       (s) => {
-        s.noise({ dur: 0.06, vol: 0.3, filter: 'bandpass', f: 2500, q: 3 });
-        s.soft({ f: low(17), dur: 0.15, vol: 0.05, at: 0.02 });
+        snowCrunch(s, { grains: Math.floor(rand(18, 26)), dur: 0.18, low: 1400, high: 3600 });
+        s.noise({
+          dur: 0.12,
+          vol: 0.5,
+          filter: 'bandpass',
+          f: rand(1100, 1400),
+          f2: rand(1500, 1800),
+          q: 14,
+          at: 0.03,
+        });
       },
-      (s) =>
-        [0, 0.03, 0.07].forEach((at) =>
-          s.noise({ dur: 0.03, vol: 0.12, at, filter: 'highpass', f: 4000 }),
-        ),
+      // г — два шага подряд: хруст и ещё один, потише
+      (s) => {
+        snowCrunch(s, { grains: Math.floor(rand(14, 20)), dur: 0.13 });
+        snowCrunch(s, {
+          grains: Math.floor(rand(10, 16)),
+          dur: 0.12,
+          at: rand(0.17, 0.22),
+          vol: 0.3,
+        });
+      },
+      // д — хруст с морозными блёстками
+      (s) => {
+        snowCrunch(s, { grains: Math.floor(rand(16, 22)), dur: 0.16 });
+        s.sparkle({ count: 2, span: 0.15, at: 0.05, vol: 0.04, dur: 0.15 });
+      },
     ],
   },
   {
