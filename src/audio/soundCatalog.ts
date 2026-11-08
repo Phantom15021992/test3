@@ -110,13 +110,22 @@ function fingerSnap(s: Synth, at: number) {
  */
 function snowCrunch(
   s: Synth,
-  { grains = 20, dur = 0.16, low = 1100, high = 3200, vol = 0.36, at = 0 } = {},
+  {
+    grains = 20,
+    dur = 0.16,
+    low = 1100,
+    high = 3200,
+    vol = 0.36,
+    at = 0,
+    shape = 1.6,
+    grain = 0.012,
+  } = {},
 ) {
   for (let i = 0; i < grains; i++) {
-    // Квадрат случайного числа сдвигает щелчки к началу: хруст резкий в начале и стихает
-    const t = Math.random() ** 1.6 * dur;
+    // Степень shape сдвигает щелчки к началу: хруст резкий в начале и стихает (1 — ровно по всей длине)
+    const t = Math.random() ** shape * dur;
     s.noise({
-      dur: rand(0.004, 0.012),
+      dur: rand(grain * 0.35, grain),
       vol: vol * rand(0.4, 1) * (1 - (t / dur) * 0.6),
       at: at + t,
       filter: 'bandpass',
@@ -942,48 +951,77 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 18,
     group: 'Препятствия',
     title: 'Удар по льду (хруст снега)',
-    // Вместо удара по льду — хруст снега (по просьбе владельца), каждый раз чуть разный
+    // Вокруг 18б (рыхлый мягкий снег) — он был ближе всего, но «не то»; прежние варианты убраны
     variants: [
-      // а — короткий хруст, как один шаг по снегу
-      (s) => snowCrunch(s, { grains: Math.floor(rand(16, 24)), dur: 0.16 }),
-      // б — рыхлый мягкий снег: ниже, глуше, с мягким «пф» под хрустом
+      // а — как 18б, но глубже и дольше: снег проминается медленнее
       (s) => {
-        s.noise({ dur: 0.14, vol: 0.12, filter: 'lowpass', f: 700 });
+        s.noise({ dur: 0.2, vol: 0.252, filter: 'lowpass', f: 550 });
         snowCrunch(s, {
-          grains: Math.floor(rand(20, 28)),
-          dur: 0.2,
+          grains: Math.floor(rand(26, 34)),
+          dur: 0.28,
+          low: 500,
+          high: 1500,
+          vol: 0.612,
+          grain: 0.016,
+        });
+      },
+      // б — плотный сжатый снег: щелчки сливаются в сплошное мягкое «хррш»
+      (s) => {
+        s.noise({ dur: 0.18, vol: 0.18, filter: 'lowpass', f: 650 });
+        snowCrunch(s, {
+          grains: Math.floor(rand(44, 56)),
+          dur: 0.22,
+          low: 650,
+          high: 1800,
+          vol: 0.432,
+          shape: 1.2,
+          grain: 0.018,
+        });
+      },
+      // в — снежок: мягкий глухой удар и короткий плотный хруст
+      (s) => {
+        s.noise({ dur: 0.1, vol: 0.54, filter: 'lowpass', f: 420 });
+        snowCrunch(s, {
+          grains: Math.floor(rand(18, 24)),
+          dur: 0.12,
+          low: 600,
+          high: 1600,
+          vol: 0.54,
+          grain: 0.014,
+        });
+      },
+      // г — снег сжали в ладони: хруст, крошечная пауза и короткий дожим
+      (s) => {
+        snowCrunch(s, {
+          grains: Math.floor(rand(18, 24)),
+          dur: 0.15,
           low: 700,
           high: 2000,
-          vol: 0.32,
+          vol: 0.576,
+          grain: 0.014,
         });
-      },
-      // в — морозный скрип: плотный хруст и тонкий скрип сверху
-      (s) => {
-        snowCrunch(s, { grains: Math.floor(rand(18, 26)), dur: 0.18, low: 1400, high: 3600 });
-        s.noise({
-          dur: 0.12,
-          vol: 0.5,
-          filter: 'bandpass',
-          f: rand(1100, 1400),
-          f2: rand(1500, 1800),
-          q: 14,
-          at: 0.03,
-        });
-      },
-      // г — два шага подряд: хруст и ещё один, потише
-      (s) => {
-        snowCrunch(s, { grains: Math.floor(rand(14, 20)), dur: 0.13 });
         snowCrunch(s, {
-          grains: Math.floor(rand(10, 16)),
-          dur: 0.12,
-          at: rand(0.17, 0.22),
-          vol: 0.3,
+          grains: Math.floor(rand(8, 12)),
+          dur: 0.08,
+          low: 600,
+          high: 1700,
+          vol: 0.432,
+          at: rand(0.19, 0.23),
+          grain: 0.014,
         });
       },
-      // д — хруст с морозными блёстками
+      // д — хруст нарастает и стихает ровно, без резкого начала, как шаг по глубокому снегу
       (s) => {
-        snowCrunch(s, { grains: Math.floor(rand(16, 22)), dur: 0.16 });
-        s.sparkle({ count: 2, span: 0.15, at: 0.05, vol: 0.04, dur: 0.15 });
+        s.noise({ dur: 0.24, vol: 0.18, filter: 'lowpass', f: 600, attack: 0.08 });
+        snowCrunch(s, {
+          grains: Math.floor(rand(28, 36)),
+          dur: 0.24,
+          low: 650,
+          high: 1900,
+          vol: 0.54,
+          shape: 1,
+          grain: 0.016,
+        });
       },
     ],
   },
