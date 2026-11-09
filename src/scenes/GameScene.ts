@@ -239,6 +239,8 @@ export class GameScene extends Phaser.Scene {
     this.view.gems = this.crystals;
     // Лист кристаллов режется на фишки до первой отрисовки поля
     this.view.crystalSet = this.crystalSet;
+    // Тестовый уровень по просьбе владельца: 1 и 2 уровни — обычные круг и треугольник, кристалл — только у 3 уровня
+    this.view.crystalFromLevel = this.gems ? 3 : 1;
     // Тестовый уровень — на тёмном фоне: так сияние новых кристаллов заметнее
     // Сцена одна на все режимы: в остальных камера прозрачная, виден общий фон игры
     this.cameras.main.setBackgroundColor(this.gems ? TEST_BACKGROUND : 'rgba(0,0,0,0)');

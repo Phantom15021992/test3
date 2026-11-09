@@ -80,6 +80,8 @@ export class BoardView {
   gems = false;
   /** Какой набор кристаллов рисовать: у тестового уровня свой */
   crystalSet: CrystalSet = 'campaign';
+  /** С какого уровня фишки рисуются кристаллами; ниже — обычные фигуры (круг, треугольник) */
+  crystalFromLevel = 1;
   private readonly plateLayer: Phaser.GameObjects.Container;
 
   constructor(
@@ -449,7 +451,7 @@ export class BoardView {
     } else if (cell.kind === 'stone' || cell.kind === 'item') {
       const name = cell.kind === 'item' ? 'crown' : cell.kind;
       children = [obstacleImage(this.scene, name, this.cellSize)];
-    } else if (cell.kind === 'tile' && this.gems) {
+    } else if (cell.kind === 'tile' && this.gems && cell.level >= this.crystalFromLevel) {
       children = [
         addCrystal(
           this.scene,
