@@ -1,4 +1,5 @@
 import { FLOOR_SIZE } from '../core/level';
+import { TUTORIALS, type Tutorial } from '../core/tutorial';
 
 // Прогресс по уровням в localStorage этого браузера: лучшее число звёзд на каждый уровень
 // и сколько звёзд потрачено на каждом уровне.
@@ -71,11 +72,16 @@ export function markTutorialDone(index: number): void {
 }
 
 /**
- * Новичок: ни обучения, ни звёзд на уровнях. Его «Кампания» начинается с обучения, а не с карты —
- * у тех, кто уже играл до появления обучения, ничего не меняется
+ * Обучение пройдено целиком — только тогда открыты уровни кампании. Проходится один раз: дальше
+ * «Кампания» ведёт сразу на карту. Касается и тех, кто играл до появления обучения
  */
-export function isNewToCampaign(): boolean {
-  return tutorialsDone() === 0 && Object.keys(loadLevelStars()).length === 0;
+export function tutorialPassed(): boolean {
+  return tutorialsDone() >= TUTORIALS.length;
+}
+
+/** Обучение, с которого продолжить: первое непройденное (null — пройдено всё) */
+export function nextTutorial(): Tutorial | null {
+  return TUTORIALS[tutorialsDone()] ?? null;
 }
 
 /**

@@ -4,9 +4,12 @@ import {
   floorWallet,
   isLevelOpen,
   loadLevelStars,
+  markTutorialDone,
+  nextTutorial,
   resetCampaignProgress,
   saveLevelStars,
   saveLevelSpending,
+  tutorialPassed,
 } from '../../src/storage/progress';
 
 beforeEach(() => {
@@ -117,5 +120,33 @@ describe('повторная попытка уровня', () => {
     expect(attemptWallet(10)).toBe(6);
     // На другом уровне этажа возврата нет: там траты прошлой победы на 10-м остаются
     expect(attemptWallet(9)).toBe(3);
+  });
+});
+
+describe('обучение перед кампанией', () => {
+  it('пока обучение не пройдено целиком, кампания закрыта и продолжается с первого непройденного', () => {
+    expect(tutorialPassed()).toBe(false);
+    expect(nextTutorial()?.index).toBe(1);
+    markTutorialDone(1);
+    expect(nextTutorial()?.index).toBe(2);
+    expect(tutorialPassed()).toBe(false);
+    // Звёзды на уровнях (игрок играл до появления обучения) обучение не заменяют
+    saveLevelStars(1, 3);
+    expect(tutorialPassed()).toBe(false);
+  });
+
+  it('пройденное обучение больше не предлагается; повторное прохождение не откатывает прогресс', () => {
+    markTutorialDone(3);
+    expect(tutorialPassed()).toBe(true);
+    expect(nextTutorial()).toBeNull();
+    markTutorialDone(1);
+    expect(tutorialPassed()).toBe(true);
+  });
+
+  it('сброс прогресса кампании возвращает обучение', () => {
+    markTutorialDone(3);
+    resetCampaignProgress();
+    expect(tutorialPassed()).toBe(false);
+    expect(nextTutorial()?.index).toBe(1);
   });
 });

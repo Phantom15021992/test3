@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
-import { TUTORIALS } from '../core/tutorial';
-import { isNewToCampaign } from '../storage/progress';
+import { nextTutorial } from '../storage/progress';
 import { addSoundToggle } from '../ui/soundToggle';
 import { DIFFICULTIES, type Difficulty } from '../core/config';
 import { loadLeaderboard, type LeaderboardEntry } from '../storage/leaderboard';
@@ -50,8 +49,9 @@ export class MenuScene extends Phaser.Scene {
 
     createMenuButton(this, centerX, LEVELS_BUTTON_Y, [menuButtonLabel(this, 'Кампания')], () => {
       if (this.starting) return;
-      // Новичок начинает кампанию с обучения, а не с карты
-      if (isNewToCampaign()) this.scene.start('Game', { tutorial: TUTORIALS[0] });
+      // Пока обучение не пройдено, «Кампания» продолжает его с первого непройденного уровня, а не открывает карту
+      const tutorial = nextTutorial();
+      if (tutorial) this.scene.start('Game', { tutorial });
       else this.scene.start('LevelMap');
     });
     createMenuButton(this, centerX, RULES_BUTTON_Y, [menuButtonLabel(this, 'Правила игры')], () => {

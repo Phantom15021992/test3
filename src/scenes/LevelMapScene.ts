@@ -2,7 +2,14 @@ import Phaser from 'phaser';
 import { FLOOR_SIZE, floorOf } from '../core/level';
 import { FLOORS } from '../levels';
 import { TUTORIALS } from '../core/tutorial';
-import { ALL_LEVELS_OPEN, floorWallet, isLevelOpen, loadLevelStars } from '../storage/progress';
+import {
+  ALL_LEVELS_OPEN,
+  floorWallet,
+  isLevelOpen,
+  loadLevelStars,
+  nextTutorial,
+  tutorialPassed,
+} from '../storage/progress';
 import { levelNumber } from '../ui/levelText';
 import { TransferDialog } from '../ui/TransferDialog';
 import {
@@ -41,6 +48,7 @@ export class LevelMapScene extends Phaser.Scene {
 
   create(): void {
     const centerX = this.scale.width / 2;
+    const passed = tutorialPassed();
     this.add
       .text(centerX, TITLE_Y, `Этаж ${this.floor}`, {
         fontFamily: 'sans-serif',
@@ -49,11 +57,18 @@ export class LevelMapScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     this.add
-      .text(centerX, WALLET_Y, `Звёзды этажа: ★ ${floorWallet(this.floor)}`, {
-        fontFamily: 'sans-serif',
-        fontSize: '30px',
-        color: hex(HIGHLIGHT_COLOR),
-      })
+      .text(
+        centerX,
+        WALLET_Y,
+        passed
+          ? `Звёзды этажа: ★ ${floorWallet(this.floor)}`
+          : 'Пройди обучение — откроются уровни',
+        {
+          fontFamily: 'sans-serif',
+          fontSize: '30px',
+          color: hex(HIGHLIGHT_COLOR),
+        },
+      )
       .setOrigin(0.5);
     this.addArrow(centerX - ARROW_OFFSET, '‹', this.floor - 1);
     this.addArrow(centerX + ARROW_OFFSET, '›', this.floor + 1);
@@ -65,8 +80,10 @@ export class LevelMapScene extends Phaser.Scene {
       const x = centerX + (column - (COLUMNS - 1) / 2) * COLUMN_STEP;
       const y = FIRST_ROW_Y + Math.floor(i / COLUMNS) * ROW_STEP;
       const earned = stars[level.id] ?? 0;
-      // Все уровни открыты сразу (ALL_LEVELS_OPEN); в dev-режиме — всегда, чтобы смотреть их без прохождения
-      const open = ALL_LEVELS_OPEN || import.meta.env.DEV || isLevelOpen(level.id, stars);
+      // Без обучения закрыто всё (и в dev-режиме). После него все уровни открыты сразу (ALL_LEVELS_OPEN);
+      // в dev-режиме — всегда, чтобы смотреть их без прохождения
+      const open =
+        passed && (ALL_LEVELS_OPEN || import.meta.env.DEV || isLevelOpen(level.id, stars));
 
       const number = this.add
         .text(0, -20, levelNumber(level), {
@@ -89,6 +106,7 @@ export class LevelMapScene extends Phaser.Scene {
         [number, rating],
         () => {
           if (open) this.scene.start('Game', { level });
+          else if (!passed) this.startTutorial();
         },
         CELL_WIDTH,
         CELL_HEIGHT,
@@ -127,6 +145,12 @@ export class LevelMapScene extends Phaser.Scene {
       [menuButtonLabel(this, 'Перенос прогресса')],
       () => new TransferDialog(this, () => this.scene.restart({})).show(),
     );
+  }
+
+  /** Закрытые до обучения уровни ведут в него: продолжить с первого непройденного */
+  private startTutorial(): void {
+    const tutorial = nextTutorial();
+    if (tutorial) this.scene.start('Game', { tutorial });
   }
 
   private addArrow(x: number, label: string, floor: number): void {
