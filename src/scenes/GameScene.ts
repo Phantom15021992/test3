@@ -78,6 +78,9 @@ const GOALS_MIN_FONT_SIZE = 18;
 /** Промежуток между колонкой звёзд и надписями условий */
 const BRIEFING_COLUMN_GAP = 10;
 
+/** Обучение: пауза после последнего хода, чтобы игрок успел разглядеть собранную фишку до окна итога */
+const TUTORIAL_RESULT_DELAY_MS = 2000;
+
 /** Сколько ходов должно остаться, чтобы прозвучало предупреждение о последних ходах */
 const LAST_MOVES_WARNING = 5;
 
@@ -364,15 +367,18 @@ export class GameScene extends Phaser.Scene {
     this.view.hideHint();
     this.view.setBlocked([]);
     this.hintText.setText('');
-    playStars(1, (delay, fn) => this.time.delayedCall(delay, fn));
     const next = TUTORIALS.find((t) => t.index === tutorial.index + 1);
     const first = LEVELS[0];
-    showTutorialDone(this, tutorial.done, [
-      next
-        ? ['Дальше', () => this.scene.restart({ tutorial: next })]
-        : ['Играть 1-1', () => this.scene.restart(first ? { level: first } : {})],
-      ['Карта уровней', () => this.scene.start('LevelMap', { floor: 1 })],
-    ]);
+    // Окно — не сразу: собранная фишка должна успеть попасться на глаза (поле пока не нажимается)
+    this.time.delayedCall(TUTORIAL_RESULT_DELAY_MS, () => {
+      playStars(1, (delay, fn) => this.time.delayedCall(delay, fn));
+      showTutorialDone(this, tutorial.done, [
+        next
+          ? ['Дальше', () => this.scene.restart({ tutorial: next })]
+          : ['Играть 1-1', () => this.scene.restart(first ? { level: first } : {})],
+        ['Карта уровней', () => this.scene.start('LevelMap', { floor: 1 })],
+      ]);
+    });
   }
 
   update(time: number): void {
