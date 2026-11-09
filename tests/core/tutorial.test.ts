@@ -104,7 +104,7 @@ describe('обучение', () => {
 
   it('обучение 3: каждый ход тратит только свои спецфишки, после манипулятора обучение кончается', () => {
     const session = tutorialSession(third!);
-    const left = [6, 5, 3, 2, 1];
+    const left = [7, 6, 5, 3, 2, 1];
     playSteps(session, (move) => {
       expect(pieces(session.board), `перед ходом ${move + 1}`).toBe(left[move]);
       expect(session.isOver).toBe(false);

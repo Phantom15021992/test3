@@ -214,6 +214,8 @@ function checkTutorial2(t: Tutorial, seed: number): boolean {
 const SPECIALS3: [Position, Cell][] = [
   // Бомбы отодвинуты от углов: взрыв 3×3 и 7×7 целиком на поле, радиус виден
   [p(1, 1), { kind: 'piece', type: 'bomb' }],
+  // Отдельная большая бомба сверху по центру: её 5×5 целиком на поле и не задевает другие бустеры
+  [p(2, 4), { kind: 'piece', type: 'megaBomb' }],
   [p(6, 3), { kind: 'piece', type: 'megaBomb' }],
   [p(6, 2), { kind: 'piece', type: 'bomb' }],
   [p(0, 9), { kind: 'piece', type: 'rainbow' }],
@@ -224,6 +226,7 @@ const SPECIALS3: [Position, Cell][] = [
 const STEPS3: TutorialStep[] = [
   { kind: 'info', title: '', text: '' },
   { kind: 'fire', at: p(1, 1), text: '' },
+  { kind: 'fire', at: p(2, 4), text: '' },
   { kind: 'swap', from: p(6, 2), to: p(6, 3), text: '' },
   { kind: 'fire', at: 'rocket', text: '' },
   { kind: 'rainbow', at: 'rainbow', text: '', pickText: '' },
@@ -231,7 +234,7 @@ const STEPS3: TutorialStep[] = [
 ];
 
 /** Сколько спецфишек должно остаться после каждого хода: каждый ход тратит только свои */
-const LEFT3 = [6, 5, 3, 2, 1, 0];
+const LEFT3 = [7, 6, 5, 3, 2, 1, 0];
 
 function design3(): { board: string[]; seed: number } | null {
   const fixed = new Map<string, Cell>(
