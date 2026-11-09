@@ -78,8 +78,8 @@ describe('обучение', () => {
     );
   });
 
-  it('обучение 2: каждая подсказка собирает свою фигуру, спецфишек нет, 7 ячеек 3 уровня по подсказкам', () => {
-    const sizes = [5, 5, 5, 5, 7, 4, 3];
+  it('обучение 2: каждая подсказка собирает свою фигуру, спецфишек нет, 6 ячеек 3 уровня по подсказкам', () => {
+    const sizes = [5, 5, 5, 5, 7, 4];
     const session = tutorialSession(second!);
     playSteps(session, (move) => {
       const step = second!.steps[move]!;
@@ -95,10 +95,10 @@ describe('обучение', () => {
       expect(session.isOver).toBe(false);
     });
     expect(pieces(session.board)).toBe(0);
-    // Ровно 7 по подсказкам: последние 3 игрок собирает сам, обучение ещё идёт, ходов хватает
-    expect(session.progress.level3).toBe(7);
+    // Ровно 6 по подсказкам: последние 4 игрок собирает сам, обучение ещё идёт, ходов хватает
+    expect(session.progress.level3).toBe(6);
     expect(session.isOver).toBe(false);
-    expect(session.movesLeft).toBe(93);
+    expect(session.movesLeft).toBe(94);
     expect(hasTileMove(session.board)).toBe(true);
   });
 
