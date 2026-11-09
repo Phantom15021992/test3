@@ -22,6 +22,8 @@ import {
   BLOCKED_COLOR,
   BOARD_CELL_DARK,
   BOARD_CELL_LIGHT,
+  TEST_CELL_DARK,
+  TEST_CELL_LIGHT,
   HIGHLIGHT_COLOR,
   SELECTION_COLOR,
   TILE_COLORS,
@@ -124,7 +126,12 @@ export class BoardView {
         const y = this.originY + r * this.cellSize;
         if (this.gems && CRYSTAL_BLUE_FIELD) this.drawCrystalCell(x, y);
         else {
-          this.background.fillStyle((r + c) % 2 === 0 ? BOARD_CELL_DARK : BOARD_CELL_LIGHT);
+          // У тестового уровня поле темнее
+          const [dark, light] =
+            this.crystalSet === 'test'
+              ? [TEST_CELL_DARK, TEST_CELL_LIGHT]
+              : [BOARD_CELL_DARK, BOARD_CELL_LIGHT];
+          this.background.fillStyle((r + c) % 2 === 0 ? dark : light);
           this.background.fillRect(x, y, this.cellSize, this.cellSize);
         }
         if (isCoal(cell)) {

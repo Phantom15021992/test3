@@ -63,7 +63,12 @@ import {
   levelMoveLimit,
   levelTitle,
 } from '../ui/levelText';
-import { HIGHLIGHT_COLOR, UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
+import {
+  HIGHLIGHT_COLOR,
+  TEST_BACKGROUND,
+  UI_MUTED_TEXT_COLOR,
+  UI_TEXT_COLOR,
+} from '../view/palette';
 import { BoardView } from '../view/BoardView';
 import { createCrystalTextures, crystalFiles, type CrystalSet } from '../view/crystalArt';
 import { debugSeed, startGame } from './startGame';
@@ -84,6 +89,11 @@ const BRIEFING_COLUMN_GAP = 10;
 
 /** Обучение: пауза после последнего хода, чтобы игрок успел разглядеть собранную фишку до окна итога */
 const TUTORIAL_RESULT_DELAY_MS = 2000;
+
+/** Фон страницы вокруг холста игры; null — прежний, из index.html */
+function setPageBackground(color: number | null): void {
+  document.body.style.background = color === null ? '' : `#${color.toString(16).padStart(6, '0')}`;
+}
 
 /** Сколько ходов должно остаться, чтобы прозвучало предупреждение о последних ходах */
 const LAST_MOVES_WARNING = 5;
@@ -229,6 +239,12 @@ export class GameScene extends Phaser.Scene {
     this.view.gems = this.crystals;
     // Лист кристаллов режется на фишки до первой отрисовки поля
     this.view.crystalSet = this.crystalSet;
+    // Тестовый уровень — на тёмном фоне: так сияние новых кристаллов заметнее
+    // Сцена одна на все режимы: в остальных камера прозрачная, виден общий фон игры
+    this.cameras.main.setBackgroundColor(this.gems ? TEST_BACKGROUND : 'rgba(0,0,0,0)');
+    // Поля страницы вокруг игры (на телефоне — сверху и снизу) того же цвета, иначе вокруг светлая рамка
+    setPageBackground(this.gems ? TEST_BACKGROUND : null);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => setPageBackground(null));
     if (this.crystals) createCrystalTextures(this, this.crystalSet);
     if (this.level?.coalLayers) this.view.coalLayers = this.level.coalLayers;
     this.view.render(this.session.board);
