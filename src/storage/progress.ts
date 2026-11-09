@@ -42,10 +42,40 @@ export function floorWallet(floor: number): number {
  */
 export function resetCampaignProgress(): void {
   try {
-    for (const key of [STARS_KEY, SPENT_KEY, LEVEL_SPENT_KEY]) localStorage.removeItem(key);
+    for (const key of [STARS_KEY, SPENT_KEY, LEVEL_SPENT_KEY, TUTORIAL_KEY]) {
+      localStorage.removeItem(key);
+    }
   } catch {
     // Хранилище недоступно — стирать нечего
   }
+}
+
+/** Сколько обучающих уровней пройдено (по порядку) */
+const TUTORIAL_KEY = 'match3.tutorialDone';
+
+export function tutorialsDone(): number {
+  try {
+    const value = Number(localStorage.getItem(TUTORIAL_KEY) ?? 0);
+    return Number.isInteger(value) && value > 0 ? value : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function markTutorialDone(index: number): void {
+  try {
+    if (index > tutorialsDone()) localStorage.setItem(TUTORIAL_KEY, String(index));
+  } catch {
+    // Хранилище недоступно — обучение просто покажется снова
+  }
+}
+
+/**
+ * Новичок: ни обучения, ни звёзд на уровнях. Его «Кампания» начинается с обучения, а не с карты —
+ * у тех, кто уже играл до появления обучения, ничего не меняется
+ */
+export function isNewToCampaign(): boolean {
+  return tutorialsDone() === 0 && Object.keys(loadLevelStars()).length === 0;
 }
 
 /**

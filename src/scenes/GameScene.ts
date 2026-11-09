@@ -27,6 +27,13 @@ import { areAdjacent, isValidSwap } from '../core/moves';
 import type { ChoiceOption, Move, ResolveStep } from '../core/resolve';
 import { floorOf, type Level } from '../core/level';
 import { LevelSession } from '../core/levelSession';
+import {
+  TUTORIALS,
+  tutorialLevel,
+  tutorialSession,
+  type Tutorial,
+  type TutorialStep,
+} from '../core/tutorial';
 import { GameSession, type PlayerMove } from '../core/session';
 import { comboNeedsColor, isCombo } from '../core/specials';
 import { BonusShop } from '../ui/BonusShop';
@@ -36,7 +43,14 @@ import { LevelResultDialog } from '../ui/LevelResultDialog';
 import { sendGameResult } from '../storage/gameResults';
 import { sendLevelMoves } from '../storage/levelMoves';
 import { sendLevelResult, type LevelOutcome } from '../storage/levelResults';
-import { attemptWallet, saveLevelSpending, saveLevelStars } from '../storage/progress';
+import {
+  attemptWallet,
+  markTutorialDone,
+  saveLevelSpending,
+  saveLevelStars,
+} from '../storage/progress';
+import { LEVELS } from '../levels';
+import { showTutorialDone } from '../ui/TutorialDoneDialog';
 import { remoteConfig, type GameTicket } from '../storage/remoteLeaderboard';
 import {
   GOALS_SEPARATOR,
@@ -88,8 +102,10 @@ export class GameScene extends Phaser.Scene {
   /** Seed и звёзды на начало попытки: с журналом они проигрывают попытку заново (level_moves) */
   private seed = 0;
   private wallet = 0;
-  /** Тестовый уровень с экрана правил: правила Детского, фишки — камень, ромб и кристалл */
+  /** Тестовый уровень с экрана правил: правила Лёгкого, фишки — кристаллы */
   private gems = false;
+  /** Обучающий уровень: поле подготовлено, подсказка видна сразу, сделать можно только её ход */
+  private tutorial: Tutorial | null = null;
   private goalsText: Phaser.GameObjects.Text | null = null;
   /** Ширина, в которую должна поместиться строка целей */
   private goalsWidth = 0;
@@ -126,14 +142,20 @@ export class GameScene extends Phaser.Scene {
     ticket?: GameTicket | null;
     level?: Level;
     gems?: boolean;
+    tutorial?: Tutorial;
   }): void {
     this.gems = data.gems ?? false;
+    this.tutorial = data.tutorial ?? null;
     // Тестовый уровень — по правилам Лёгкого (4 цвета: синий, жёлтый, красный, зелёный), без билета: в общую таблицу и статистику не идёт
     this.difficulty = this.gems
       ? DIFFICULTIES[1]!
       : (DIFFICULTIES.find((d) => d.id === data.difficulty) ?? DIFFICULTIES[2]);
     this.ticket = this.gems ? null : (data.ticket ?? null);
-    this.level = this.gems ? null : (data.level ?? null);
+    this.level = this.gems
+      ? null
+      : this.tutorial
+        ? tutorialLevel(this.tutorial)
+        : (data.level ?? null);
   }
 
   /** Фишки-кристаллы — в кампании и на тестовом уровне; свободная игра по-прежнему с кружками */
@@ -163,10 +185,12 @@ export class GameScene extends Phaser.Scene {
     // каждом запуске (для отладки; в общую таблицу такая партия не попадает, см. startGame)
     const seed = debugSeed() ?? this.ticket?.seed ?? Date.now() >>> 0;
     this.seed = seed;
-    this.wallet = this.level ? attemptWallet(this.level.id) : 0;
-    this.session = this.level
-      ? new LevelSession(seed, this.level, this.wallet)
-      : new GameSession(seed, this.difficulty.colors);
+    this.wallet = this.level && !this.tutorial ? attemptWallet(this.level.id) : 0;
+    this.session = this.tutorial
+      ? tutorialSession(this.tutorial)
+      : this.level
+        ? new LevelSession(seed, this.level, this.wallet)
+        : new GameSession(seed, this.difficulty.colors);
     if (import.meta.env.DEV) {
       // Доступ к сцене из консоли браузера для ручной проверки
       (window as unknown as { gameScene: GameScene }).gameScene = this;
@@ -224,26 +248,28 @@ export class GameScene extends Phaser.Scene {
       this.level !== null,
     );
     if (this.session instanceof LevelSession && !this.session.shopOpen) this.bonusShop.hide();
-    this.walletText = this.level
-      ? this.add
-          .text(this.scale.width - 30, boxTop - 205, '', {
-            ...hudStyle,
-            color: `#${HIGHLIGHT_COLOR.toString(16)}`,
-          })
-          .setOrigin(1, 0.5)
-      : null;
+    this.walletText =
+      this.level && !this.tutorial
+        ? this.add
+            .text(this.scale.width - 30, boxTop - 205, '', {
+              ...hudStyle,
+              color: `#${HIGHLIGHT_COLOR.toString(16)}`,
+            })
+            .setOrigin(1, 0.5)
+        : null;
     this.updateScore();
     this.updateMoves();
-    this.goalsText = this.level
-      ? this.add
-          .text(centerX, boxBottom + LEVEL_GOALS_Y_OFFSET, '', {
-            fontFamily: 'sans-serif',
-            fontSize: `${GOALS_FONT_SIZE}px`,
-            color: `#${HIGHLIGHT_COLOR.toString(16)}`,
-            align: 'center',
-          })
-          .setOrigin(0.5, 0)
-      : null;
+    this.goalsText =
+      this.level && !this.tutorial
+        ? this.add
+            .text(centerX, boxBottom + LEVEL_GOALS_Y_OFFSET, '', {
+              fontFamily: 'sans-serif',
+              fontSize: `${GOALS_FONT_SIZE}px`,
+              color: `#${HIGHLIGHT_COLOR.toString(16)}`,
+              align: 'center',
+            })
+            .setOrigin(0.5, 0)
+        : null;
     this.goalsWidth = Math.min(boxSize, this.scale.width - 2 * BOARD_MARGIN);
     if (this.level) {
       const style = {
@@ -255,10 +281,12 @@ export class GameScene extends Phaser.Scene {
       const y = boxBottom + LEVEL_GOALS_Y_OFFSET;
       this.briefingCenterX = centerX;
       this.briefingWidth = boxSize;
-      this.briefingStars = this.add.text(0, y, '', { ...style, align: 'right' });
-      this.briefingText = this.add.text(0, y, '', style);
-      this.setBriefing(this.level);
-      this.refreshGoals();
+      if (!this.tutorial) {
+        this.briefingStars = this.add.text(0, y, '', { ...style, align: 'right' });
+        this.briefingText = this.add.text(0, y, '', style);
+        this.setBriefing(this.level);
+        this.refreshGoals();
+      }
       this.add
         .text(30, boxTop - 275, '← Карта', {
           fontFamily: 'sans-serif',
@@ -294,12 +322,63 @@ export class GameScene extends Phaser.Scene {
     this.input.on('pointerdown', this.onPointerDown, this);
     this.input.on('pointermove', this.onPointerMove, this);
     this.input.on('pointerup', this.onPointerUp, this);
+    this.showTutorialStep();
+  }
+
+  // ---------- Обучение ----------
+
+  /** Шаг обучения, который ждёт игрока: по одному на ход */
+  private get tutorialStep(): TutorialStep | null {
+    return this.tutorial?.steps[this.session.moves] ?? null;
+  }
+
+  /** Подсвечивает клетки хода и затемняет остальное поле, внизу — что сделать */
+  private showTutorialStep(): void {
+    const step = this.tutorialStep;
+    if (!step) return;
+    this.view.showHint([step.from, step.to]);
+    this.view.setBlocked(this.tutorialBlocked());
+    this.hintText.setText(step.text);
+  }
+
+  private tutorialBlocked(): Position[] {
+    const step = this.tutorialStep;
+    if (!step) return [];
+    const { board } = this.session;
+    return allPositions(board).filter(
+      (pos) =>
+        getCell(board, pos)?.kind !== 'hole' && !samePos(pos, step.from) && !samePos(pos, step.to),
+    );
+  }
+
+  /** В обучении нажимать можно только клетки подсказанного хода */
+  private tutorialAllows(cell: Position): boolean {
+    const step = this.tutorialStep;
+    if (!this.tutorial) return true;
+    return step !== null && (samePos(cell, step.from) || samePos(cell, step.to));
+  }
+
+  /** Обучение пройдено: окно с итогом, дальше — следующее обучение или первый уровень */
+  private finishTutorial(tutorial: Tutorial): void {
+    markTutorialDone(tutorial.index);
+    this.view.hideHint();
+    this.view.setBlocked([]);
+    this.hintText.setText('');
+    playStars(1, (delay, fn) => this.time.delayedCall(delay, fn));
+    const next = TUTORIALS.find((t) => t.index === tutorial.index + 1);
+    const first = LEVELS[0];
+    showTutorialDone(this, tutorial.done, [
+      next
+        ? ['Дальше', () => this.scene.restart({ tutorial: next })]
+        : ['Играть 1-1', () => this.scene.restart(first ? { level: first } : {})],
+      ['Карта уровней', () => this.scene.start('LevelMap', { floor: 1 })],
+    ]);
   }
 
   update(time: number): void {
     // Пока идёт ход, пауза не считается: думать игрок начинает, когда поле успокоилось
     if (this.busy) this.lastActionAt = time;
-    if (this.busy || this.hintShown || this.mode.type !== 'idle') return;
+    if (this.tutorial || this.busy || this.hintShown || this.mode.type !== 'idle') return;
     if (time - this.lastActionAt < HINT_DELAY_MS) return;
     this.hintShown = true;
     const hint = strongestMove(this.session);
@@ -320,6 +399,7 @@ export class GameScene extends Phaser.Scene {
 
   private titleText(): string {
     if (this.gems) return 'Тестовый уровень';
+    if (this.tutorial) return this.tutorial.title;
     return this.level ? levelTitle(this.level) : `Три в ряд · ${this.difficulty.name}`;
   }
 
@@ -422,6 +502,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onTap(cell: Position): void {
+    if (!this.tutorialAllows(cell)) return;
     const board = this.session.board;
     const content = getCell(board, cell);
     const mode = this.mode;
@@ -522,6 +603,17 @@ export class GameScene extends Phaser.Scene {
   // ---------- Ходы ----------
 
   private async trySwap(a: Position, b: Position): Promise<void> {
+    if (this.tutorial) {
+      const step = this.tutorialStep;
+      const same =
+        step &&
+        ((samePos(a, step.from) && samePos(b, step.to)) ||
+          (samePos(a, step.to) && samePos(b, step.from)));
+      if (!step || !same) return;
+      // Ход всегда «от from к to»: награда встаёт туда, куда сдвинута фишка, — как задумано на поле
+      a = step.from;
+      b = step.to;
+    }
     const board = this.session.board;
     const cellA = getCell(board, a);
     const cellB = getCell(board, b);
@@ -553,6 +645,7 @@ export class GameScene extends Phaser.Scene {
     await this.animate(steps, move);
     await this.ensureMoves();
     if (this.session.isOver) {
+      if (this.tutorial) return this.finishTutorial(this.tutorial);
       await (this.session instanceof LevelSession
         ? this.finishLevel(this.session)
         : this.finishGame());
@@ -560,6 +653,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.busy = false;
     this.updateBonusShop();
+    this.showTutorialStep();
   }
 
   /** Сцена анимирует шаги партии и отвечает на выборы */
@@ -655,6 +749,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Попытка уходит в статистику, а победа — в прогресс: звёзды и траты */
   private saveLevelResult(session: LevelSession): void {
+    if (this.tutorial) return;
     const { level, stars } = session;
     this.sendLevelAttempt(stars > 0 ? 'won' : 'lost');
     if (stars > 0) {
@@ -664,6 +759,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private mapData(): { floor?: number } {
+    if (this.tutorial) return { floor: 1 };
     return this.level ? { floor: floorOf(this.level.id) } : {};
   }
 
@@ -686,6 +782,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Анонимная запись попытки уровня: настоящая сложность видна только по живым игрокам */
   private sendLevelAttempt(outcome: LevelOutcome): void {
+    if (this.tutorial) return;
     const config = remoteConfig();
     const { session } = this;
     if (!config || !(session instanceof LevelSession)) return;
@@ -789,14 +886,16 @@ export class GameScene extends Phaser.Scene {
     this.view.select(marked);
     const { board } = this.session;
     this.view.setBlocked(
-      mode.type === 'aim'
-        ? allPositions(board).filter((pos) => {
-            const cell = getCell(board, pos);
-            return cell?.kind !== 'hole' && !isBonusTarget(board, pos);
-          })
-        : [],
+      this.tutorial
+        ? this.tutorialBlocked()
+        : mode.type === 'aim'
+          ? allPositions(board).filter((pos) => {
+              const cell = getCell(board, pos);
+              return cell?.kind !== 'hole' && !isBonusTarget(board, pos);
+            })
+          : [],
     );
-    this.hintText.setText(hintFor(mode));
+    this.hintText.setText(this.tutorialStep?.text ?? hintFor(mode));
     this.updateBonusShop();
   }
 
@@ -805,7 +904,9 @@ export class GameScene extends Phaser.Scene {
     this.selected = pos;
     this.view.select(pos);
     const cell = pos && getCell(this.session.board, pos);
-    this.hintText.setText(isPiece(cell) ? PIECE_HINT : hintFor(this.mode));
+    this.hintText.setText(
+      this.tutorialStep?.text ?? (isPiece(cell) ? PIECE_HINT : hintFor(this.mode)),
+    );
   }
 
   private updateScore(): void {

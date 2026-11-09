@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { FLOOR_SIZE, floorOf } from '../core/level';
 import { FLOORS } from '../levels';
+import { TUTORIALS } from '../core/tutorial';
 import { ALL_LEVELS_OPEN, floorWallet, isLevelOpen, loadLevelStars } from '../storage/progress';
 import { levelNumber } from '../ui/levelText';
 import { TransferDialog } from '../ui/TransferDialog';
@@ -96,9 +97,29 @@ export class LevelMapScene extends Phaser.Scene {
 
     const rows = Math.ceil(FLOOR_SIZE / COLUMNS);
     const backY = FIRST_ROW_Y + rows * ROW_STEP + MENU_BUTTON_GAP / 2 + MENU_BUTTON_HEIGHT / 2 - 60;
-    createMenuButton(this, centerX, backY, [menuButtonLabel(this, 'Назад')], () =>
-      this.scene.start('Menu'),
+    // Обучение — перед 1-1: на первом этаже его можно пройти снова. Кнопка делит ряд с «Назад»,
+    // иначе нижняя кнопка не помещается на экран
+    const tutorial = this.floor === 1 ? TUTORIALS[0] : undefined;
+    const halfWidth = (CELL_WIDTH * 2 + COLUMN_STEP - CELL_WIDTH) / 2 - MENU_BUTTON_GAP / 2;
+    const halfStep = halfWidth / 2 + MENU_BUTTON_GAP / 4;
+    createMenuButton(
+      this,
+      tutorial ? centerX - halfStep : centerX,
+      backY,
+      [menuButtonLabel(this, 'Назад')],
+      () => this.scene.start('Menu'),
+      tutorial ? halfWidth : undefined,
     );
+    if (tutorial) {
+      createMenuButton(
+        this,
+        centerX + halfStep,
+        backY,
+        [menuButtonLabel(this, 'Обучение')],
+        () => this.scene.start('Game', { tutorial }),
+        halfWidth,
+      );
+    }
     createMenuButton(
       this,
       centerX,
