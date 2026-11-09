@@ -30,6 +30,7 @@ import { chestParts, iceImage, obstacleImage, setCoalArt } from './obstacleArt';
 import { drawPiece } from './pieceArt';
 import {
   addCrystal,
+  type CrystalSet,
   CRYSTAL_BLUE_FIELD,
   CRYSTAL_CELL,
   CRYSTAL_CELL_ALPHA,
@@ -75,6 +76,8 @@ export class BoardView {
   coalLayers: number = COAL_MAX_LAYERS;
   /** Тестовый уровень с экрана правил: фишки — анимированные камень, ромб и кристалл (лист грузит GameScene) */
   gems = false;
+  /** Какой набор кристаллов рисовать: у тестового уровня свой */
+  crystalSet: CrystalSet = 'campaign';
   private readonly plateLayer: Phaser.GameObjects.Container;
 
   constructor(
@@ -441,7 +444,15 @@ export class BoardView {
       children = [obstacleImage(this.scene, name, this.cellSize)];
     } else if (cell.kind === 'tile' && this.gems) {
       children = [
-        addCrystal(this.scene, cell.level, cell.color, 0, 0, this.cellSize * CRYSTAL_PIECE_SHARE),
+        addCrystal(
+          this.scene,
+          cell.level,
+          cell.color,
+          0,
+          0,
+          this.cellSize * CRYSTAL_PIECE_SHARE,
+          this.crystalSet,
+        ),
       ];
     } else if (cell.kind === 'tile') {
       const body = this.scene.add.graphics();

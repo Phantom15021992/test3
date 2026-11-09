@@ -24,42 +24,63 @@ export const CRYSTAL_CELL = 'crystal-cell';
  * кристаллы с перекраской)
  */
 export const CRYSTAL_SHEET = true;
-const SHEET_KEY = 'crystal-sheet';
 
-export const CRYSTAL_FILES: readonly { key: string; path: string }[] = CRYSTAL_SHEET
-  ? [
-      { key: SHEET_KEY, path: 'assets/crystals/gems-sheet.webp' },
-      { key: CRYSTAL_CELL, path: 'assets/crystals/cell.png' },
-    ]
-  : [
+type SheetColor = 'red' | 'blue' | 'green' | 'orange' | 'yellow' | 'cyan';
+
+/**
+ * Наборы кристаллов-листов: кампания — третий набор художника, тестовый уровень — четвёртый (на пробу).
+ * rows — цвета строк листа сверху вниз (лишние строки ниже не берутся); byPalette — цвет палитры игры
+ * (синий, жёлтый, красный, зелёный, фиолетовый, оранжевый, голубой) → строка листа: чего на листе нет,
+ * то берётся похожим
+ */
+interface SheetSet {
+  key: string;
+  path: string;
+  rows: readonly SheetColor[];
+  byPalette: readonly SheetColor[];
+}
+
+export type CrystalSet = 'campaign' | 'test';
+
+const SHEETS: Record<CrystalSet, SheetSet> = {
+  campaign: {
+    key: 'crystal-sheet',
+    path: 'assets/crystals/gems-sheet.webp',
+    rows: ['red', 'blue', 'green', 'orange', 'yellow'],
+    byPalette: ['blue', 'yellow', 'red', 'green', 'blue', 'orange', 'blue'],
+  },
+  // Четвёртый набор: 6 строк, последняя — повтор синей, поэтому берутся первые 5
+  test: {
+    key: 'crystal-sheet-2',
+    path: 'assets/crystals/gems-sheet-2.webp',
+    rows: ['green', 'blue', 'red', 'yellow', 'cyan'],
+    byPalette: ['blue', 'yellow', 'red', 'green', 'blue', 'yellow', 'cyan'],
+  },
+};
+
+/** Картинки, которые сцене нужно загрузить для набора */
+export function crystalFiles(set: CrystalSet): readonly { key: string; path: string }[] {
+  if (!CRYSTAL_SHEET) {
+    return [
       { key: 'crystal-src-1', path: 'assets/crystals/level1.png' },
       { key: 'crystal-src-2', path: 'assets/crystals/level2.png' },
       { key: 'crystal-src-3', path: 'assets/crystals/level3.webp' },
       { key: CRYSTAL_CELL, path: 'assets/crystals/cell.png' },
     ];
+  }
+  return [
+    { key: SHEETS[set].key, path: SHEETS[set].path },
+    { key: CRYSTAL_CELL, path: 'assets/crystals/cell.png' },
+  ];
+}
 
-/** Строки листа сверху вниз */
-const SHEET_ROWS = ['red', 'blue', 'green', 'orange', 'yellow'] as const;
-type SheetColor = (typeof SHEET_ROWS)[number];
-/**
- * Цвет палитры игры (синий, жёлтый, красный, зелёный, фиолетовый, оранжевый, голубой) → строка листа.
- * Фиолетового и голубого на листе нет — пока синие
- */
-const SHEET_BY_PALETTE: readonly SheetColor[] = [
-  'blue',
-  'yellow',
-  'red',
-  'green',
-  'blue',
-  'orange',
-  'blue',
-];
 const SHEET_STAR_TINTS: Record<SheetColor, number> = {
   red: 0xffd0b8,
   blue: 0xa8f4ff,
   green: 0xb8ffd0,
   orange: 0xffdcb0,
   yellow: 0xfff4b0,
+  cyan: 0xb8fff6,
 };
 /** Нарисованное сияние «дышит»: поверх фишки проступает его копия — у 1 уровня сияния нет */
 const SHEET_GLOWS: Record<1 | 2 | 3, number> = { 1: 0, 2: 0.45, 3: 0.65 };
@@ -96,17 +117,21 @@ interface Layer {
   bodySize: number;
 }
 const layers = new Map<string, Layer>();
-const bodyKey = (level: number, color: string) => `crystal-${color}-${level}`;
-const glowKey = (level: number, color: string) => `crystal-glow-${color}-${level}`;
+/** Ключи текстур; у листов — с набором, у второго набора (перекраска) — без него */
+const bodyKey = (level: number, color: string, set = '') => `crystal-${set}${color}-${level}`;
+const glowKey = (level: number, color: string, set = '') => `crystal-glow-${set}${color}-${level}`;
+const setPrefix = (set: CrystalSet) => (CRYSTAL_SHEET ? `${set}-` : '');
 
 /** Готовит фишки из картинок: режет лист или перекрашивает второй набор; картинки должны быть уже загружены */
-export function createCrystalTextures(scene: Phaser.Scene): void {
-  if (layers.size > 0 && scene.textures.exists(bodyKey(3, 'red'))) return;
+export function createCrystalTextures(scene: Phaser.Scene, set: CrystalSet = 'campaign'): void {
   if (CRYSTAL_SHEET) {
-    cutSheet(scene);
+    const sheet = SHEETS[set];
+    if (scene.textures.exists(bodyKey(3, sheet.rows[0]!, setPrefix(set)))) return;
+    cutSheet(scene, sheet, setPrefix(set));
     drawStar(scene);
     return;
   }
+  if (layers.size > 0 && scene.textures.exists(bodyKey(3, 'red'))) return;
   for (const level of [1, 2, 3] as const) {
     const source = scene.textures.get(`crystal-src-${level}`).getSourceImage() as HTMLImageElement;
     const base = document.createElement('canvas');
@@ -149,8 +174,8 @@ function addTexture(scene: Phaser.Scene, key: string, canvas: HTMLCanvasElement)
  * Режет лист третьего набора на фишки. Фон листа уже прозрачный, сияние нарисовано полупрозрачным —
  * фишки берутся как есть, ищутся по пустым полосам между ними
  */
-function cutSheet(scene: Phaser.Scene): void {
-  const source = scene.textures.get(SHEET_KEY).getSourceImage() as HTMLImageElement;
+function cutSheet(scene: Phaser.Scene, set: SheetSet, prefix: string): void {
+  const source = scene.textures.get(set.key).getSourceImage() as HTMLImageElement;
   const sheet = document.createElement('canvas');
   sheet.width = source.width;
   sheet.height = source.height;
@@ -161,8 +186,8 @@ function cutSheet(scene: Phaser.Scene): void {
   const rows = inkSpans(sheet.height, (y) =>
     countInk(pixels, sheet.width, 0, sheet.width, y, 'row'),
   );
-  if (rows.length !== SHEET_ROWS.length) throw new Error(`На листе ${rows.length} рядов фишек`);
-  SHEET_ROWS.forEach((color, row) => {
+  if (rows.length < set.rows.length) throw new Error(`На листе ${rows.length} рядов фишек`);
+  set.rows.forEach((color, row) => {
     const [top, bottom] = rows[row]!;
     // Сияния соседних фишек в ряду бывают сомкнуты: столбцы делятся по самому пустому месту у трети ширины
     const ink = (x: number) => countInk(pixels, sheet.width, top, bottom, x, 'col');
@@ -198,14 +223,16 @@ function cutSheet(scene: Phaser.Scene): void {
       ctx.drawImage(sheet, sx, sy, cellW, cellH, 0, 0, cellW, cellH);
       // Размер и центр фишки — по плотной части (без сияния), иначе фишки с сиянием были бы мельче
       const box = opaqueBox(canvas, 250);
-      const key = bodyKey(level, color);
+      const key = bodyKey(level, color, prefix);
       addTexture(scene, key, canvas);
       layers.set(key, {
         originX: (box.x + box.w / 2) / cellW,
         originY: (box.y + box.h / 2) / cellH,
         bodySize: Math.max(box.w, box.h),
       });
-      if (SHEET_GLOWS[level] > 0) addTexture(scene, glowKey(level, color), glowOnly(canvas));
+      if (SHEET_GLOWS[level] > 0) {
+        addTexture(scene, glowKey(level, color, prefix), glowOnly(canvas));
+      }
     }
   });
 }
@@ -379,27 +406,29 @@ export function addCrystal(
   x: number,
   y: number,
   size: number,
+  set: CrystalSet = 'campaign',
 ): Phaser.GameObjects.Container {
   const color = CRYSTAL_SHEET
-    ? (SHEET_BY_PALETTE[colorIndex] ?? 'blue')
+    ? (SHEETS[set].byPalette[colorIndex] ?? 'blue')
     : (SPARKLE_COLORS[colorIndex] ?? SPARKLE_COLORS[0]);
+  const prefix = setPrefix(set);
   const tint = CRYSTAL_SHEET
     ? SHEET_STAR_TINTS[color as SheetColor]
     : STAR_TINTS[color as SparkleColor];
-  const layer = layers.get(bodyKey(level, color))!;
+  const layer = layers.get(bodyKey(level, color, prefix))!;
   const scale = size / layer.bodySize;
   const container = scene.add.container(x, y);
   const phase = Math.random() * PULSE_MS;
   const [glowFrom, glowTo] = GLOWS[level];
   const body = scene.add
-    .image(0, 0, bodyKey(level, color))
+    .image(0, 0, bodyKey(level, color, prefix))
     .setOrigin(layer.originX, layer.originY)
     .setScale(scale);
   container.add(body);
   if (CRYSTAL_SHEET && SHEET_GLOWS[level] > 0) {
     // Нарисованное сияние дышит: поверх фишки то проступает, то гаснет его копия
     const glow = scene.add
-      .image(0, 0, glowKey(level, color))
+      .image(0, 0, glowKey(level, color, prefix))
       .setOrigin(layer.originX, layer.originY)
       .setScale(scale)
       .setAlpha(0);
@@ -415,7 +444,7 @@ export function addCrystal(
     });
   } else if (!CRYSTAL_SHEET && glowTo > 0) {
     const glow = scene.add
-      .image(0, 0, glowKey(level, color))
+      .image(0, 0, glowKey(level, color, prefix))
       .setOrigin(layer.originX, layer.originY)
       .setScale(scale * 1.08)
       .setAlpha(glowFrom);

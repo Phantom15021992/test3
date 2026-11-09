@@ -65,7 +65,7 @@ import {
 } from '../ui/levelText';
 import { HIGHLIGHT_COLOR, UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/palette';
 import { BoardView } from '../view/BoardView';
-import { CRYSTAL_FILES, createCrystalTextures } from '../view/crystalArt';
+import { createCrystalTextures, crystalFiles, type CrystalSet } from '../view/crystalArt';
 import { debugSeed, startGame } from './startGame';
 import { playCues, playSound, playStars } from '../audio/gameSounds';
 import { StepSoundTracker, type ProgressView } from '../audio/stepSounds';
@@ -174,10 +174,15 @@ export class GameScene extends Phaser.Scene {
     return this.gems || this.level !== null;
   }
 
+  /** Тестовый уровень пробует новый набор кристаллов художника, кампания — с проверенным */
+  private get crystalSet(): CrystalSet {
+    return this.gems ? 'test' : 'campaign';
+  }
+
   /** Лист кристаллов грузится только там, где они нужны */
   preload(): void {
     if (!this.crystals) return;
-    for (const { key, path } of CRYSTAL_FILES) {
+    for (const { key, path } of crystalFiles(this.crystalSet)) {
       if (!this.textures.exists(key)) this.load.image(key, path);
     }
   }
@@ -223,7 +228,8 @@ export class GameScene extends Phaser.Scene {
     this.view = new BoardView(this, originX, originY, cellSize);
     this.view.gems = this.crystals;
     // Лист кристаллов режется на фишки до первой отрисовки поля
-    if (this.crystals) createCrystalTextures(this);
+    this.view.crystalSet = this.crystalSet;
+    if (this.crystals) createCrystalTextures(this, this.crystalSet);
     if (this.level?.coalLayers) this.view.coalLayers = this.level.coalLayers;
     this.view.render(this.session.board);
     this.refreshIce();
