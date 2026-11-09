@@ -18,6 +18,8 @@ import {
   HINT_DELAY_MS,
   MOVE_LIMIT,
   SWIPE_THRESHOLD,
+  TEST_LEVEL_SALT,
+  TEST_LEVEL_SHARES,
   type Difficulty,
   type DifficultyId,
 } from '../core/config';
@@ -27,6 +29,8 @@ import { areAdjacent, isValidSwap } from '../core/moves';
 import type { ChoiceOption, Move, ResolveStep } from '../core/resolve';
 import { floorOf, type Level } from '../core/level';
 import { LevelSession } from '../core/levelSession';
+import { withLevels } from '../core/generate';
+import { createRng } from '../core/rng';
 import {
   locate,
   manipulatorPick,
@@ -219,6 +223,15 @@ export class GameScene extends Phaser.Scene {
       : this.level
         ? new LevelSession(seed, this.level, this.wallet)
         : new GameSession(seed, this.difficulty.colors);
+    // Тестовый уровень начинается с уже собранных ячеек: 30% поля — 2 уровня, 15% — 3 уровня
+    if (this.gems) {
+      this.session.board = withLevels(
+        this.session.board,
+        this.session.colorCount,
+        TEST_LEVEL_SHARES,
+        createRng(seed ^ TEST_LEVEL_SALT),
+      );
+    }
     if (import.meta.env.DEV) {
       // Доступ к сцене из консоли браузера для ручной проверки
       (window as unknown as { gameScene: GameScene }).gameScene = this;

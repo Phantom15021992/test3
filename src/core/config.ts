@@ -166,3 +166,11 @@ export const HINT_PULSE_MS = 450;
 
 /** Соль к seed попытки для ГСЧ, который прячет золото (hiddenGold): ГСЧ партии он не трогает */
 export const HIDDEN_GOLD_SALT = 0x5f3759df;
+
+/**
+ * Тестовый уровень (по просьбе владельца): стартовое поле уже наполовину собрано — доля фишек, поднятых
+ * до 2 и 3 уровня (`withLevels` в generate.ts). В свободной игре и кампании не используется
+ */
+export const TEST_LEVEL_SHARES = { 2: 0.3, 3: 0.15 } as const;
+/** Своё зерно для раскладки уровней: ГСЧ партии не трогается */
+export const TEST_LEVEL_SALT = 0x2c1b3a;

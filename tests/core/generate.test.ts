@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createEmptyBoard } from '../../src/core/board';
-import { generateStartBoard } from '../../src/core/generate';
+import { generateStartBoard, withLevels } from '../../src/core/generate';
 import { findMatches } from '../../src/core/match';
-import { hasPossibleMove } from '../../src/core/moves';
+import { hasPossibleMove, hasTileMove } from '../../src/core/moves';
 import { createRng } from '../../src/core/rng';
 import { parseBoard } from '../helpers/parseBoard';
 
@@ -44,5 +44,29 @@ describe('generateStartBoard', () => {
 
   it('бросает ошибку, если поле невозможно', () => {
     expect(() => generateStartBoard(createEmptyBoard(3, 3), 1, createRng(1))).toThrow();
+  });
+});
+
+describe('withLevels — стартовое поле с уже собранными ячейками', () => {
+  it('30% ячеек 2 уровня и 15% — 3 уровня, без готовых совпадений и с ходом, цвета — из набора', () => {
+    for (let seed = 1; seed <= 30; seed++) {
+      const start = generateStartBoard(createEmptyBoard(10, 10), 4, createRng(seed));
+      const board = withLevels(start, 4, { 2: 0.3, 3: 0.15 }, createRng(seed + 1000));
+      const tiles = board.flat().filter((c) => c?.kind === 'tile');
+      const level = (n: number) => tiles.filter((c) => c?.kind === 'tile' && c.level === n).length;
+      expect(level(2), `seed ${seed}`).toBe(30);
+      expect(level(3)).toBe(15);
+      expect(level(1)).toBe(55);
+      expect(findMatches(board)).toEqual([]);
+      expect(hasTileMove(board)).toBe(true);
+      for (const c of tiles) if (c?.kind === 'tile') expect(c.color).toBeLessThan(4);
+    }
+  });
+
+  it('исходное поле не меняется', () => {
+    const start = generateStartBoard(createEmptyBoard(10, 10), 4, createRng(7));
+    const copy = JSON.stringify(start);
+    withLevels(start, 4, { 2: 0.3, 3: 0.15 }, createRng(8));
+    expect(JSON.stringify(start)).toBe(copy);
   });
 });
