@@ -829,7 +829,7 @@ export class GameScene extends Phaser.Scene {
    */
   private async finishGame(): Promise<void> {
     const { session } = this;
-    this.hintText.setText('Ходы закончились — спецфишки срабатывают!');
+    this.hintText.setText('Ходы закончились — бустеры срабатывают!');
     const scoreBeforeFinale = session.score;
     await this.animate(session.finale());
     this.hintText.setText('');
@@ -855,8 +855,8 @@ export class GameScene extends Phaser.Scene {
     if (hasPieces(session.board)) {
       this.hintText.setText(
         session.movesLeft === 0
-          ? 'Ходы закончились — спецфишки срабатывают!'
-          : 'Три звезды! Оставшиеся спецфишки срабатывают',
+          ? 'Ходы закончились — бустеры срабатывают!'
+          : 'Три звезды! Оставшиеся бустеры срабатывают',
       );
       await this.animate(session.campaignFinale());
       this.hintText.setText('');
@@ -1094,7 +1094,7 @@ function isOnField(cell: Cell | undefined): boolean {
 
 const HINT_TEXTS: Readonly<Record<HintKind, string>> = {
   swap: 'Подсказка: поменяйте отмеченные клетки',
-  fire: 'Подсказка: двойной клик по спецфишке',
+  fire: 'Подсказка: двойной клик по бустеру',
   rainbow: 'Подсказка: нажмите на радугу, затем на отмеченную фишку',
 };
 

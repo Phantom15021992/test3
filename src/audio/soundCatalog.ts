@@ -621,8 +621,8 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
   // ---------- Спецфишки ----------
   {
     id: 10,
-    group: 'Спецфишки',
-    title: 'Появление спецфишки',
+    group: 'Бустеры',
+    title: 'Появление бустера',
     chosen: 5,
     // Полностью новый набор: прежние варианты не подошли. Ниже, с искрами, каждый раз чуть разные
     variants: [
@@ -678,7 +678,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
   },
   {
     id: 11,
-    group: 'Спецфишки',
+    group: 'Бустеры',
     title: 'Ракета',
     chosen: 2,
     variants: [
@@ -695,7 +695,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
   },
   {
     id: 12,
-    group: 'Спецфишки',
+    group: 'Бустеры',
     title: 'Бомба 3×3',
     chosen: 2,
     // Новый набор: прежние не подошли. Короче и легче мега-бомбы, каждый раз чуть разный
@@ -727,7 +727,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
   },
   {
     id: 13,
-    group: 'Спецфишки',
+    group: 'Бустеры',
     title: 'Мега-бомба 5×5',
     chosen: 0,
     // Новый набор: прежние не подошли. Взрыв кристаллов и камней — без электронного «бума», с разбросом
@@ -775,7 +775,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
   },
   {
     id: 14,
-    group: 'Спецфишки',
+    group: 'Бустеры',
     title: 'Радуга',
     chosen: 0,
     doubtful: true,
@@ -797,7 +797,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
   },
   {
     id: 15,
-    group: 'Спецфишки',
+    group: 'Бустеры',
     title: 'Манипулятор',
     chosen: 2,
     variants: [
@@ -820,7 +820,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 16,
     code: '16.1',
     chosen: 0,
-    group: 'Спецфишки',
+    group: 'Бустеры',
     title: 'Комбо: ракета + ракета (крест)',
     variants: [
       (s) => {
@@ -833,7 +833,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 16,
     code: '16.2',
     chosen: 0,
-    group: 'Спецфишки',
+    group: 'Бустеры',
     title: 'Комбо: ракета + бомба',
     variants: [
       (s) => {
@@ -846,7 +846,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 16,
     code: '16.3',
     chosen: 0,
-    group: 'Спецфишки',
+    group: 'Бустеры',
     title: 'Комбо: бомба + бомба (взрыв 5×5)',
     variants: [
       (s) => {
@@ -870,7 +870,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     code: '16.4',
     chosen: 0,
     doubtful: true,
-    group: 'Спецфишки',
+    group: 'Бустеры',
     title: 'Комбо: радуга + ракета',
     variants: [
       (s) => {
@@ -885,7 +885,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     code: '16.5',
     chosen: 0,
     doubtful: true,
-    group: 'Спецфишки',
+    group: 'Бустеры',
     title: 'Комбо: радуга + бомба',
     variants: [
       (s) => {
@@ -900,7 +900,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     code: '16.6',
     chosen: 0,
     doubtful: true,
-    group: 'Спецфишки',
+    group: 'Бустеры',
     title: 'Комбо: радуга + радуга (всё поле)',
     variants: [
       (s) => {
@@ -915,7 +915,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 16,
     code: '16.7',
     chosen: 0,
-    group: 'Спецфишки',
+    group: 'Бустеры',
     title: 'Комбо: мега-бомба + ракета (5 строк + 5 столбцов)',
     variants: [
       (s) => {
@@ -928,7 +928,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 16,
     code: '16.8',
     chosen: 0,
-    group: 'Спецфишки',
+    group: 'Бустеры',
     title: 'Комбо: мега-бомба + бомба (взрыв 7×7)',
     variants: [
       (s) => {
@@ -941,7 +941,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     id: 16,
     code: '16.9',
     chosen: 0,
-    group: 'Спецфишки',
+    group: 'Бустеры',
     title: 'Комбо: мега-бомба + мега-бомба (всё поле)',
     variants: [
       (s) => {
@@ -955,7 +955,7 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
     code: '16.10',
     chosen: 0,
     doubtful: true,
-    group: 'Спецфишки',
+    group: 'Бустеры',
     title: 'Комбо: мега-бомба + радуга',
     variants: [
       (s) => {
@@ -967,8 +967,8 @@ export const SOUND_CATALOG: readonly SoundEntry[] = [
   },
   {
     id: 17,
-    group: 'Спецфишки',
-    title: 'Покупка спецфишки',
+    group: 'Бустеры',
+    title: 'Покупка бустера',
     chosen: 0,
     variants: [
       (s) => run(s, 'glass', [p(7), p(10)], 0.09, { dur: 0.5, vol: 0.13 }),

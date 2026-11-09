@@ -147,7 +147,7 @@ export class RulesPanel {
   }
 
   private drawSpecials(x: number, top: number): void {
-    this.text(x, top + HEADER_HEIGHT / 2 - 4, 'Спецфишки', FONT_HEADER);
+    this.text(x, top + HEADER_HEIGHT / 2 - 4, 'Бустеры', FONT_HEADER);
     let y = top + HEADER_HEIGHT;
     this.text(x, y + SUBHEADER_HEIGHT / 2, ACTIVATION_NOTE, FONT_ROW, UI_MUTED_TEXT_COLOR);
     y += SUBHEADER_HEIGHT;
@@ -156,7 +156,7 @@ export class RulesPanel {
       this.text(x + ICON_SIZE + TEXT_GAP, y + ROW_HEIGHT / 2, text, FONT_ROW);
       y += ROW_HEIGHT;
     }
-    this.text(x, y + ROW_HEIGHT / 2, 'Комбо: обмен двух спецфишек', FONT_ROW, UI_MUTED_TEXT_COLOR);
+    this.text(x, y + ROW_HEIGHT / 2, 'Комбо: обмен двух бустеров', FONT_ROW, UI_MUTED_TEXT_COLOR);
     y += ROW_HEIGHT;
     for (const { pair, text } of COMBOS) {
       const rowY = y + ROW_HEIGHT / 2;
