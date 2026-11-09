@@ -277,6 +277,8 @@ function checkTutorial3(t: Tutorial, seed: number): boolean {
   return session.isOver;
 }
 
+declare const process: { argv: string[] };
+
 // Какое обучение подбирать: npx vite-node scripts/designTutorials.ts [2|3]
 const which = process.argv[2];
 const two = which === '3' ? null : design2();
