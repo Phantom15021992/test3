@@ -13,10 +13,13 @@ export const TILE_COLORS: readonly number[] = [
 
 export const BOARD_CELL_DARK = 0x262b40;
 export const BOARD_CELL_LIGHT = 0x2c3249;
-/** Тестовый уровень (новый набор кристаллов): экран и шахматка поля на ~40% темнее — сияние кристаллов виднее */
-export const TEST_BACKGROUND = 0x10131c;
-export const TEST_CELL_DARK = 0x171a27;
-export const TEST_CELL_LIGHT = 0x1b1f2d;
+/**
+ * Тестовый уровень (новый набор кристаллов): тёмно-фиолетовый фон, как на листе художника (#150c18), шахматка
+ * поля — того же оттенка, чуть светлее, чтобы клетки читались. На тёмном фоне сияние кристаллов виднее
+ */
+export const TEST_BACKGROUND = 0x150c18;
+export const TEST_CELL_DARK = 0x1d1323;
+export const TEST_CELL_LIGHT = 0x24192b;
 export const SELECTION_COLOR = 0xffffff;
 /** Клетки, куда нельзя направить покупку */
 export const BLOCKED_COLOR = 0x0b0e1a;
