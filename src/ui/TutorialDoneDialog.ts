@@ -11,47 +11,58 @@ const BUTTON_STEP = 112;
 
 const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
 
-// Окно конца обучения: что игрок узнал и куда дальше — без звёзд, у обучения их нет.
+// Окно обучения: рассказ перед шагом или итог в конце — без звёзд, у обучения их нет.
+// Возвращает свои объекты: окно рассказа закрывается, и обучение идёт дальше.
 export function showTutorialDone(
   scene: Phaser.Scene,
   text: string,
   buttons: readonly (readonly [string, () => void])[],
-): void {
+  title = 'Отлично!',
+): Phaser.GameObjects.GameObject[] {
+  const objects: Phaser.GameObjects.GameObject[] = [];
   const { width, height } = scene.scale;
   const centerX = width / 2;
   const top = (height - PANEL_HEIGHT) / 2;
   // Затемнение перехватывает нажатия, чтобы поле под окном не реагировало
-  scene.add
-    .rectangle(0, 0, width, height, 0x000000, 0.75)
-    .setOrigin(0, 0)
-    .setInteractive()
-    .setDepth(DEPTH);
-  scene.add
-    .graphics()
-    .fillStyle(UI_PANEL_COLOR)
-    .fillRoundedRect(centerX - PANEL_WIDTH / 2, top, PANEL_WIDTH, PANEL_HEIGHT, 28)
-    .setDepth(DEPTH);
-  scene.add
-    .text(centerX, top + 70, 'Отлично!', {
-      fontFamily: 'sans-serif',
-      fontSize: '48px',
-      color: hex(HIGHLIGHT_COLOR),
-    })
-    .setOrigin(0.5)
-    .setDepth(DEPTH);
-  scene.add
-    .text(centerX, top + 120, text, {
-      fontFamily: 'sans-serif',
-      fontSize: '28px',
-      color: UI_MUTED_TEXT_COLOR,
-      align: 'center',
-      lineSpacing: 6,
-      wordWrap: { width: PANEL_WIDTH - 80 },
-    })
-    .setOrigin(0.5, 0)
-    .setDepth(DEPTH);
+  objects.push(
+    scene.add
+      .rectangle(0, 0, width, height, 0x000000, 0.75)
+      .setOrigin(0, 0)
+      .setInteractive()
+      .setDepth(DEPTH),
+  );
+  objects.push(
+    scene.add
+      .graphics()
+      .fillStyle(UI_PANEL_COLOR)
+      .fillRoundedRect(centerX - PANEL_WIDTH / 2, top, PANEL_WIDTH, PANEL_HEIGHT, 28)
+      .setDepth(DEPTH),
+  );
+  objects.push(
+    scene.add
+      .text(centerX, top + 70, title, {
+        fontFamily: 'sans-serif',
+        fontSize: '48px',
+        color: hex(HIGHLIGHT_COLOR),
+      })
+      .setOrigin(0.5)
+      .setDepth(DEPTH),
+  );
+  objects.push(
+    scene.add
+      .text(centerX, top + 120, text, {
+        fontFamily: 'sans-serif',
+        fontSize: '28px',
+        color: UI_MUTED_TEXT_COLOR,
+        align: 'center',
+        lineSpacing: 6,
+        wordWrap: { width: PANEL_WIDTH - 80 },
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(DEPTH),
+  );
   buttons.forEach(([label, onClick], i) => {
-    createMenuButton(
+    const button = createMenuButton(
       scene,
       centerX,
       top + PANEL_HEIGHT - 80 - (buttons.length - 1 - i) * BUTTON_STEP,
@@ -60,5 +71,7 @@ export function showTutorialDone(
       BUTTON_WIDTH,
       BUTTON_HEIGHT,
     ).setDepth(DEPTH);
+    objects.push(button);
   });
+  return objects;
 }

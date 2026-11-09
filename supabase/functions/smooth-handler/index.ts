@@ -825,6 +825,7 @@ function* resolveMove(board, move, ctx) {
     let direct3 = 0;
     for (const group of groups) {
       const outcome = groupOutcome(group, landing, ctx.campaign ?? false);
+      if (ctx.noSpecials) outcome.placements = outcome.placements.filter(({ cell }) => isTile(cell));
       removal.push(...group.cells, ...boxesAround(current, group.cells));
       addBlows(matchBlows, coalAround(current, group.cells), group.level);
       const step = dropped ? Math.min(++comboSteps, COMBO_MAX_STEPS) : 0;
@@ -1094,6 +1095,10 @@ var GameSession = class {
   get isOver() {
     return this.moves >= this.moveLimit;
   }
+  /** Совпадения без спецфишек — только в обучении объединению */
+  get noSpecials() {
+    return false;
+  }
   /** Правила кампании: бомбы из квадрата 2×2 ячеек 2 уровня и из 6+ фишек 1 уровня */
   get campaign() {
     return false;
@@ -1109,7 +1114,8 @@ var GameSession = class {
     const steps = resolveMove(this.board, move, {
       colorCount: this.colorCount,
       rng,
-      campaign: this.campaign
+      campaign: this.campaign,
+      noSpecials: this.noSpecials
     });
     let next = steps.next();
     while (!next.done) {

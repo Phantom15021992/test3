@@ -62,6 +62,11 @@ export class GameSession {
     return this.moves >= this.moveLimit;
   }
 
+  /** Совпадения без спецфишек — только в обучении объединению */
+  get noSpecials(): boolean {
+    return false;
+  }
+
   /** Правила кампании: бомбы из квадрата 2×2 ячеек 2 уровня и из 6+ фишек 1 уровня */
   get campaign(): boolean {
     return false;
@@ -80,6 +85,7 @@ export class GameSession {
       colorCount: this.colorCount,
       rng,
       campaign: this.campaign,
+      noSpecials: this.noSpecials,
     });
     let next = steps.next();
     while (!next.done) {

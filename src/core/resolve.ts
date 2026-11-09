@@ -118,6 +118,11 @@ export interface ResolveContext {
   /** Правила кампании (в свободной игре их нет): квадрат 2×2 из ячеек 2 уровня и группа из 6+ фишек
    *  1 уровня дают ещё и бомбу */
   campaign?: boolean;
+  /**
+   * Совпадения не дают спецфишек (обучение объединению): награда та же, но без спецфишек; если награда —
+   * только спецфишка (например, три ячейки 3 уровня), клетки просто уходят с очками
+   */
+  noSpecials?: boolean;
 }
 
 /** Защита от бесконечного цикла при ошибке в логике */
@@ -229,6 +234,7 @@ export function* resolveMove(
 
     for (const group of groups) {
       const outcome = groupOutcome(group, landing, ctx.campaign ?? false);
+      if (ctx.noSpecials) outcome.placements = outcome.placements.filter(({ cell }) => isTile(cell));
       removal.push(...group.cells, ...boxesAround(current, group.cells));
       // Совпадение рядом с углём снимает столько слоёв, какого уровня его фишки
       addBlows(matchBlows, coalAround(current, group.cells), group.level);

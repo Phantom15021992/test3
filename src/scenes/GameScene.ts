@@ -28,6 +28,10 @@ import type { ChoiceOption, Move, ResolveStep } from '../core/resolve';
 import { floorOf, type Level } from '../core/level';
 import { LevelSession } from '../core/levelSession';
 import {
+  locate,
+  manipulatorPick,
+  rainbowPick,
+  swapFigure,
   TUTORIALS,
   tutorialLevel,
   tutorialSession,
@@ -109,6 +113,10 @@ export class GameScene extends Phaser.Scene {
   private gems = false;
   /** Обучающий уровень: поле подготовлено, подсказка видна сразу, сделать можно только её ход */
   private tutorial: Tutorial | null = null;
+  /** Номер шага обучения: рассказ без хода тоже шаг, поэтому не равен числу ходов */
+  private stepIndex = 0;
+  /** Клетки, которые подсказка даёт поменять манипулятором (выбраны в начале его шага) */
+  private manipulatorCells: { a: Position; b: Position } | null = null;
   private goalsText: Phaser.GameObjects.Text | null = null;
   /** Ширина, в которую должна поместиться строка целей */
   private goalsWidth = 0;
@@ -184,6 +192,8 @@ export class GameScene extends Phaser.Scene {
     this.busy = false;
     this.lastActionAt = this.game.loop.time;
     this.hintShown = false;
+    this.stepIndex = 0;
+    this.manipulatorCells = null;
     // Seed выдаёт сервер, чтобы партию можно было проверить. ?seed=123 — одинаковое поле при
     // каждом запуске (для отладки; в общую таблицу такая партия не попадает, см. startGame)
     const seed = debugSeed() ?? this.ticket?.seed ?? Date.now() >>> 0;
@@ -330,40 +340,124 @@ export class GameScene extends Phaser.Scene {
 
   // ---------- Обучение ----------
 
-  /** Шаг обучения, который ждёт игрока: по одному на ход */
+  /** Шаг обучения, который ждёт игрока; null — шаги кончились (игрок продолжает сам) или это не обучение */
   private get tutorialStep(): TutorialStep | null {
-    return this.tutorial?.steps[this.session.moves] ?? null;
+    return this.tutorial?.steps[this.stepIndex] ?? null;
   }
 
-  /** Подсвечивает клетки хода и затемняет остальное поле, внизу — что сделать */
-  private showTutorialStep(): void {
+  /**
+   * Что сейчас подсказывает шаг: какие клетки можно нажать, какие подсветить и что написать. У радуги
+   * и манипулятора по нескольку нажатий: сначала сама спецфишка, потом фишки, которые она возьмёт
+   */
+  private tutorialFocus(): { allowed: Position[]; shown: Position[]; text: string } | null {
     const step = this.tutorialStep;
-    if (!step) return;
-    this.view.showHint([step.from, step.to]);
-    this.view.setBlocked(this.tutorialBlocked());
-    this.hintText.setText(step.text);
-  }
-
-  private tutorialBlocked(): Position[] {
-    const step = this.tutorialStep;
-    if (!step) return [];
+    if (!step || step.kind === 'info') return null;
     const { board } = this.session;
-    return allPositions(board).filter(
-      (pos) =>
-        getCell(board, pos)?.kind !== 'hole' && !samePos(pos, step.from) && !samePos(pos, step.to),
+    const mode = this.mode;
+    switch (step.kind) {
+      case 'swap': {
+        const from = locate(board, step.from);
+        const to = locate(board, step.to);
+        if (!from || !to) return null;
+        return { allowed: [from, to], shown: swapFigure(board, from, to), text: step.text };
+      }
+      case 'fire': {
+        const at = locate(board, step.at);
+        return at ? { allowed: [at], shown: [at], text: step.text } : null;
+      }
+      case 'rainbow': {
+        const at = locate(board, step.at);
+        const pick = rainbowPick(board);
+        if (!at || !pick) return null;
+        return mode.type === 'rainbowColor'
+          ? { allowed: [pick.at], shown: [at, pick.at], text: step.pickText }
+          : { allowed: [at], shown: [at], text: step.text };
+      }
+      case 'manipulator': {
+        const at = locate(board, step.at);
+        const pick = this.manipulatorCells;
+        if (!at || !pick) return null;
+        if (mode.type !== 'manipulator') return { allowed: [at], shown: [at], text: step.text };
+        return mode.first
+          ? { allowed: [pick.b], shown: [pick.a, pick.b], text: step.secondText }
+          : { allowed: [pick.a], shown: [pick.a], text: step.firstText };
+      }
+    }
+  }
+
+  /** Подсвечивает клетки шага и затемняет остальное поле, внизу — что сделать */
+  private showTutorialStep(): void {
+    const { tutorial } = this;
+    if (!tutorial) return;
+    const step = this.tutorialStep;
+    if (step?.kind === 'info') return this.showTutorialInfo(step.title, step.text);
+    if (!step) {
+      // Подсказки кончились: игрок играет сам, обычная подсказка — по паузе
+      this.view.setBlocked([]);
+      this.hintText.setText(this.tutorialFreeText());
+      return;
+    }
+    // Клетки манипулятора выбираются один раз на шаг: перебор пар не быстрый, а поле до хода не меняется
+    if (step.kind === 'manipulator' && this.mode.type !== 'manipulator') {
+      this.manipulatorCells = manipulatorPick(this.session.board);
+    }
+    const focus = this.tutorialFocus();
+    if (!focus) return;
+    this.view.showHint(focus.shown);
+    this.view.setBlocked(this.tutorialBlocked());
+    this.hintText.setText(focus.text);
+  }
+
+  private tutorialFreeText(): string {
+    const { tutorial, session } = this;
+    if (!tutorial?.goal || !(session instanceof LevelSession)) return tutorial?.freeText ?? '';
+    const { goal } = tutorial;
+    return `${tutorial.freeText ?? ''}: ${session.goalValue(goal)}/${goal.count}`;
+  }
+
+  /** Рассказ без хода: окно с кнопкой «Дальше»; поле в это время не нажимается */
+  private showTutorialInfo(title: string, text: string): void {
+    this.busy = true;
+    this.view.setBlocked(this.tutorialBlocked());
+    this.hintText.setText('');
+    const objects = showTutorialDone(
+      this,
+      text,
+      [
+        [
+          'Дальше',
+          () => {
+            objects.forEach((object) => object.destroy());
+            this.busy = false;
+            this.stepIndex++;
+            this.showTutorialStep();
+          },
+        ],
+      ],
+      title,
     );
   }
 
-  /** В обучении нажимать можно только клетки подсказанного хода */
+  /** Затемнено всё, кроме подсвеченного; пока идёт рассказ — всё поле */
+  private tutorialBlocked(): Position[] {
+    if (!this.tutorial || !this.tutorialStep) return [];
+    const shown = this.tutorialFocus()?.shown ?? [];
+    const { board } = this.session;
+    return allPositions(board).filter(
+      (pos) => getCell(board, pos)?.kind !== 'hole' && !shown.some((cell) => samePos(cell, pos)),
+    );
+  }
+
+  /** В обучении нажимать можно только подсказанные клетки; когда подсказки кончились — любые */
   private tutorialAllows(cell: Position): boolean {
-    const step = this.tutorialStep;
-    if (!this.tutorial) return true;
-    return step !== null && (samePos(cell, step.from) || samePos(cell, step.to));
+    if (!this.tutorial || !this.tutorialStep) return true;
+    return this.tutorialFocus()?.allowed.some((pos) => samePos(pos, cell)) ?? false;
   }
 
   /** Обучение пройдено: окно с итогом, дальше — следующее обучение или первый уровень */
   private finishTutorial(tutorial: Tutorial): void {
-    markTutorialDone(tutorial.index);
+    const won = !(this.session instanceof LevelSession) || this.session.goalsDone;
+    if (won) markTutorialDone(tutorial.index);
     this.view.hideHint();
     this.view.setBlocked([]);
     this.hintText.setText('');
@@ -371,6 +465,19 @@ export class GameScene extends Phaser.Scene {
     const first = LEVELS[0];
     // Окно — не сразу: собранная фишка должна успеть попасться на глаза (поле пока не нажимается)
     this.time.delayedCall(TUTORIAL_RESULT_DELAY_MS, () => {
+      if (!won) {
+        playSound('lose');
+        showTutorialDone(
+          this,
+          'Ходы закончились. Попробуй ещё раз — подсказки покажут фигуры снова',
+          [
+            ['Ещё раз', () => this.scene.restart({ tutorial })],
+            ['Карта уровней', () => this.scene.start('LevelMap', { floor: 1 })],
+          ],
+          'Почти получилось',
+        );
+        return;
+      }
       playStars(1, (delay, fn) => this.time.delayedCall(delay, fn));
       showTutorialDone(this, tutorial.done, [
         next
@@ -384,7 +491,8 @@ export class GameScene extends Phaser.Scene {
   update(time: number): void {
     // Пока идёт ход, пауза не считается: думать игрок начинает, когда поле успокоилось
     if (this.busy) this.lastActionAt = time;
-    if (this.tutorial || this.busy || this.hintShown || this.mode.type !== 'idle') return;
+    // В обучении своя подсказка видна всё время; обычная — только когда игрок продолжает сам
+    if (this.tutorialStep || this.busy || this.hintShown || this.mode.type !== 'idle') return;
     if (time - this.lastActionAt < HINT_DELAY_MS) return;
     this.hintShown = true;
     const hint = strongestMove(this.session);
@@ -609,16 +717,19 @@ export class GameScene extends Phaser.Scene {
   // ---------- Ходы ----------
 
   private async trySwap(a: Position, b: Position): Promise<void> {
-    if (this.tutorial) {
-      const step = this.tutorialStep;
+    const step = this.tutorialStep;
+    if (step) {
+      if (step.kind !== 'swap') return;
+      const from = locate(this.session.board, step.from);
+      const to = locate(this.session.board, step.to);
       const same =
-        step &&
-        ((samePos(a, step.from) && samePos(b, step.to)) ||
-          (samePos(a, step.to) && samePos(b, step.from)));
-      if (!step || !same) return;
+        from &&
+        to &&
+        ((samePos(a, from) && samePos(b, to)) || (samePos(a, to) && samePos(b, from)));
+      if (!same) return;
       // Ход всегда «от from к to»: награда встаёт туда, куда сдвинута фишка, — как задумано на поле
-      a = step.from;
-      b = step.to;
+      a = from;
+      b = to;
     }
     const board = this.session.board;
     const cellA = getCell(board, a);
@@ -644,11 +755,18 @@ export class GameScene extends Phaser.Scene {
   private async play(move: PlayerMove): Promise<void> {
     this.busy = true;
     if (this.session.moves === 0) this.startedAt = Date.now();
+    // Ход по подсказке обучения закрывает её шаг; пока он идёт, поле не затемнено
+    const guided = this.tutorialStep !== null;
+    if (guided) {
+      this.view.hideHint();
+      this.view.setBlocked([]);
+    }
     const steps = this.session.play(move);
     this.updateMoves();
     this.updateBonusShop();
     this.setSelected(null);
     await this.animate(steps, move);
+    if (guided) this.stepIndex++;
     await this.ensureMoves();
     if (this.session.isOver) {
       if (this.tutorial) return this.finishTutorial(this.tutorial);
@@ -892,7 +1010,7 @@ export class GameScene extends Phaser.Scene {
     this.view.select(marked);
     const { board } = this.session;
     this.view.setBlocked(
-      this.tutorial
+      this.tutorialStep
         ? this.tutorialBlocked()
         : mode.type === 'aim'
           ? allPositions(board).filter((pos) => {
@@ -901,8 +1019,10 @@ export class GameScene extends Phaser.Scene {
             })
           : [],
     );
-    this.hintText.setText(this.tutorialStep?.text ?? hintFor(mode));
+    this.hintText.setText(this.tutorialFocus()?.text ?? hintFor(mode));
     this.updateBonusShop();
+    // У радуги и манипулятора следующее нажатие — уже по другим клеткам
+    if (this.tutorialStep) this.showTutorialStep();
   }
 
   private setSelected(pos: Position | null): void {
@@ -911,7 +1031,7 @@ export class GameScene extends Phaser.Scene {
     this.view.select(pos);
     const cell = pos && getCell(this.session.board, pos);
     this.hintText.setText(
-      this.tutorialStep?.text ?? (isPiece(cell) ? PIECE_HINT : hintFor(this.mode)),
+      this.tutorialFocus()?.text ?? (isPiece(cell) ? PIECE_HINT : hintFor(this.mode)),
     );
   }
 
