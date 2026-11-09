@@ -404,6 +404,10 @@ export class GameScene extends Phaser.Scene {
     const focus = this.tutorialFocus();
     if (!focus) return;
     this.view.showHint(focus.shown);
+    // Фишки хода покачиваются навстречу друг другу: видно, какую куда сдвинуть
+    if (step.kind === 'swap' && focus.allowed.length === 2) {
+      this.view.nudge(focus.allowed[0]!, focus.allowed[1]!);
+    }
     this.view.setBlocked(this.tutorialBlocked());
     this.hintText.setText(focus.text);
   }

@@ -212,9 +212,10 @@ function checkTutorial2(t: Tutorial, seed: number): boolean {
 // ---------- Обучение 3: спецфишки ----------
 
 const SPECIALS3: [Position, Cell][] = [
-  [p(0, 0), { kind: 'piece', type: 'bomb' }],
-  [p(9, 0), { kind: 'piece', type: 'megaBomb' }],
-  [p(9, 1), { kind: 'piece', type: 'bomb' }],
+  // Бомбы отодвинуты от углов: взрыв 3×3 и 7×7 целиком на поле, радиус виден
+  [p(1, 1), { kind: 'piece', type: 'bomb' }],
+  [p(6, 3), { kind: 'piece', type: 'megaBomb' }],
+  [p(6, 2), { kind: 'piece', type: 'bomb' }],
   [p(0, 9), { kind: 'piece', type: 'rainbow' }],
   [p(0, 7), { kind: 'piece', type: 'manipulator' }],
   [p(9, 9), { kind: 'piece', type: 'rocket', direction: 'row' }],
@@ -222,8 +223,8 @@ const SPECIALS3: [Position, Cell][] = [
 
 const STEPS3: TutorialStep[] = [
   { kind: 'info', title: '', text: '' },
-  { kind: 'fire', at: p(0, 0), text: '' },
-  { kind: 'swap', from: p(9, 1), to: p(9, 0), text: '' },
+  { kind: 'fire', at: p(1, 1), text: '' },
+  { kind: 'swap', from: p(6, 2), to: p(6, 3), text: '' },
   { kind: 'fire', at: 'rocket', text: '' },
   { kind: 'rainbow', at: 'rainbow', text: '', pickText: '' },
   { kind: 'manipulator', at: 'manipulator', text: '', firstText: '', secondText: '' },
@@ -276,10 +277,12 @@ function checkTutorial3(t: Tutorial, seed: number): boolean {
   return session.isOver;
 }
 
-const two = design2();
+// Какое обучение подбирать: npx vite-node scripts/designTutorials.ts [2|3]
+const which = process.argv[2];
+const two = which === '3' ? null : design2();
 console.log('Обучение 2:', two ? `seed ${two.seed}` : 'не найдено');
 if (two) console.log(two.board.map((l) => `    '${l}',`).join('\n'));
-const three = design3();
+const three = which === '2' ? null : design3();
 console.log('Обучение 3:', three ? `seed ${three.seed}` : 'не найдено');
 if (three) console.log(three.board.map((l) => `    '${l}',`).join('\n'));
 void getCell;

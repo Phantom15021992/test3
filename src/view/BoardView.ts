@@ -48,6 +48,11 @@ const TILE_OUTLINE_WIDTH = 3;
 const COMBO_LABEL_DEPTH = 5;
 
 // Отображение поля. Состояние игры здесь не хранится — только спрайты, повторяющие поле из core.
+/** Покачивание фишек хода в обучении: на какую долю клетки они сдвигаются навстречу, как быстро и с какой паузой */
+const NUDGE_SHARE = 0.18;
+const NUDGE_MS = 320;
+const NUDGE_PAUSE_MS = 650;
+
 export class BoardView {
   private readonly background: Phaser.GameObjects.Graphics;
   private readonly iceLayer: Phaser.GameObjects.Container;
@@ -56,6 +61,8 @@ export class BoardView {
   private readonly hintLayer: Phaser.GameObjects.Graphics;
   private readonly blocked: Phaser.GameObjects.Graphics;
   private hintPulse: Phaser.Tweens.Tween | null = null;
+  /** Покачивание фишек хода в обучении: фишки и клетки, на место которых их надо вернуть */
+  private nudges: { sprite: TileSprite; pos: Position; tween: Phaser.Tweens.Tween }[] = [];
   // Новые фишки появляются над полем — маска скрывает их, пока не долетят до поля
   private readonly maskShape: Phaser.GameObjects.Graphics;
   private readonly mask: Phaser.Display.Masks.GeometryMask;
@@ -89,6 +96,7 @@ export class BoardView {
   }
 
   render(board: Board): void {
+    this.stopNudge();
     this.sprites.flat().forEach((sprite) => sprite?.destroy());
     this.coal.forEach((image) => image.destroy());
     this.coal.clear();
@@ -276,7 +284,48 @@ export class BoardView {
     });
   }
 
+  /**
+   * Подсказка обучения: фишки хода покачиваются навстречу друг другу — видно, какую куда сдвинуть.
+   * Снимается вместе с подсказкой (hideHint)
+   */
+  nudge(from: Position, to: Position): void {
+    this.stopNudge();
+    const a = this.centerOf(from);
+    const b = this.centerOf(to);
+    const dx = (b.x - a.x) * NUDGE_SHARE;
+    const dy = (b.y - a.y) * NUDGE_SHARE;
+    for (const [pos, sx, sy] of [
+      [from, dx, dy],
+      [to, -dx, -dy],
+    ] as const) {
+      const sprite = this.spriteAt(pos);
+      if (!sprite) continue;
+      const center = this.centerOf(pos);
+      const tween = this.scene.tweens.add({
+        targets: sprite,
+        x: center.x + sx,
+        y: center.y + sy,
+        duration: NUDGE_MS,
+        yoyo: true,
+        repeat: -1,
+        repeatDelay: NUDGE_PAUSE_MS,
+        ease: 'Sine.easeInOut',
+      });
+      this.nudges.push({ sprite, pos, tween });
+    }
+  }
+
+  private stopNudge(): void {
+    for (const { sprite, pos, tween } of this.nudges) {
+      tween.remove();
+      const center = this.centerOf(pos);
+      sprite.setPosition(center.x, center.y);
+    }
+    this.nudges = [];
+  }
+
   hideHint(): void {
+    this.stopNudge();
     this.hintPulse?.remove();
     this.hintPulse = null;
     this.hintLayer.clear();
