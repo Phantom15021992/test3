@@ -40,7 +40,7 @@ import {
   CRYSTAL_FIELD_COLOR,
   CRYSTAL_PIECE_SHARE,
 } from './crystalArt';
-import { drawTileShape } from './tileArt';
+import { drawDiamondShape, drawTileShape } from './tileArt';
 
 /** Поле тестового уровня чуть шире клеток: синий фон выступает каймой, как на образце художника */
 const CRYSTAL_FIELD_PAD = 0.12;
@@ -82,6 +82,8 @@ export class BoardView {
   crystalSet: CrystalSet = 'campaign';
   /** С какого уровня фишки рисуются кристаллами; ниже — обычные фигуры (круг, треугольник) */
   crystalFromLevel = 1;
+  /** Ячейка 3 уровня — алмаз вместо звезды (тестовый уровень) */
+  diamondLevel3 = false;
   private readonly plateLayer: Phaser.GameObjects.Container;
 
   constructor(
@@ -474,6 +476,10 @@ export class BoardView {
   }
 
   private drawTile(g: Phaser.GameObjects.Graphics, tile: Tile): void {
+    if (this.diamondLevel3 && tile.level === 3) {
+      drawDiamondShape(g, TILE_COLORS[tile.color] ?? 0xffffff, this.cellSize, TILE_OUTLINE_WIDTH);
+      return;
+    }
     drawTileShape(
       g,
       tile.level,
