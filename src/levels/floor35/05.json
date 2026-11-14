@@ -1,0 +1,40 @@
+{
+  "id": 345,
+  "title": "Уровень gold + color + stones",
+  "hint": "Золото — во льду и в сундуках: доломай их",
+  "layout": [
+    ".........",
+    ".........",
+    ".........",
+    "....s.s..",
+    ".........",
+    ".....s.s.",
+    "...J.J...",
+    ".JJJ.JJJ.",
+    "........."
+  ],
+  "colors": 3,
+  "moves": 35,
+  "goals": [
+    {
+      "kind": "gold",
+      "count": 3
+    },
+    {
+      "kind": "level3color",
+      "count": 4,
+      "color": 0
+    }
+  ],
+  "stars": [
+    {
+      "kind": "level3",
+      "count": 10
+    },
+    {
+      "kind": "level3",
+      "count": 15
+    }
+  ],
+  "hiddenGold": 3
+}

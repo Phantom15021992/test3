@@ -1,0 +1,39 @@
+{
+  "id": 469,
+  "title": "Уровень stones + cells + ice",
+  "hint": "Камни разбивает только взрыв",
+  "layout": [
+    "....#....",
+    "....#....",
+    "....#ss..",
+    "....#....",
+    "....#....",
+    "..Js#.J..",
+    ".JJ.#sJJ.",
+    ".JJ.#.JJ.",
+    "....#...."
+  ],
+  "colors": 3,
+  "moves": 35,
+  "goals": [
+    {
+      "kind": "ice",
+      "count": 10
+    },
+    {
+      "kind": "level3",
+      "count": 6
+    }
+  ],
+  "stars": [
+    {
+      "kind": "level3",
+      "count": 10
+    },
+    {
+      "kind": "level3",
+      "count": 15
+    }
+  ],
+  "iceCracks": true
+}

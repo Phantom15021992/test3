@@ -1,0 +1,43 @@
+{
+  "id": 329,
+  "title": "Уровень crowns + coal + ice",
+  "hint": "Опусти корону на дно поля",
+  "layout": [
+    "o.o.....",
+    "........",
+    "....cc..",
+    "....cc..",
+    "...JJ...",
+    ".JJccJJ.",
+    ".JJccJJ.",
+    "........"
+  ],
+  "colors": 3,
+  "moves": 35,
+  "goals": [
+    {
+      "kind": "item",
+      "count": 2
+    },
+    {
+      "kind": "coal",
+      "count": 2
+    },
+    {
+      "kind": "ice",
+      "count": 10
+    }
+  ],
+  "stars": [
+    {
+      "kind": "level3",
+      "count": 10
+    },
+    {
+      "kind": "level3",
+      "count": 15
+    }
+  ],
+  "coalLayers": 6,
+  "iceCracks": true
+}

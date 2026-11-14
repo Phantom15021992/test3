@@ -1,0 +1,38 @@
+{
+  "id": 279,
+  "title": "Уровень cells + stones + ice",
+  "hint": "Собирай ячейки 3 уровня",
+  "layout": [
+    ".........",
+    ".........",
+    "......s..",
+    "...ss....",
+    ".s.......",
+    ".........",
+    "..JJ.JJ..",
+    ".JJJ.JJJ.",
+    "........."
+  ],
+  "colors": 3,
+  "moves": 35,
+  "goals": [
+    {
+      "kind": "ice",
+      "count": 10
+    },
+    {
+      "kind": "level3",
+      "count": 6
+    }
+  ],
+  "stars": [
+    {
+      "kind": "level3",
+      "count": 10
+    },
+    {
+      "kind": "level3",
+      "count": 15
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "id": 359,
+  "title": "Уровень color + ice + gold",
+  "hint": "Собирай ячейки 3 уровня нужного цвета",
+  "layout": [
+    "#...##...#",
+    "..........",
+    "..........",
+    "..........",
+    "#...##...#",
+    "#...##...#",
+    "..JJ..JJ..",
+    ".JJJJJJJJ.",
+    ".JJJ..JJJ.",
+    "#...##...#"
+  ],
+  "colors": 3,
+  "moves": 35,
+  "goals": [
+    {
+      "kind": "ice",
+      "count": 18
+    },
+    {
+      "kind": "gold",
+      "count": 3
+    },
+    {
+      "kind": "level3color",
+      "count": 4,
+      "color": 1
+    }
+  ],
+  "stars": [
+    {
+      "kind": "level3",
+      "count": 10
+    },
+    {
+      "kind": "level3",
+      "count": 15
+    }
+  ],
+  "hiddenGold": 3
+}

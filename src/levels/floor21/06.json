@@ -1,0 +1,38 @@
+{
+  "id": 206,
+  "title": "Уровень ice + color",
+  "hint": "Лёд ломается, когда на его клетке исчезает фишка",
+  "layout": [
+    "........",
+    "........",
+    "........",
+    "........",
+    "...ii...",
+    ".iiiiii.",
+    ".iiiiii.",
+    "........"
+  ],
+  "colors": 3,
+  "moves": 35,
+  "goals": [
+    {
+      "kind": "ice",
+      "count": 14
+    },
+    {
+      "kind": "level3color",
+      "count": 4,
+      "color": 2
+    }
+  ],
+  "stars": [
+    {
+      "kind": "level3",
+      "count": 10
+    },
+    {
+      "kind": "level3",
+      "count": 15
+    }
+  ]
+}

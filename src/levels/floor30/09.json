@@ -1,0 +1,45 @@
+{
+  "id": 299,
+  "title": "Уровень coal + chests + ice",
+  "hint": "Совпадения рядом с углём откалывают слои",
+  "layout": [
+    "..........",
+    ".......cc.",
+    ".ccJJJJcc.",
+    ".cc.1.....",
+    ".....#####",
+    ".....#####",
+    ".1........",
+    ".ccJJJJ1..",
+    ".ccJ1.J...",
+    ".........."
+  ],
+  "colors": 3,
+  "moves": 35,
+  "goals": [
+    {
+      "kind": "coal",
+      "count": 3
+    },
+    {
+      "kind": "box",
+      "count": 4
+    },
+    {
+      "kind": "ice",
+      "count": 10
+    }
+  ],
+  "stars": [
+    {
+      "kind": "level3",
+      "count": 10
+    },
+    {
+      "kind": "level3",
+      "count": 15
+    }
+  ],
+  "coalLayers": 6,
+  "iceCracks": true
+}

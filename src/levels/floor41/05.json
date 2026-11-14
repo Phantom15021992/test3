@@ -1,0 +1,46 @@
+{
+  "id": 405,
+  "title": "Уровень ice + coal + color",
+  "hint": "Лёд ломается, когда на его клетке исчезает фишка",
+  "layout": [
+    "..........",
+    "....JJcc..",
+    ".J..JJccJ.",
+    "..........",
+    ".....#####",
+    ".....#####",
+    ".cc.......",
+    ".cc..cc...",
+    ".JJ..ccJJ.",
+    ".........."
+  ],
+  "colors": 3,
+  "moves": 35,
+  "goals": [
+    {
+      "kind": "coal",
+      "count": 3
+    },
+    {
+      "kind": "ice",
+      "count": 10
+    },
+    {
+      "kind": "level3color",
+      "count": 4,
+      "color": 1
+    }
+  ],
+  "stars": [
+    {
+      "kind": "level3",
+      "count": 10
+    },
+    {
+      "kind": "level3",
+      "count": 15
+    }
+  ],
+  "coalLayers": 6,
+  "iceCracks": true
+}

@@ -1,0 +1,43 @@
+{
+  "id": 449,
+  "title": "Уровень gold + color + crowns",
+  "hint": "Золото — во льду и в сундуках: доломай их",
+  "layout": [
+    "...o.o..",
+    "........",
+    "........",
+    "........",
+    "........",
+    "...JJ...",
+    ".JJJJJJ.",
+    "........"
+  ],
+  "colors": 3,
+  "moves": 35,
+  "goals": [
+    {
+      "kind": "item",
+      "count": 2
+    },
+    {
+      "kind": "gold",
+      "count": 3
+    },
+    {
+      "kind": "level3color",
+      "count": 4,
+      "color": 1
+    }
+  ],
+  "stars": [
+    {
+      "kind": "level3",
+      "count": 10
+    },
+    {
+      "kind": "level3",
+      "count": 15
+    }
+  ],
+  "hiddenGold": 3
+}

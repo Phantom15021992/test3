@@ -1,0 +1,46 @@
+{
+  "id": 439,
+  "title": "Уровень coal + ice + color",
+  "hint": "Совпадения рядом с углём откалывают слои",
+  "layout": [
+    "..........",
+    "..........",
+    "..........",
+    "...JJJJcc.",
+    "...J..Jcc.",
+    ".cc.##....",
+    ".cc.##.cc.",
+    "....##.cc.",
+    ".JJ.##.JJ.",
+    "....##...."
+  ],
+  "colors": 3,
+  "moves": 35,
+  "goals": [
+    {
+      "kind": "coal",
+      "count": 3
+    },
+    {
+      "kind": "ice",
+      "count": 10
+    },
+    {
+      "kind": "level3color",
+      "count": 4,
+      "color": 2
+    }
+  ],
+  "stars": [
+    {
+      "kind": "level3",
+      "count": 10
+    },
+    {
+      "kind": "level3",
+      "count": 15
+    }
+  ],
+  "coalLayers": 6,
+  "iceCracks": true
+}

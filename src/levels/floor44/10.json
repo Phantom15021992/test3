@@ -1,0 +1,39 @@
+{
+  "id": 440,
+  "title": "Уровень coal + stones + chests",
+  "hint": "Совпадения рядом с углём откалывают слои",
+  "layout": [
+    ".........",
+    "...cc....",
+    "...cc....",
+    ".1.......",
+    "....1s...",
+    ".ccs.....",
+    ".cc.s.s1.",
+    "....1....",
+    "........."
+  ],
+  "colors": 3,
+  "moves": 35,
+  "goals": [
+    {
+      "kind": "coal",
+      "count": 2
+    },
+    {
+      "kind": "box",
+      "count": 4
+    }
+  ],
+  "stars": [
+    {
+      "kind": "level3",
+      "count": 10
+    },
+    {
+      "kind": "level3",
+      "count": 15
+    }
+  ],
+  "coalLayers": 6
+}

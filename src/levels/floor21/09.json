@@ -1,0 +1,41 @@
+{
+  "id": 209,
+  "title": "Уровень ice + chests + crowns",
+  "hint": "Лёд ломается, когда на его клетке исчезает фишка",
+  "layout": [
+    "o...o...",
+    "........",
+    "......1.",
+    "...1....",
+    "...JJ...",
+    "..JJJJ1.",
+    ".JJ1.JJ.",
+    "........"
+  ],
+  "colors": 3,
+  "moves": 35,
+  "goals": [
+    {
+      "kind": "item",
+      "count": 2
+    },
+    {
+      "kind": "box",
+      "count": 4
+    },
+    {
+      "kind": "ice",
+      "count": 10
+    }
+  ],
+  "stars": [
+    {
+      "kind": "level3",
+      "count": 10
+    },
+    {
+      "kind": "level3",
+      "count": 15
+    }
+  ]
+}
