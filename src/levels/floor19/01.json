@@ -8,21 +8,21 @@
     ".........",
     ".........",
     ".........",
+    "...i.ii..",
     ".iii.iii.",
-    ".iii.iii.",
-    ".ibb.bbi.",
+    ".i.b.bbi.",
     "........."
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 26,
   "goals": [
     {
       "kind": "box",
-      "count": 4
+      "count": 3
     },
     {
       "kind": "ice",
-      "count": 14
+      "count": 11
     }
   ],
   "stars": [

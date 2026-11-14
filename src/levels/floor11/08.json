@@ -6,22 +6,22 @@
     "#...##...#",
     "..........",
     "..........",
-    "..iiiiii..",
+    "....iii...",
     "#.iiiiii.#",
-    "##.ibbi.##",
+    "##.i.bi.##",
     "###.bb.###",
     "####..####"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 34,
   "goals": [
     {
       "kind": "box",
-      "count": 4
+      "count": 3
     },
     {
       "kind": "ice",
-      "count": 14
+      "count": 11
     }
   ],
   "stars": [

@@ -3,11 +3,11 @@
   "title": "Уровень coal + crowns + color",
   "hint": "Совпадения рядом с углём откалывают слои",
   "layout": [
-    "..o.o.....",
+    "..........",
     ".....cc...",
     ".....cc...",
     "..........",
-    ".....#####",
+    "..o.o#####",
     ".....#####",
     "..........",
     "......cc..",
@@ -15,7 +15,7 @@
     ".........."
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 37,
   "goals": [
     {
       "kind": "item",
@@ -27,19 +27,19 @@
     },
     {
       "kind": "level3color",
-      "count": 4,
+      "count": 3,
       "color": 1
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 13
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 18
     }
   ],
-  "coalLayers": 6
+  "coalLayers": 5
 }

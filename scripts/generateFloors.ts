@@ -19,6 +19,7 @@ import { placeChains, placeLayer } from './levelLayout';
 
 declare const process: { argv: string[] };
 declare function require(name: 'node:fs'): {
+  readFileSync(path: string, encoding: 'utf8'): string;
   writeFileSync(path: string, data: string): void;
   mkdirSync(path: string, options: { recursive: boolean }): void;
 };
@@ -56,6 +57,9 @@ const CLASH: readonly [Mechanic, Mechanic][] = [['cells', 'color']];
 /** Места этажа (с нуля), где механик три и варианты тяжёлые */
 const HARD_PLACES = [4, 8, 9];
 
+/** Путь короны до дна (клеток) на лёгких и трудных местах */
+const CROWN_PATH = { easy: [3, 6], hard: [3, 7] } as const;
+
 const HINTS: Readonly<Record<Mechanic, string>> = {
   ice: 'Лёд ломается, когда на его клетке исчезает фишка',
   gold: 'Золото — во льду и в сундуках: доломай их',
@@ -67,9 +71,15 @@ const HINTS: Readonly<Record<Mechanic, string>> = {
   color: 'Собирай ячейки 3 уровня нужного цвета',
 };
 
-const first = Number(process.argv[2]) || 11;
-const last = Number(process.argv[3]) || first;
-const seed = Number(process.argv[4]) || 2026;
+const args = process.argv.slice(2).filter((arg) => !arg.startsWith('--'));
+const first = Number(args[0]) || 11;
+const last = Number(args[1]) || first;
+const seed = Number(args[2]) || 2026;
+/** --only=12-6,13-1: переложить только эти уровни с прежним набором механик (из title), своим ГСЧ */
+const only = process.argv
+  .find((arg) => arg.startsWith('--only='))
+  ?.slice('--only='.length)
+  .split(',');
 
 /** Формы полей первых 100 уровней: только клетки и дыры, без препятствий */
 const SHAPES: string[][] = [
@@ -111,24 +121,37 @@ function setCell(layout: string[], row: number, col: number, symbol: string): vo
   layout[row] = line.slice(0, col) + symbol + line.slice(col + 1);
 }
 
-/** Короны — в верхней строке поля, в разных столбцах ближе к середине, где столбец доходит до середины */
-function placeCrowns(layout: string[], count: number, rng: Rng): Set<number> {
-  const width = layout[0]!.length;
-  const middle = Math.floor((layout.length - 1) / 2);
-  const columns = Array.from({ length: width }, (_, c) => c).filter((c) =>
-    layout.slice(0, middle + 1).every((line) => line[c] !== '#'),
-  );
-  const used = new Set<number>();
-  const order = columns.sort(
-    (a, b) => Math.abs(2 * a - width + 1) - Math.abs(2 * b - width + 1) || rng.int(3) - 1,
-  );
-  for (const col of order) {
-    if (used.size >= count) break;
-    if ([...used].some((c) => Math.abs(c - col) < 2)) continue;
-    setCell(layout, 0, col, 'o');
-    used.add(col);
+/** Сколько клеток проходит корона от верхней клетки столбца до его дна (дыры не клетки) */
+function crownPath(layout: readonly string[], col: number): number {
+  const cells = layout.map((line) => line[col] !== '#');
+  const length = cells.indexOf(false) < 0 ? cells.length : cells.indexOf(false);
+  // Столбец без разрывов: над дырой бот корону не доводит (она ждёт, пока опустеет клетка за дырой)
+  return cells.slice(length).some(Boolean) ? -1 : length - 1;
+}
+
+/**
+ * Столбцы для корон: начинаются в верхней строке, путь до дна — CROWN_PATH. На сплошном поле 10×10 корону
+ * и от середины поля (ниже правило не пускает) бот не доводит за 45 ходов в 90% партий, а в коротком столбце
+ * буквы, креста или сердца подгонка добирает сложность высотой короны, как на уровнях 8-2 и 10-2
+ */
+function pickCrownColumns(
+  layout: readonly string[],
+  count: number,
+  hard: boolean,
+  rng: Rng,
+): number[] {
+  const [low, high] = hard ? CROWN_PATH.hard : CROWN_PATH.easy;
+  const columns = Array.from({ length: layout[0]!.length }, (_, c) => c).filter((c) => {
+    const path = crownPath(layout, c);
+    return layout[0]![c] !== '#' && path >= low && path <= high;
+  });
+  const used: number[] = [];
+  for (const col of columns.sort(() => rng.int(3) - 1)) {
+    if (used.length >= count) break;
+    if (used.some((c) => Math.abs(c - col) < 2)) continue;
+    used.push(col);
   }
-  return used;
+  return used.length >= count ? used : [];
 }
 
 function placeCoal(layout: string[], blocks: number, banned: Set<number>, rng: Rng): number {
@@ -197,8 +220,14 @@ function buildLevel(id: number, mechanics: Mechanic[], rng: Rng): Level {
   const place = (id - 1) % FLOOR_SIZE;
   const hard = HARD_PLACES.includes(place);
   // Трудным местам и уровням с углём и коронами — поля побольше
-  const big = hard || mechanics.includes('coal') || mechanics.includes('crowns');
-  const shapes = SHAPES.filter((s) => cellCount(s) >= (big ? 70 : 55));
+  const big = hard || mechanics.includes('coal');
+  const crowns = mechanics.includes('crowns') ? (hard ? 2 : 1) : 0;
+  // Короны — только на формах с коротким столбцом (pickCrownColumns), поэтому размер поля им не важен
+  const shapes = SHAPES.filter(
+    (s) =>
+      cellCount(s) >= (big && crowns === 0 ? 70 : 55) &&
+      (crowns === 0 || pickCrownColumns(s, crowns, hard, createRng(1)).length > 0),
+  );
   let layout = [...shapes[rng.int(shapes.length)]!];
   const goals: Goal[] = [];
   let coalLayers: number | undefined;
@@ -206,14 +235,16 @@ function buildLevel(id: number, mechanics: Mechanic[], rng: Rng): Level {
   let iceCracks = false;
 
   let crownColumns = new Set<number>();
-  if (mechanics.includes('crowns')) {
-    const crowns = hard ? 2 : 1;
-    crownColumns = placeCrowns(layout, crowns, rng);
+  if (crowns > 0) {
+    crownColumns = new Set(pickCrownColumns(layout, crowns, hard, rng));
+    for (const col of crownColumns) setCell(layout, 0, col, 'o');
     goals.push({ kind: 'item', count: crownColumns.size });
   }
   if (mechanics.includes('coal')) {
     // С коронами или льдом — 2–3 глыбы, иначе 1–2
-    const withOthers = mechanics.includes('crowns') || mechanics.includes('ice');
+    // Уголь — единственная цель (рядом одни камни): одна глыба даже в 9 слоёв проходится за 25 ходов (17-1)
+    const alone = mechanics.every((m) => m === 'coal' || m === 'stones');
+    const withOthers = alone || mechanics.includes('crowns') || mechanics.includes('ice');
     const blocks = placeCoal(layout, (withOthers ? 2 : 1) + (hard ? 1 : 0), crownColumns, rng);
     if (blocks > 0) {
       goals.push({ kind: 'coal', count: blocks });
@@ -266,21 +297,34 @@ function buildLevel(id: number, mechanics: Mechanic[], rng: Rng): Level {
 }
 
 const fs = require('node:fs');
-const rng = createRng(seed);
-for (let floor = first; floor <= last; floor++) {
-  const theme = THEMES[(floor - 11) % THEMES.length]!;
-  const plan = planFloor(theme, rng);
-  const dir = `src/levels/floor${String(floor).padStart(2, '0')}`;
-  fs.mkdirSync(dir, { recursive: true });
-  plan.forEach((mechanics, place) => {
-    const id = (floor - 1) * FLOOR_SIZE + place + 1;
-    const level = buildLevel(id, mechanics, rng);
-    fs.writeFileSync(
-      `${dir}/${String(place + 1).padStart(2, '0')}.json`,
-      `${JSON.stringify(level, null, 2)}\n`,
-    );
-    console.log(
-      `${floor}-${place + 1}: ${mechanics.join(' + ')} → ${level.goals.map((g) => `${g.kind} ${g.count}`).join(', ')}`,
-    );
-  });
+const fileOf = (floor: number, place: number) =>
+  `src/levels/floor${String(floor).padStart(2, '0')}/${String(place + 1).padStart(2, '0')}.json`;
+
+function write(floor: number, place: number, mechanics: Mechanic[], rng: Rng): void {
+  const id = (floor - 1) * FLOOR_SIZE + place + 1;
+  const level = buildLevel(id, mechanics, rng);
+  fs.writeFileSync(
+    fileOf(floor, place),
+    `${JSON.stringify(level, null, 2)}
+`,
+  );
+  console.log(
+    `${floor}-${place + 1}: ${mechanics.join(' + ')} → ${level.goals.map((g) => `${g.kind} ${g.count}`).join(', ')}`,
+  );
+}
+
+if (only) {
+  for (const name of only) {
+    const [floor, place] = name.split('-').map(Number) as [number, number];
+    const title = (JSON.parse(fs.readFileSync(fileOf(floor, place - 1), 'utf8')) as Level).title;
+    const mechanics = title.replace('Уровень ', '').split(' + ') as Mechanic[];
+    write(floor, place - 1, mechanics, createRng(seed * 1000 + (floor - 1) * FLOOR_SIZE + place));
+  }
+} else {
+  const rng = createRng(seed);
+  for (let floor = first; floor <= last; floor++) {
+    const theme = THEMES[(floor - 11) % THEMES.length]!;
+    fs.mkdirSync(`src/levels/floor${String(floor).padStart(2, '0')}`, { recursive: true });
+    planFloor(theme, rng).forEach((mechanics, place) => write(floor, place, mechanics, rng));
+  }
 }

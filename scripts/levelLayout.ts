@@ -267,8 +267,14 @@ export function lowerCrowns(layout: readonly string[], rows: number): string[] {
     const below = grid
       .map((line, row) => ({ row, symbol: line[crown.col]! }))
       .filter(({ row, symbol }) => row > crown.row && row <= middleRow(grid) && symbol !== '#');
+    // На дно столбца корону не ставим: там она засчиталась бы сразу
+    const bottom = grid.reduce(
+      (last, line, row) => (line[crown.col] !== '#' ? row : last),
+      crown.row,
+    );
     let target = Math.min(rows, below.length) - 1;
-    while (target >= 0 && below[target]!.symbol !== '.') target--;
+    while (target >= 0 && (below[target]!.symbol !== '.' || below[target]!.row === bottom))
+      target--;
     if (target < 0) continue;
     grid[crown.row]![crown.col] = '.';
     grid[below[target]!.row]![crown.col] = 'o';

@@ -219,7 +219,8 @@ let lastBuys: Record<string, number> = {};
  */
 function chooseBossSize(level: Level): SizedLevel {
   let best: { sized: SizedLevel; distance: number } | null = null;
-  for (const scale of [0.5, 0.7, 1, 1.4, 2, 2.8, 4]) {
+  // До ×8: боту 2,35 и выше с покупками мало и ×4 (12-10, 14-10 — 55–65% побед)
+  for (const scale of [0.5, 0.7, 1, 1.4, 2, 2.8, 4, 5.6, 8]) {
     const sized = resizeLevel(level.layout, level.goals, scale, resizeOptions(level));
     const played = playAll(level, sized, SEARCH_GAMES);
     const used = usedMoves(played, sized.goals);
