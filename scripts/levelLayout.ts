@@ -275,3 +275,27 @@ export function lowerCrowns(layout: readonly string[], rows: number): string[] {
   }
   return grid.map((line) => line.join(''));
 }
+
+/**
+ * Генератор новых этажей (scripts/generateFloors.ts): поставить на поле count препятствий symbol по тем же
+ * правилам, что и подгонка (лёд — только в толстых местах, сундуки — не на дне под коронами, не на краю)
+ */
+export function placeLayer(layout: readonly string[], symbol: string, count: number): string[] {
+  const grid = layout.map((line) => [...line]);
+  resizeLayer(grid, symbol, 1, count);
+  return grid.map((line) => line.join(''));
+}
+
+/** Сундуки в цепях: первый ставится на свободную внутреннюю клетку, остальные — по правилам цепей */
+export function placeChains(layout: readonly string[], links: number): string[] {
+  const grid = layout.map((line) => [...line]);
+  const floor = crownFloor(grid);
+  const [first] = freeCells(
+    grid,
+    (cell) => inner(grid, cell) && !floor.has(`${cell.row},${cell.col}`),
+  );
+  if (!first) return [...layout];
+  grid[first.row]![first.col] = '1';
+  resizeChains(grid, links);
+  return grid.map((line) => line.join(''));
+}

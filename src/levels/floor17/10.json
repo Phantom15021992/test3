@@ -1,0 +1,40 @@
+{
+  "id": 170,
+  "title": "Уровень stones + ice + crowns",
+  "hint": "Камни разбивает только взрыв",
+  "layout": [
+    "###o.o.###",
+    "#........#",
+    "......s...",
+    "......ss..",
+    "..........",
+    "..s.......",
+    "..........",
+    "..JJJJJJ..",
+    "#..JJJJ..#",
+    "###....###"
+  ],
+  "colors": 3,
+  "moves": 35,
+  "goals": [
+    {
+      "kind": "item",
+      "count": 2
+    },
+    {
+      "kind": "ice",
+      "count": 10
+    }
+  ],
+  "stars": [
+    {
+      "kind": "level3",
+      "count": 10
+    },
+    {
+      "kind": "level3",
+      "count": 15
+    }
+  ],
+  "iceCracks": true
+}

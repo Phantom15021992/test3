@@ -39,6 +39,20 @@ const MAX_AIM_CELLS = 30;
  * камни): человек смотрит на них нарочно. Лёд лежит по всему полю, на него внимание не делится
  */
 export const botSkill = { attention: 2.25, focus: 3, crownRow: 40, temperature: 0 };
+
+/**
+ * Каждая следующая сотня уровней подгоняется под бота сильнее на ATTENTION_STEP (по просьбе владельца):
+ * уровни 1–100 — 2,25, 101–200 — 2,35, 201–300 — 2,45, 301–400 — 2,55, 401–500 — 2,65. Сильнее бот —
+ * тяжелее уровень при той же доле побед, поэтому для людей (≈2,25) игра от сотни к сотне усложняется
+ */
+export const ATTENTION_STEP = 0.1;
+export const LEVELS_PER_STEP = 100;
+
+/** Внимание бота на уровне: базовое плюс шаг за каждую пройденную сотню уровней */
+export function attentionFor(levelId: number): number {
+  const steps = Math.max(0, Math.floor((levelId - 1) / LEVELS_PER_STEP));
+  return botSkill.attention + ATTENTION_STEP * steps;
+}
 /** Сколько клеток цели на поле человек видит все разом: при таком числе и лёд — отдельные предметы */
 const FOCUS_TARGETS = 12;
 /** На сколько клеток под корону человек смотрит всегда */
@@ -259,8 +273,9 @@ function ordered(session: LevelSession, rng: Rng): PlayerMove[] {
   const all = shuffled(candidates(session), rng);
   // Человек замечает не все обмены на поле, а случайные несколько; спецфишки видны всегда
   // Дробное внимание: целая часть — всегда, дробная — с такой вероятностью ещё один обмен
-  const whole = Math.floor(botSkill.attention);
-  const limit = whole + (rng.int(1000) < (botSkill.attention - whole) * 1000 ? 1 : 0);
+  const attention = attentionFor(session.level.id);
+  const whole = Math.floor(attention);
+  const limit = whole + (rng.int(1000) < (attention - whole) * 1000 ? 1 : 0);
   const crowns = allPositions(session.board).filter(
     (pos) => getCell(session.board, pos)?.kind === 'item',
   );
