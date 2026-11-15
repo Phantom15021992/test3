@@ -11,11 +11,11 @@
     "....s..s..",
     "######.cc.",
     "..s..s.cc.",
-    ".JJJJJJJJ.",
+    "...JJJJJ..",
     ".........."
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 43,
   "goals": [
     {
       "kind": "coal",
@@ -23,7 +23,7 @@
     },
     {
       "kind": "gold",
-      "count": 3
+      "count": 2
     }
   ],
   "stars": [
@@ -36,6 +36,6 @@
       "count": 15
     }
   ],
-  "coalLayers": 6,
-  "hiddenGold": 3
+  "coalLayers": 4,
+  "hiddenGold": 2
 }

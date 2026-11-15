@@ -9,7 +9,7 @@
     "..........",
     "..........",
     "..........",
-    "...JJJJ...",
+    "..JJJJJJ..",
     "...JccJcc.",
     "...JccJcc.",
     ".........."
@@ -23,23 +23,23 @@
     },
     {
       "kind": "gold",
-      "count": 3
+      "count": 4
     },
     {
       "kind": "level3",
-      "count": 6
+      "count": 8
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 18
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 23
     }
   ],
-  "coalLayers": 6,
-  "hiddenGold": 3
+  "coalLayers": 8,
+  "hiddenGold": 4
 }

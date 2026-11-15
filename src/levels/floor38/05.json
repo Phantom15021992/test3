@@ -11,11 +11,11 @@
     "#...##...#",
     "..........",
     "......cc..",
-    ".t.t..cct.",
+    "...t..cct.",
     "#...##...#"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 25,
   "goals": [
     {
       "kind": "coal",
@@ -23,22 +23,22 @@
     },
     {
       "kind": "gold",
-      "count": 3
+      "count": 2
     },
     {
       "kind": "level3",
-      "count": 6
+      "count": 5
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 15
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 20
     }
   ],
-  "coalLayers": 6
+  "coalLayers": 5
 }

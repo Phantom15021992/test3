@@ -7,15 +7,15 @@
     ".cc.......",
     ".cc.##.cc.",
     ".......cc.",
-    "....1.....",
-    "..JJ..JJ..",
+    "..........",
+    "...J..J...",
     ".J..##.1J.",
     ".1.J..Jcc.",
     "...J1.Jcc.",
     ".........."
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 42,
   "goals": [
     {
       "kind": "coal",
@@ -23,11 +23,11 @@
     },
     {
       "kind": "box",
-      "count": 4
+      "count": 3
     },
     {
       "kind": "ice",
-      "count": 10
+      "count": 8
     }
   ],
   "stars": [
@@ -40,5 +40,5 @@
       "count": 15
     }
   ],
-  "coalLayers": 6
+  "coalLayers": 5
 }

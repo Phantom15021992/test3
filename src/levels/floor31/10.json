@@ -4,43 +4,43 @@
   "hint": "Лёд ломается, когда на его клетке исчезает фишка",
   "layout": [
     "..........",
+    ".JJJJJJJJ.",
     "....JJ....",
-    "....JJ....",
-    "####......",
-    "###.JJ...#",
-    "#...JJ.###",
-    "......####",
-    "....JJ....",
+    "####.JJ...",
+    "###.JJJ..#",
+    "#..JJJ.###",
+    ".JJJJ.####",
+    ".JJJJJ....",
     ".JJJJJJJJ.",
     ".........."
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 41,
   "goals": [
     {
       "kind": "ice",
-      "count": 18
+      "count": 35
     },
     {
       "kind": "gold",
-      "count": 3
+      "count": 4
     },
     {
       "kind": "level3color",
-      "count": 4,
+      "count": 6,
       "color": 1
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 16
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 21
     }
   ],
-  "hiddenGold": 3,
+  "hiddenGold": 4,
   "iceCracks": true
 }

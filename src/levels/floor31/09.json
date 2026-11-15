@@ -3,17 +3,17 @@
   "title": "Уровень ice + coal + crowns",
   "hint": "Лёд ломается, когда на его клетке исчезает фишка",
   "layout": [
-    "o......o",
+    "........",
     ".....cc.",
     ".cc..cc.",
-    ".cc.....",
+    "occJJ..o",
     ".JJJJJJ.",
     "...JJcc.",
-    "...JJcc.",
+    "..JJJcc.",
     "........"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 39,
   "goals": [
     {
       "kind": "item",
@@ -25,7 +25,7 @@
     },
     {
       "kind": "ice",
-      "count": 10
+      "count": 13
     }
   ],
   "stars": [
@@ -38,5 +38,5 @@
       "count": 15
     }
   ],
-  "coalLayers": 6
+  "coalLayers": 8
 }

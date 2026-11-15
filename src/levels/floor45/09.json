@@ -8,12 +8,12 @@
     "........",
     "........",
     "........",
-    "...JJ...",
+    ".JJJJJJ.",
     ".JJJJJJ.",
     "........"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 32,
   "goals": [
     {
       "kind": "item",
@@ -21,23 +21,23 @@
     },
     {
       "kind": "gold",
-      "count": 3
+      "count": 5
     },
     {
       "kind": "level3color",
-      "count": 4,
+      "count": 6,
       "color": 1
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 16
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 21
     }
   ],
-  "hiddenGold": 3
+  "hiddenGold": 5
 }

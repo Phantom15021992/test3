@@ -4,41 +4,41 @@
   "hint": "Собирай ячейки 3 уровня",
   "layout": [
     "#...##...#",
-    "..........",
-    "..........",
+    ".......1..",
+    "....1.....",
     "..........",
     "#...##.1.#",
     "#.1.##...#",
-    "..........",
-    "..J.JJ1J..",
-    ".JJ1...JJ.",
+    ".JJJ..JJJ.",
+    ".JJ.JJ2JJ.",
+    ".JJ2...JJ.",
     "#...##...#"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 36,
   "goals": [
     {
       "kind": "box",
-      "count": 4
+      "count": 6
     },
     {
       "kind": "gold",
-      "count": 3
+      "count": 6
     },
     {
       "kind": "level3",
-      "count": 6
+      "count": 12
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 22
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 27
     }
   ],
-  "hiddenGold": 3
+  "hiddenGold": 6
 }

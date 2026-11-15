@@ -3,17 +3,19 @@
   "title": "Уровень ice + cells + crowns",
   "hint": "Лёд ломается, когда на его клетке исчезает фишка",
   "layout": [
-    "#..o##.o.#",
-    "..........",
-    "..........",
-    "..........",
-    "#..JJJJ..#",
-    "##.JJJJ.##",
+    "o......o..",
+    ".JJJJJJJJ.",
+    ".JJJJJJJJ.",
+    "...JJJJ...",
     "###.JJ.###",
-    "####..####"
+    "###.JJ.###",
+    "###.JJ.###",
+    "###.JJ.###",
+    "###.JJ.###",
+    "###....###"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 44,
   "goals": [
     {
       "kind": "item",
@@ -21,21 +23,21 @@
     },
     {
       "kind": "ice",
-      "count": 10
+      "count": 30
     },
     {
       "kind": "level3",
-      "count": 6
+      "count": 24
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 34
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 39
     }
   ],
   "iceCracks": true

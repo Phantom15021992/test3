@@ -8,20 +8,20 @@
     "........",
     "........",
     "........",
-    "...gg...",
-    ".gbbbbg.",
+    "........",
+    ".g.bb.g.",
     "........"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 45,
   "goals": [
     {
       "kind": "box",
-      "count": 4
+      "count": 2
     },
     {
       "kind": "gold",
-      "count": 4
+      "count": 2
     }
   ],
   "stars": [

@@ -5,9 +5,9 @@
   "layout": [
     "#o.o##...#",
     "..........",
-    "..........",
-    "..........",
-    "#..JJJJ..#",
+    ".JJJJJJJJ.",
+    ".JJJJJJJJ.",
+    "#.JJJJJJ.#",
     "##.JJJJ.##",
     "###.JJ.###",
     "####..####"
@@ -21,21 +21,21 @@
     },
     {
       "kind": "ice",
-      "count": 10
+      "count": 28
     },
     {
       "kind": "level3",
-      "count": 6
+      "count": 17
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 27
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 32
     }
   ]
 }
