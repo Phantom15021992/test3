@@ -93,10 +93,10 @@ export function attemptWallet(levelId: number): number {
 }
 
 /**
- * Все уровни кампании открыты сразу, без прохождения по порядку (по просьбе владельца). false —
- * снова строго по порядку (isLevelOpen). Карта всё равно открывается на этаже, до которого игрок дошёл
+ * Уровни открываются по порядку (isLevelOpen), а открытые помнит браузер игрока: это звёзды
+ * в localStorage. true — все уровни открыты сразу, без прохождения (так было по просьбе владельца)
  */
-export const ALL_LEVELS_OPEN = true;
+export const ALL_LEVELS_OPEN = false;
 
 /** Уровни открываются строго по порядку: нужен пройденный предыдущий */
 export function isLevelOpen(levelId: number, stars: LevelStars): boolean {

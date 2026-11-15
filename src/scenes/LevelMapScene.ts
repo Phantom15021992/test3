@@ -80,7 +80,7 @@ export class LevelMapScene extends Phaser.Scene {
       const x = centerX + (column - (COLUMNS - 1) / 2) * COLUMN_STEP;
       const y = FIRST_ROW_Y + Math.floor(i / COLUMNS) * ROW_STEP;
       const earned = stars[level.id] ?? 0;
-      // Без обучения закрыто всё (и в dev-режиме). После него все уровни открыты сразу (ALL_LEVELS_OPEN);
+      // Без обучения закрыто всё (и в dev-режиме). После него — по порядку (или все сразу, ALL_LEVELS_OPEN);
       // в dev-режиме — всегда, чтобы смотреть их без прохождения
       const open =
         passed && (ALL_LEVELS_OPEN || import.meta.env.DEV || isLevelOpen(level.id, stars));
