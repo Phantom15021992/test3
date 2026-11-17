@@ -54,13 +54,16 @@ describe('цель: ячейки 3 уровня одного цвета', () => 
     );
   });
 
-  it('тексты: «Жёлтые звёзды 1/2» и «собери 2 жёлтые звезды»', () => {
+  it('тексты: «Жёлтые кристаллы 3 ур. 1/2» и «собери 2 жёлтых кристалла 3 уровня»', () => {
     const session = new LevelSession(1, parseLevel(level(1)));
     greenStar(session);
-    expect(goalsText(session)).toBe('Жёлтые звёзды 1/2');
-    expect(goalTaskText(session.level.goals[0]!)).toContain('собери 2 жёлтые звезды');
-    expect(goalTaskText({ kind: 'level3color', count: 5, color: 0 })).toContain(
-      'собери 5 синих звёзд',
+    expect(goalsText(session)).toBe('Жёлтые кристаллы 3 ур. 1/2');
+    expect(goalTaskText(session.level.goals[0]!)).toBe('собери 2 жёлтых кристалла 3 уровня');
+    expect(goalTaskText({ kind: 'level3color', count: 1, color: 0 })).toBe(
+      'собери 1 синий кристалл 3 уровня',
+    );
+    expect(goalTaskText({ kind: 'level3color', count: 5, color: 0 })).toBe(
+      'собери 5 синих кристаллов 3 уровня',
     );
   });
 });

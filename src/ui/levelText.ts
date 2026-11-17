@@ -20,28 +20,28 @@ const GOAL_NAMES: Readonly<Record<GoalKind, string>> = {
   item: 'Короны',
   coal: 'Уголь',
   gold: 'Золото',
-  level3color: 'Звёзды',
+  level3color: 'Кристаллы 3 ур.',
 };
 
 /**
  * Цвета палитры (порядок — как в игре) в формах для цели level3color:
- * «синие звёзды», «собери 1 синюю / 2 синие / 5 синих звёзд»
+ * «синие кристаллы», «собери 1 синий / 2 синих / 5 синих кристаллов 3 уровня»
  */
 const COLOR_FORMS: readonly (readonly [string, string, string])[] = [
-  ['синюю', 'синие', 'синих'],
-  ['жёлтую', 'жёлтые', 'жёлтых'],
-  ['красную', 'красные', 'красных'],
-  ['зелёную', 'зелёные', 'зелёных'],
-  ['фиолетовую', 'фиолетовые', 'фиолетовых'],
-  ['оранжевую', 'оранжевые', 'оранжевых'],
-  ['голубую', 'голубые', 'голубых'],
+  ['синий', 'синие', 'синих'],
+  ['жёлтый', 'жёлтые', 'жёлтых'],
+  ['красный', 'красные', 'красных'],
+  ['зелёный', 'зелёные', 'зелёных'],
+  ['фиолетовый', 'фиолетовые', 'фиолетовых'],
+  ['оранжевый', 'оранжевые', 'оранжевых'],
+  ['голубой', 'голубые', 'голубых'],
 ];
 
-/** Название цели в строке прогресса: у цели по цвету — «Синие звёзды» */
+/** Название цели в строке прогресса: у цели по цвету — «Синие кристаллы 3 ур.» */
 function goalName(goal: Goal): string {
   if (goal.kind !== 'level3color') return GOAL_NAMES[goal.kind];
-  const few = COLOR_FORMS[goal.color ?? 0]?.[1] ?? '';
-  return `${few.charAt(0).toUpperCase()}${few.slice(1)} звёзды`;
+  const plural = COLOR_FORMS[goal.color ?? 0]?.[1] ?? '';
+  return `${plural.charAt(0).toUpperCase()}${plural.slice(1)} кристаллы 3 ур.`;
 }
 
 /** Ячейка 3 уровня, собранная сразу из фишек, засчитывается как две ячейки 2 уровня */
@@ -92,7 +92,7 @@ function plural(count: number, one: string, few: string, many: string): string {
   return units >= 2 && units <= 4 ? few : many;
 }
 
-/** Цель уровня словами: «сломай 14 льдин», «собери 5 синих звёзд» */
+/** Цель уровня словами: «сломай 14 льдин», «собери 5 синих кристаллов 3 уровня» */
 export function goalTaskText({ kind, count, color }: Goal): string {
   const n = String(count);
   switch (kind) {
@@ -115,8 +115,9 @@ export function goalTaskText({ kind, count, color }: Goal): string {
     case 'coal':
       return `разбей ${n} ${plural(count, 'глыбу', 'глыбы', 'глыб')} угля`;
     case 'level3color': {
-      const [one, few, many] = COLOR_FORMS[color ?? 0] ?? ['', '', ''];
-      return `собери ${n} ${plural(count, `${one} звезду`, `${few} звезды`, `${many} звёзд`)} (ячейки 3 уровня)`;
+      // После 2–4 прилагательное мужского рода — в родительном падеже: «2 синих кристалла»
+      const [one, , many] = COLOR_FORMS[color ?? 0] ?? ['', '', ''];
+      return `собери ${n} ${plural(count, `${one} кристалл`, `${many} кристалла`, `${many} кристаллов`)} 3 уровня`;
     }
     case 'gold':
       return `достань золото: ${n} (слитки во льду и сундуки с сокровищами)`;
@@ -174,7 +175,7 @@ export function briefingLines(level: Level, session?: LevelSession): BriefingLin
 export function missingGoalsText(session: LevelSession): string {
   return session.level.goals
     .filter((goal) => session.goalValue(goal) < goal.count)
-    .map((goal) => `${GOAL_NAMES[goal.kind]} ${session.goalValue(goal)}/${goal.count}`)
+    .map((goal) => `${goalName(goal)} ${session.goalValue(goal)}/${goal.count}`)
     .join('\n');
 }
 
