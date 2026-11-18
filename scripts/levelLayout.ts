@@ -261,19 +261,23 @@ export function middleRow(grid: readonly (readonly string[] | string)[]): number
   return Math.floor((grid.length - 1) / 2);
 }
 
+/** Сколько клеток поля минимум под короной в её столбце: корона стоит на 4-й строке от дна или выше */
+export const CROWN_MIN_BELOW = 3;
+
 export function lowerCrowns(layout: readonly string[], rows: number): string[] {
   const grid = layout.map((line) => [...line]);
   for (const crown of cellsOf(grid, 'o')) {
     const below = grid
       .map((line, row) => ({ row, symbol: line[crown.col]! }))
       .filter(({ row, symbol }) => row > crown.row && row <= middleRow(grid) && symbol !== '#');
-    // На дно столбца корону не ставим: там она засчиталась бы сразу
-    const bottom = grid.reduce(
-      (last, line, row) => (line[crown.col] !== '#' ? row : last),
-      crown.row,
-    );
+    // Ниже 4-й клетки от дна корону не ставим: у дна её доводят за ход-два, а на дне она засчиталась бы сразу
+    const cellsBelow = (row: number) =>
+      grid.filter((line, r) => r > row && line[crown.col] !== '#').length;
     let target = Math.min(rows, below.length) - 1;
-    while (target >= 0 && (below[target]!.symbol !== '.' || below[target]!.row === bottom))
+    while (
+      target >= 0 &&
+      (below[target]!.symbol !== '.' || cellsBelow(below[target]!.row) < CROWN_MIN_BELOW)
+    )
       target--;
     if (target < 0) continue;
     grid[crown.row]![crown.col] = '.';

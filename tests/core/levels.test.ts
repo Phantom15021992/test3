@@ -69,6 +69,18 @@ describe('кампания', () => {
     }
   });
 
+  it('корона стоит на 4-й строке от дна своего столбца или выше: у дна она засчиталась бы за ход', () => {
+    for (const { id, layout } of LEVELS) {
+      layout.forEach((line, row) =>
+        [...line].forEach((symbol, col) => {
+          if (symbol !== 'o') return;
+          const below = layout.filter((other, r) => r > row && other[col] !== '#').length;
+          expect(below, `уровень ${id}, корона (${row},${col})`).toBeGreaterThanOrEqual(3);
+        }),
+      );
+    }
+  });
+
   it('цветов 3, четыре — только на сплошном поле без дыр', () => {
     for (const { id, layout, colors } of LEVELS) {
       const solid = !layout.join('').includes('#');
