@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { nextTutorial } from '../storage/progress';
+import { loadCampaignName } from '../storage/levelBoard';
+import { CampaignNameDialog } from '../ui/CampaignNameDialog';
 import { addSoundToggle } from '../ui/soundToggle';
 import { DIFFICULTIES, type Difficulty } from '../core/config';
 import { loadLeaderboard, type LeaderboardEntry } from '../storage/leaderboard';
@@ -50,9 +52,14 @@ export class MenuScene extends Phaser.Scene {
     createMenuButton(this, centerX, LEVELS_BUTTON_Y, [menuButtonLabel(this, 'Кампания')], () => {
       if (this.starting) return;
       // Пока обучение не пройдено, «Кампания» продолжает его с первого непройденного уровня, а не открывает карту
-      const tutorial = nextTutorial();
-      if (tutorial) this.scene.start('Game', { tutorial });
-      else this.scene.start('LevelMap');
+      const enter = () => {
+        const tutorial = nextTutorial();
+        if (tutorial) this.scene.start('Game', { tutorial });
+        else this.scene.start('LevelMap');
+      };
+      // Первый заход в кампанию — сначала ник: он нужен таблицам лидеров уровней
+      if (loadCampaignName()) enter();
+      else new CampaignNameDialog(this, enter).show();
     });
     createMenuButton(this, centerX, RULES_BUTTON_Y, [menuButtonLabel(this, 'Правила игры')], () => {
       if (!this.starting) this.scene.start('Rules');

@@ -12,6 +12,8 @@ import {
 } from '../storage/progress';
 import { levelNumber } from '../ui/levelText';
 import { TransferDialog } from '../ui/TransferDialog';
+import { CampaignNameDialog } from '../ui/CampaignNameDialog';
+import { loadCampaignName } from '../storage/levelBoard';
 import {
   createMenuButton,
   MENU_BUTTON_GAP,
@@ -22,6 +24,9 @@ import { HIGHLIGHT_COLOR, UI_MUTED_TEXT_COLOR, UI_TEXT_COLOR } from '../view/pal
 
 const TITLE_Y = 80;
 const WALLET_Y = 150;
+/** Ник кампании — мелко в левом верхнем углу, над заголовком этажа */
+const NAME_X = 24;
+const NAME_Y = 26;
 const ARROW_OFFSET = 230;
 const FIRST_ROW_Y = 260;
 const ROW_STEP = 150;
@@ -70,6 +75,22 @@ export class LevelMapScene extends Phaser.Scene {
         },
       )
       .setOrigin(0.5);
+    // Ник для таблиц лидеров уровней — в левом верхнем углу, нажатие открывает смену
+    this.add
+      .text(NAME_X, NAME_Y, `Ник: ${loadCampaignName() || '—'} ✎`, {
+        fontFamily: 'sans-serif',
+        fontSize: '26px',
+        color: UI_MUTED_TEXT_COLOR,
+      })
+      .setOrigin(0, 0.5)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerup', () =>
+        new CampaignNameDialog(
+          this,
+          () => this.scene.restart({ floor: this.floor }),
+          () => undefined,
+        ).show(),
+      );
     this.addArrow(centerX - ARROW_OFFSET, '‹', this.floor - 1);
     this.addArrow(centerX + ARROW_OFFSET, '›', this.floor + 1);
 

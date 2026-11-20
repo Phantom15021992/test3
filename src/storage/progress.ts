@@ -43,7 +43,8 @@ export function floorWallet(floor: number): number {
  */
 export function resetCampaignProgress(): void {
   try {
-    for (const key of [STARS_KEY, SPENT_KEY, LEVEL_SPENT_KEY, TUTORIAL_KEY]) {
+    // Лучшие итоги для таблиц лидеров уровней (levelBoard.ts) тоже: без них «твой лучший итог» врал бы
+    for (const key of [STARS_KEY, SPENT_KEY, LEVEL_SPENT_KEY, TUTORIAL_KEY, 'match3.levelBest']) {
       localStorage.removeItem(key);
     }
   } catch {
