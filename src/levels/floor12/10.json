@@ -3,18 +3,18 @@
   "title": "Уровень chests + cells + gold",
   "hint": "Сундук ломается от совпадения рядом или от взрыва",
   "layout": [
-    "....#....",
-    ".JJ.#.JJ.",
-    ".JJ.#.JJ.",
-    ".J..#.2J.",
-    ".J3.#..J.",
-    ".JJ.#.JJ.",
-    ".JJ.#.3J.",
-    ".J3.#.JJ.",
-    "....#...."
+    ".........",
+    ".........",
+    ".........",
+    ".........",
+    "....1....",
+    ".......1.",
+    ".1.J.J...",
+    ".JJJ1JJJ.",
+    "........."
   ],
   "colors": 3,
-  "moves": 34,
+  "moves": 35,
   "goals": [
     {
       "kind": "box",
@@ -22,22 +22,22 @@
     },
     {
       "kind": "gold",
-      "count": 8
+      "count": 3
     },
     {
       "kind": "level3",
-      "count": 17
+      "count": 6
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 27
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 32
+      "count": 15
     }
   ],
-  "hiddenGold": 8
+  "hiddenGold": 3
 }

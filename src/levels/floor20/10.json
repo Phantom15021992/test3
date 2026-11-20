@@ -4,18 +4,18 @@
   "hint": "Совпадения рядом с углём откалывают слои",
   "layout": [
     "..........",
-    ".JJJJJJJJ.",
-    ".JJJJJJJJ.",
-    ".JJJJJJcc.",
-    ".JccJJJcc.",
-    ".JccJJJJJ.",
-    ".JJJJJJcc.",
-    ".JJJJJJcc.",
-    ".JJJJJJJJ.",
+    "..........",
+    "..........",
+    "..........",
+    ".JJ.##.JJ.",
+    ".JJ.##.JJ.",
+    ".ccJ..Jcc.",
+    ".ccJccJcc.",
+    ".JJJccJJJ.",
     ".........."
   ],
   "colors": 3,
-  "moves": 45,
+  "moves": 35,
   "goals": [
     {
       "kind": "coal",
@@ -23,11 +23,11 @@
     },
     {
       "kind": "ice",
-      "count": 52
+      "count": 18
     },
     {
       "kind": "gold",
-      "count": 6
+      "count": 3
     }
   ],
   "stars": [
@@ -40,7 +40,6 @@
       "count": 15
     }
   ],
-  "coalLayers": 9,
-  "hiddenGold": 6,
-  "iceCracks": true
+  "coalLayers": 6,
+  "hiddenGold": 3
 }

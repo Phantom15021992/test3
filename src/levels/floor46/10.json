@@ -3,17 +3,17 @@
   "title": "Уровень color + chests + crowns",
   "hint": "Собирай ячейки 3 уровня нужного цвета",
   "layout": [
-    "o.o.....",
+    "o......o",
     "........",
     "......1.",
     "...1....",
     "........",
-    "......2.",
-    "...2....",
+    "......1.",
+    "...1....",
     "........"
   ],
   "colors": 3,
-  "moves": 25,
+  "moves": 35,
   "goals": [
     {
       "kind": "item",
@@ -25,18 +25,18 @@
     },
     {
       "kind": "level3color",
-      "count": 6,
-      "color": 1
+      "count": 4,
+      "color": 0
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 16
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 21
+      "count": 15
     }
   ]
 }

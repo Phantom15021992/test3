@@ -15,7 +15,7 @@
 import { FLOOR_SIZE, parseLevel, type Goal, type Level } from '../src/core/level';
 import { createRng, type Rng } from '../src/core/rng';
 import { LEVELS } from '../src/levels';
-import { placeChains, placeLayer } from './levelLayout';
+import { placeChains, placeLayer, symmetryOf } from './levelLayout';
 
 declare const process: { argv: string[] };
 declare function require(name: 'node:fs'): {
@@ -145,8 +145,18 @@ function pickCrownColumns(
     const path = crownPath(layout, c);
     return layout[0]![c] !== '#' && path >= low && path <= high;
   });
+  const shuffled = columns.sort(() => rng.int(3) - 1);
+  const width = layout[0]!.length;
+  // Две короны — зеркально (уровни симметричные), если у столбца есть подходящее отражение
+  if (count === 2) {
+    const pair = shuffled.find((col) => {
+      const other = width - 1 - col;
+      return other !== col && Math.abs(other - col) >= 2 && columns.includes(other);
+    });
+    if (pair !== undefined) return [pair, width - 1 - pair];
+  }
   const used: number[] = [];
-  for (const col of columns.sort(() => rng.int(3) - 1)) {
+  for (const col of shuffled) {
     if (used.length >= count) break;
     if (used.some((c) => Math.abs(c - col) < 2)) continue;
     used.push(col);
@@ -154,35 +164,75 @@ function pickCrownColumns(
   return used.length >= count ? used : [];
 }
 
+const BLOCK = [
+  [0, 0],
+  [0, 1],
+  [1, 0],
+  [1, 1],
+] as const;
+
+/** Левая верхняя клетка отражения глыбы 2×2 (уровни симметричные) */
+function blockImage(layout: readonly string[], row: number, col: number) {
+  const image = symmetryOf(layout);
+  const cells = BLOCK.map(([dr, dc]) => image({ row: row + dr, col: col + dc }));
+  return {
+    row: Math.min(...cells.map((c) => c.row)),
+    col: Math.min(...cells.map((c) => c.col)),
+  };
+}
+
+/**
+ * Глыбы угля — парами отражений; нечётная — на оси, если там есть место. Без места для пары — по одной
+ */
 function placeCoal(layout: string[], blocks: number, banned: Set<number>, rng: Rng): number {
   let placed = 0;
-  for (let i = 0; i < blocks; i++) {
+  const put = (row: number, col: number) => {
+    for (const [dr, dc] of BLOCK) setCell(layout, row + dr, col + dc, 'c');
+    placed++;
+  };
+  while (placed < blocks) {
     const spots = coalSpots(layout, banned);
     if (spots.length === 0) break;
-    const { row, col } = spots[rng.int(spots.length)]!;
-    for (const [dr, dc] of [
-      [0, 0],
-      [0, 1],
-      [1, 0],
-      [1, 1],
-    ] as const) {
-      setCell(layout, row + dr, col + dc, 'c');
+    const onAxis = spots.filter(({ row, col }) => {
+      const img = blockImage(layout, row, col);
+      return img.row === row && img.col === col;
+    });
+    if (blocks - placed === 1 && onAxis.length > 0) {
+      const { row, col } = onAxis[rng.int(onAxis.length)]!;
+      put(row, col);
+      continue;
     }
-    placed++;
+    const { row, col } = spots[rng.int(spots.length)]!;
+    put(row, col);
+    if (placed >= blocks) break;
+    const img = blockImage(layout, row, col);
+    if (coalSpots(layout, banned).some((s) => s.row === img.row && s.col === img.col)) {
+      put(img.row, img.col);
+    }
   }
   return placed;
 }
 
-/** Камни — помеха без цели: в середине поля, не на краю */
+/** Камни — помеха без цели: в середине поля, не на краю; парами отражений */
 function placeStones(layout: string[], count: number, rng: Rng): void {
+  const image = symmetryOf(layout);
   const free: { row: number; col: number }[] = [];
   for (let r = 2; r < layout.length - 2; r++) {
     for (let c = 1; c < layout[0]!.length - 1; c++)
       if (layout[r]![c] === '.') free.push({ row: r, col: c });
   }
-  for (let i = 0; i < count && free.length > 0; i++) {
-    const { row, col } = free.splice(rng.int(free.length), 1)[0]!;
-    setCell(layout, row, col, 's');
+  let placed = 0;
+  while (placed < count && free.length > 0) {
+    const cell = free.splice(rng.int(free.length), 1)[0]!;
+    setCell(layout, cell.row, cell.col, 's');
+    placed++;
+    const img = image(cell);
+    const index = free.findIndex((c) => c.row === img.row && c.col === img.col);
+    if (index >= 0) {
+      free.splice(index, 1);
+      setCell(layout, img.row, img.col, 's');
+      placed++;
+    }
   }
 }
 

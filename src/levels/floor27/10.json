@@ -3,18 +3,19 @@
   "title": "Уровень stones + coal + ice",
   "hint": "Камни разбивает только взрыв",
   "layout": [
-    ".........",
-    ".........",
-    ".cc.ss...",
-    ".ccs.....",
-    "..Jcc.J..",
-    ".s.cc.cc.",
-    "...J.Jcc.",
-    ".JJJ.JJJ.",
-    "........."
+    "..........",
+    ".JJccJJJ..",
+    "...cc.....",
+    ".s..s.....",
+    ".cc..#####",
+    ".cc..#####",
+    ".s..s.....",
+    "...cc.....",
+    ".JJccJJJ..",
+    ".........."
   ],
   "colors": 3,
-  "moves": 33,
+  "moves": 35,
   "goals": [
     {
       "kind": "coal",
@@ -35,6 +36,5 @@
       "count": 15
     }
   ],
-  "coalLayers": 6,
-  "iceCracks": true
+  "coalLayers": 6
 }

@@ -3,42 +3,42 @@
   "title": "Уровень cells + gold + ice",
   "hint": "Собирай ячейки 3 уровня",
   "layout": [
-    "....##....",
-    "....##....",
-    "....##....",
-    "....##....",
-    "....##....",
-    "..........",
-    "..........",
-    "....JJJ...",
-    ".JJJJJJJJ.",
-    ".........."
+    ".........",
+    ".........",
+    ".........",
+    ".........",
+    ".........",
+    ".JJJ.JJJ.",
+    ".JJJ.JJJ.",
+    ".JJJ.JJJ.",
+    "........."
   ],
   "colors": 3,
-  "moves": 26,
+  "moves": 35,
   "goals": [
     {
       "kind": "ice",
-      "count": 11
+      "count": 18
     },
     {
       "kind": "gold",
-      "count": 2
+      "count": 3
     },
     {
       "kind": "level3",
-      "count": 5
+      "count": 6
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 15
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 20
+      "count": 15
     }
   ],
-  "hiddenGold": 2
+  "hiddenGold": 3,
+  "iceCracks": true
 }

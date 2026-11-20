@@ -3,19 +3,17 @@
   "title": "Уровень crowns + gold + coal",
   "hint": "Опусти корону на дно поля",
   "layout": [
-    ".o.....o..",
+    "#o..##..o#",
+    "..cc..cc..",
+    "..cc..cc..",
     "..........",
-    "..tcc..t..",
-    "...cc.....",
-    "###.tt.###",
+    "#.JJJJJJ.#",
+    "##.JccJ.##",
     "###.cc.###",
-    "###.cc.###",
-    "###.tt.###",
-    "###.tt.###",
-    "###....###"
+    "####..####"
   ],
   "colors": 3,
-  "moves": 32,
+  "moves": 35,
   "goals": [
     {
       "kind": "item",
@@ -23,11 +21,11 @@
     },
     {
       "kind": "coal",
-      "count": 2
+      "count": 3
     },
     {
       "kind": "gold",
-      "count": 8
+      "count": 3
     }
   ],
   "stars": [
@@ -40,5 +38,6 @@
       "count": 15
     }
   ],
-  "coalLayers": 9
+  "coalLayers": 6,
+  "hiddenGold": 3
 }

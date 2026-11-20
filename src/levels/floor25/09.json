@@ -5,13 +5,13 @@
   "layout": [
     "..........",
     "..........",
+    "....##....",
     "..........",
     "..........",
     "..........",
-    "..........",
-    "..JJJJJJ..",
-    "...JccJcc.",
-    "...JccJcc.",
+    "..J.##.J..",
+    ".ccJ..Jcc.",
+    ".ccJJJJcc.",
     ".........."
   ],
   "colors": 3,
@@ -23,23 +23,23 @@
     },
     {
       "kind": "gold",
-      "count": 4
+      "count": 3
     },
     {
       "kind": "level3",
-      "count": 8
+      "count": 6
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 18
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 23
+      "count": 15
     }
   ],
-  "coalLayers": 8,
-  "hiddenGold": 4
+  "coalLayers": 6,
+  "hiddenGold": 3
 }

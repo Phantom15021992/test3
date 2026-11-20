@@ -3,7 +3,7 @@
   "title": "Уровень cells + crowns",
   "hint": "Собирай ячейки 3 уровня",
   "layout": [
-    ".o........",
+    "o.........",
     "..........",
     "..........",
     "..........",
@@ -15,7 +15,7 @@
     "###....###"
   ],
   "colors": 3,
-  "moves": 27,
+  "moves": 35,
   "goals": [
     {
       "kind": "item",
@@ -23,17 +23,17 @@
     },
     {
       "kind": "level3",
-      "count": 9
+      "count": 6
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 19
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 24
+      "count": 15
     }
   ]
 }

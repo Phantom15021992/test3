@@ -106,7 +106,31 @@ const cellsOf = (grid: Grid, symbols: string): Cell[] =>
     line.flatMap((symbol, col) => (symbols.includes(symbol) ? [{ row, col }] : [])),
   );
 
-const mirror = (grid: Grid, col: number) => grid[0]!.length - 1 - col;
+/**
+ * Симметричная клетка (по просьбе владельца уровни — симметричные): зеркально слева направо, если так
+ * стоят дыры поля; у букв S и Z — поворот на 180°, у E и C — отражение сверху вниз; у прочих — всё равно зеркало
+ */
+export function symmetryOf(grid: readonly (readonly string[] | string)[]): (cell: Cell) => Cell {
+  const rows = grid.length;
+  const cols = grid[0]!.length;
+  const hole = (r: number, c: number) => grid[r]![c] === '#';
+  const every = (image: (cell: Cell) => Cell) =>
+    grid.every((_, r) =>
+      Array.from({ length: cols }, (_, c) => c).every((c) => {
+        const { row, col } = image({ row: r, col: c });
+        return hole(r, c) === hole(row, col);
+      }),
+    );
+  const lr = ({ row, col }: Cell): Cell => ({ row, col: cols - 1 - col });
+  const rot = ({ row, col }: Cell): Cell => ({ row: rows - 1 - row, col: cols - 1 - col });
+  if (every(lr)) return lr;
+  if (every(rot)) return rot;
+  // У букв E и C ось — горизонтальная: отражение сверху вниз
+  const tb = ({ row, col }: Cell): Cell => ({ row: rows - 1 - row, col });
+  return every(tb) ? tb : lr;
+}
+
+const same = (a: Cell, b: Cell) => a.row === b.row && a.col === b.col;
 
 /** Клетки, куда падает корона: самая нижняя клетка каждого столбца, если на поле есть короны */
 function crownFloor(grid: Grid): Set<string> {
@@ -163,38 +187,47 @@ function resizeLayer(grid: Grid, symbol: string, count: number, scale: number): 
   const allowed = (cell: Cell) =>
     inner(grid, cell) &&
     ('iJg'.includes(symbol) ? thick(grid, cell) : !floor.has(`${cell.row},${cell.col}`));
+  // Поле держится симметричным: препятствие ставится и убирается вместе со своим отражением. Число может
+  // разойтись с целью на одно — цель потом считается по полю
+  const image = symmetryOf(grid);
+  const at = (cell: Cell) => grid[cell.row]![cell.col];
+  const set = (cell: Cell, value: string) => (grid[cell.row]![cell.col] = value);
   let placed = cellsOf(grid, symbol).length;
   while (placed > target) {
-    // Убираем сверху: снизу препятствия мешают сильнее, а ставим мы их тоже снизу
-    const extra = placed - target;
+    // Убираем сверху: снизу препятствия мешают сильнее, а ставим мы их тоже снизу. Сначала — без пары
     const list = cellsOf(grid, symbol);
-    const pair = list.find(
-      ({ row, col }) => col !== mirror(grid, col) && grid[row]![mirror(grid, col)] === symbol,
-    );
-    if (extra >= 2 && pair) {
-      grid[pair.row]![pair.col] = '.';
-      grid[pair.row]![mirror(grid, pair.col)] = '.';
-      placed -= 2;
-    } else {
-      const { row, col } = list[0]!;
-      grid[row]![col] = '.';
+    const lonely = list.find((cell) => at(image(cell)) !== symbol || same(image(cell), cell));
+    const extra = placed - target;
+    if (lonely) {
+      set(lonely, '.');
       placed -= 1;
-    }
+    } else if (extra >= 2) {
+      set(image(list[0]!), '.');
+      set(list[0]!, '.');
+      placed -= 2;
+    } else break;
   }
   while (placed < target) {
     const free = freeCells(grid, allowed);
     if (free.length === 0) break;
-    const pair = free.find(
-      ({ row, col }) =>
-        col !== mirror(grid, col) && free.some((c) => c.row === row && c.col === mirror(grid, col)),
-    );
-    if (target - placed >= 2 && pair) {
-      grid[pair.row]![pair.col] = symbol;
-      grid[pair.row]![mirror(grid, pair.col)] = symbol;
+    const freeAt = (cell: Cell) => free.some((c) => same(c, cell));
+    // Сначала — отражение уже стоящего, потом пара свободных клеток, потом клетка на оси
+    const missing = free.find((cell) => at(image(cell)) === symbol && !same(image(cell), cell));
+    const pair = free.find((cell) => !same(image(cell), cell) && freeAt(image(cell)));
+    const axis = free.find((cell) => same(image(cell), cell));
+    const left = target - placed;
+    if (missing) {
+      set(missing, symbol);
+      placed += 1;
+    } else if (left === 1 && axis) {
+      set(axis, symbol);
+      placed += 1;
+    } else if (pair) {
+      set(pair, symbol);
+      set(image(pair), symbol);
       placed += 2;
     } else {
-      const { row, col } = free[0]!;
-      grid[row]![col] = symbol;
+      set(free[0]!, symbol);
       placed += 1;
     }
   }

@@ -3,19 +3,19 @@
   "title": "Уровень gold + chests + ice",
   "hint": "Золото — во льду и в сундуках: доломай их",
   "layout": [
-    "###....###",
-    "#..JJJJ..#",
-    ".JJJJJJJJ.",
-    ".JJJJJJJJ.",
-    ".JJJJJJJJ.",
-    ".JJJ3JJJJ.",
-    ".3JJJJJJJ.",
-    ".JJJJJJ3J.",
-    "#..J3JJ..#",
-    "###....###"
+    "..........",
+    "..........",
+    "..........",
+    "..........",
+    "....##.1..",
+    "..J.##.J..",
+    ".1JJ..JJ..",
+    ".J.JJJJ1J.",
+    ".JJJ1.JJJ.",
+    ".........."
   ],
   "colors": 3,
-  "moves": 30,
+  "moves": 35,
   "goals": [
     {
       "kind": "box",
@@ -23,11 +23,11 @@
     },
     {
       "kind": "ice",
-      "count": 52
+      "count": 18
     },
     {
       "kind": "gold",
-      "count": 17
+      "count": 3
     }
   ],
   "stars": [
@@ -40,5 +40,5 @@
       "count": 15
     }
   ],
-  "hiddenGold": 17
+  "hiddenGold": 3
 }

@@ -3,17 +3,17 @@
   "title": "Уровень crowns + color + coal",
   "hint": "Опусти корону на дно поля",
   "layout": [
-    "#...##o.o#",
-    "..........",
-    ".cc.cc....",
-    ".cc.cc....",
-    "#........#",
-    "##..cc..##",
-    "###.cc.###",
-    "####..####"
+    "o......o",
+    "........",
+    "....cc..",
+    "....cc..",
+    "........",
+    ".cc..cc.",
+    ".cc..cc.",
+    "........"
   ],
   "colors": 3,
-  "moves": 34,
+  "moves": 35,
   "goals": [
     {
       "kind": "item",
@@ -26,17 +26,17 @@
     {
       "kind": "level3color",
       "count": 4,
-      "color": 1
+      "color": 2
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 14
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 19
+      "count": 15
     }
   ],
   "coalLayers": 6

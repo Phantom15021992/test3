@@ -3,17 +3,17 @@
   "title": "Уровень cells + gold + crowns",
   "hint": "Собирай ячейки 3 уровня",
   "layout": [
-    "#o..##..o#",
-    "..JJ..JJ..",
-    ".JJJJJJJJ.",
-    ".JJJJJJJJ.",
-    "#.JJJJJJ.#",
-    "##.JJJJ.##",
-    "###.JJ.###",
-    "####..####"
+    "o......o",
+    "........",
+    "........",
+    "........",
+    "........",
+    "...JJ...",
+    ".JJJJJJ.",
+    "........"
   ],
   "colors": 3,
-  "moves": 34,
+  "moves": 35,
   "goals": [
     {
       "kind": "item",
@@ -21,22 +21,22 @@
     },
     {
       "kind": "gold",
-      "count": 12
+      "count": 3
     },
     {
       "kind": "level3",
-      "count": 24
+      "count": 6
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 34
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 39
+      "count": 15
     }
   ],
-  "hiddenGold": 12
+  "hiddenGold": 3
 }

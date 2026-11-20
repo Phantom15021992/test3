@@ -3,14 +3,14 @@
   "title": "Уровень cells + ice + crowns",
   "hint": "Собирай ячейки 3 уровня",
   "layout": [
-    "#o.o##...#",
-    "..........",
-    ".JJJJJJJJ.",
-    ".JJJJJJJJ.",
-    "#.JJJJJJ.#",
-    "##.JJJJ.##",
-    "###.JJ.###",
-    "####..####"
+    "..o..o..",
+    "........",
+    "........",
+    "........",
+    "........",
+    "..JJJJ..",
+    ".JJJJJJ.",
+    "........"
   ],
   "colors": 3,
   "moves": 35,
@@ -21,21 +21,21 @@
     },
     {
       "kind": "ice",
-      "count": 28
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 17
+      "count": 6
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 27
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 32
+      "count": 15
     }
   ]
 }

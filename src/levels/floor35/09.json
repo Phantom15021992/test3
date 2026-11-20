@@ -3,43 +3,42 @@
   "title": "Уровень gold + cells + ice",
   "hint": "Золото — во льду и в сундуках: доломай их",
   "layout": [
-    "....##....",
-    "....##....",
-    "....##....",
-    "..........",
-    "..........",
-    "..........",
-    "..........",
-    "....##....",
-    "..J.##.J..",
-    "....##...."
+    "....#....",
+    "....#....",
+    "....#....",
+    "..J.#.J..",
+    ".JJ.#.JJ.",
+    ".JJ.#.JJ.",
+    ".JJ.#.JJ.",
+    ".JJ.#.JJ.",
+    "....#...."
   ],
   "colors": 3,
-  "moves": 33,
+  "moves": 35,
   "goals": [
     {
       "kind": "ice",
-      "count": 2
+      "count": 18
     },
     {
       "kind": "gold",
-      "count": 1
+      "count": 3
     },
     {
       "kind": "level3",
-      "count": 2
+      "count": 6
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 12
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 17
+      "count": 15
     }
   ],
-  "hiddenGold": 1,
+  "hiddenGold": 3,
   "iceCracks": true
 }

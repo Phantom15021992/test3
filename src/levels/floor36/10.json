@@ -3,42 +3,43 @@
   "title": "Уровень color + chests + ice",
   "hint": "Собирай ячейки 3 уровня нужного цвета",
   "layout": [
-    "#...##...#",
-    "......1...",
-    ".2JJJJJJ..",
-    ".JJJ..JJJ.",
-    "#...##.2.#",
-    "#.2.##...#",
-    ".JJJ..JJJ.",
-    ".JJ.JJ2JJ.",
-    ".JJ2...JJ.",
-    "#...##...#"
+    "..........",
+    "..........",
+    "..........",
+    "..........",
+    "....##.1..",
+    "....##....",
+    ".1........",
+    "...JJJJ1..",
+    ".JJJ1.JJJ.",
+    ".........."
   ],
   "colors": 3,
-  "moves": 45,
+  "moves": 35,
   "goals": [
     {
       "kind": "box",
-      "count": 6
+      "count": 4
     },
     {
       "kind": "ice",
-      "count": 28
+      "count": 10
     },
     {
       "kind": "level3color",
-      "count": 11,
-      "color": 0
+      "count": 4,
+      "color": 2
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 21
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 26
+      "count": 15
     }
-  ]
+  ],
+  "iceCracks": true
 }
