@@ -396,7 +396,7 @@ function groupOutcome(group: MatchGroup, landing: Position[], campaign: boolean)
     );
     if (pos) placements.push({ pos, cell: { kind: 'piece', type: 'bomb' } });
   }
-  // 6+ фишек 1 уровня (и фигура из 7 клеток): к ячейкам 3 уровня — маленькая бомба
+  // 5+ фишек 1 уровня (и фигура из 7 клеток): к ячейкам 3 уровня — маленькая бомба
   if (campaign && group.level === 1 && group.cells.length >= CAMPAIGN_BOMB_GROUP) {
     const pos = neighborInGroup(
       group,

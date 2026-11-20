@@ -307,6 +307,25 @@ describe('resolveMove: ячейки 2–3 уровня', () => {
     expect(pieces(false)).toEqual(['tile']);
   });
 
+  it('в кампании уже 5 фишек 1 уровня в линию дают ячейку 3 уровня и бомбу, 4 — без бомбы', () => {
+    const five = parseBoard(`
+      R1 R1 G1 R1 R1
+      B1 Y1 R1 Y1 B1
+    `);
+    const four = parseBoard(`
+      R1 R1 G1 R1 B1
+      B1 Y1 R1 Y1 G1
+    `);
+    const move = { type: 'swap', from: p(1, 2), to: p(0, 2) } as const;
+    const pieces = (board: ReturnType<typeof parseBoard>, campaign: boolean) =>
+      stepsOf(runMove(board, move, { ...ctx(), campaign }).steps, 'transform')[0]!.placements.map(
+        ({ cell }) => (cell?.kind === 'piece' ? cell.type : `${cell?.kind}`),
+      );
+    expect(pieces(five, true)).toEqual(['tile', 'bomb']);
+    expect(pieces(five, false)).toEqual(['tile']);
+    expect(pieces(four, true)).not.toContain('bomb');
+  });
+
   it('квадрат 2×2 из ячеек 3 уровня — как 4 ячейки: ×20 и радуга', () => {
     const board = parseBoard(`
       R3 G1 R3
