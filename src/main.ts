@@ -4,6 +4,10 @@ import { GameScene } from './scenes/GameScene';
 import { LevelMapScene } from './scenes/LevelMapScene';
 import { MenuScene } from './scenes/MenuScene';
 import { RulesScene } from './scenes/RulesScene';
+import { clearUpdateParam } from './ui/updateGameButton';
+
+// После «Обновить игру» в адресе остаётся метка — убираем
+clearUpdateParam();
 
 // Портретная ориентация под телефон; на ПК масштабируется с сохранением пропорций.
 const game = new Phaser.Game({

@@ -3,17 +3,20 @@ import {
   createMenuButton,
   MENU_BUTTON_GAP,
   MENU_BUTTON_HEIGHT,
-  MENU_BUTTON_WIDTH,
   menuButtonLabel,
 } from '../ui/menuButton';
 import { RULES_PANEL_HEIGHT, RulesPanel } from '../ui/RulesPanel';
 import { addResetProgressButton } from '../ui/resetProgressButton';
+import { addUpdateGameButton } from '../ui/updateGameButton';
 import { UI_TEXT_COLOR } from '../view/palette';
 
 const TITLE_Y = 110;
 const PANEL_TOP = 170;
 const PANEL_MARGIN = 18;
-const TEST_FONT_SIZE = 26;
+const TEST_FONT_SIZE = 24;
+const BACK_FONT_SIZE = 34;
+/** Ряд кнопок под правилами — почти во всю ширину экрана: в нём четыре кнопки */
+const ROW_WIDTH = 680;
 
 // Отдельный экран с правилами игры; открывается кнопкой из главного меню. Внизу — сброс прогресса кампании.
 export class RulesScene extends Phaser.Scene {
@@ -32,28 +35,30 @@ export class RulesScene extends Phaser.Scene {
       .setOrigin(0.5);
     new RulesPanel(this, PANEL_MARGIN, PANEL_TOP, this.scale.width - PANEL_MARGIN * 2);
     const backY = PANEL_TOP + RULES_PANEL_HEIGHT + MENU_BUTTON_GAP * 1.5 + MENU_BUTTON_HEIGHT / 2;
-    // «Назад», сброс прогресса кампании и тестовый уровень — в один ряд: под панелью правил
-    // места на два ряда нет
-    const third = (MENU_BUTTON_WIDTH - MENU_BUTTON_GAP * 2) / 3;
-    const step = third + MENU_BUTTON_GAP;
+    // «Назад», сброс прогресса кампании, тестовый уровень и обновление игры — в один ряд: под панелью
+    // правил места на два ряда нет, поэтому ряд шире обычной кнопки меню
+    const quarter = (ROW_WIDTH - MENU_BUTTON_GAP * 3) / 4;
+    const step = quarter + MENU_BUTTON_GAP;
+    const xAt = (i: number) => centerX + (i - 1.5) * step;
     createMenuButton(
       this,
-      centerX - step,
+      xAt(0),
       backY,
-      [menuButtonLabel(this, 'Назад')],
+      [menuButtonLabel(this, 'Назад', BACK_FONT_SIZE)],
       () => this.scene.start('Menu'),
-      third,
+      quarter,
     );
-    addResetProgressButton(this, centerX, backY, third, MENU_BUTTON_HEIGHT);
-    // Тестовый уровень: правила Детского, фишки — картинки самоцветов
+    addResetProgressButton(this, xAt(1), backY, quarter, MENU_BUTTON_HEIGHT);
+    // Тестовый уровень: правила Лёгкого, фишки — камни с листа владельца
     const test = menuButtonLabel(this, 'Тестовый\nуровень', TEST_FONT_SIZE).setAlign('center');
     createMenuButton(
       this,
-      centerX + step,
+      xAt(2),
       backY,
       [test],
       () => this.scene.start('Game', { gems: true }),
-      third,
+      quarter,
     );
+    addUpdateGameButton(this, xAt(3), backY, quarter, MENU_BUTTON_HEIGHT);
   }
 }
