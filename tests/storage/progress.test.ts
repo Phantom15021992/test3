@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   attemptWallet,
   floorWallet,
-  ALL_LEVELS_OPEN,
   isLevelOpen,
   loadLevelStars,
   markTutorialDone,
@@ -96,8 +95,7 @@ describe('порядок уровней', () => {
     expect(isLevelOpen(11, stars)).toBe(true);
   });
 
-  it('уровни открываются по порядку, а открытое берётся из хранилища браузера', () => {
-    expect(ALL_LEVELS_OPEN).toBe(false);
+  it('порядок открытия (когда ALL_LEVELS_OPEN выключен) берётся из хранилища браузера', () => {
     saveLevelStars(1, 2);
     saveLevelStars(2, 1);
     // Новый заход в игру: звёзды читаются заново из localStorage
