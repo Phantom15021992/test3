@@ -7,6 +7,22 @@
 
 import { COAL_MAX_LAYERS } from '../src/core/config';
 import type { Goal } from '../src/core/level';
+import { createRng } from '../src/core/rng';
+
+/**
+ * Цвета задания на 5, 9 и 10 местах этажа — одни на весь этаж (по просьбе владельца): один цвет или два, не три.
+ * Зависят только от номера этажа, поэтому генератор и правка уже готовых уровней дают одно и то же
+ */
+export function floorColors(floor: number): number[] {
+  const rng = createRng(floor * 7919 + 13);
+  const count = 1 + rng.int(2);
+  const palette = [0, 1, 2];
+  for (let i = palette.length - 1; i > 0; i--) {
+    const j = rng.int(i + 1);
+    [palette[i], palette[j]] = [palette[j]!, palette[i]!];
+  }
+  return palette.slice(0, count);
+}
 
 type Grid = string[][];
 

@@ -69,6 +69,27 @@ describe('кампания', () => {
     }
   });
 
+  it('5, 9 и 10 места этажа: кристаллы 3 уровня одних и тех же 1–2 цветов на всём этаже, без «просто ячеек»', () => {
+    for (const floor of FLOORS) {
+      const sets = [4, 8, 9].map((place) => {
+        const level = floor[place]!;
+        expect(
+          level.goals.map((g) => g.kind),
+          `уровень ${level.id}`,
+        ).not.toContain('level3');
+        return level.goals
+          .filter((g) => g.kind === 'level3color')
+          .map((g) => g.color)
+          .sort()
+          .join(',');
+      });
+      const colors = sets[0]!.split(',').filter(Boolean);
+      expect(colors.length, `этаж ${floorOf(floor[0]!.id)}`).toBeGreaterThanOrEqual(1);
+      expect(colors.length, `этаж ${floorOf(floor[0]!.id)}`).toBeLessThanOrEqual(2);
+      expect(new Set(sets).size, `этаж ${floorOf(floor[0]!.id)}`).toBe(1);
+    }
+  });
+
   it('корона стоит на 4-й строке от дна своего столбца или выше: у дна она засчиталась бы за ход', () => {
     for (const { id, layout } of LEVELS) {
       layout.forEach((line, row) =>

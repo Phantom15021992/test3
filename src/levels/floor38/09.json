@@ -28,22 +28,17 @@
     {
       "kind": "level3color",
       "count": 3,
-      "color": 2
-    },
-    {
-      "kind": "level3color",
-      "count": 3,
       "color": 1
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 13
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 18
     }
   ],
   "iceCracks": true

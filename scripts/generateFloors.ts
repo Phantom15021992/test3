@@ -15,7 +15,7 @@
 import { FLOOR_SIZE, parseLevel, type Goal, type Level } from '../src/core/level';
 import { createRng, type Rng } from '../src/core/rng';
 import { LEVELS } from '../src/levels';
-import { placeChains, placeLayer, symmetryOf } from './levelLayout';
+import { floorColors, placeChains, placeLayer, symmetryOf } from './levelLayout';
 
 declare const process: { argv: string[] };
 declare function require(name: 'node:fs'): {
@@ -357,12 +357,9 @@ function buildLevel(id: number, mechanics: Mechanic[], rng: Rng): Level {
   }
   if (mechanics.includes('cells')) goals.push({ kind: 'level3', count: 6 });
   if (mechanics.includes('color')) {
-    // На 5, 9 и 10 местах — один или два цвета (не три), по 3 ячейки для начала: число подгоняет подбор
-    const colors = hard ? 1 + rng.int(2) : 1;
-    const palette = [0, 1, 2].sort(() => rng.int(3) - 1);
-    for (const color of palette.slice(0, colors)) {
-      goals.push({ kind: 'level3color', count: hard ? 3 : 4, color });
-    }
+    // На 5, 9 и 10 местах — цвета этажа (один или два на весь этаж), по 3 ячейки для начала: число подгоняет подбор
+    const colors = hard ? floorColors(Math.ceil(id / FLOOR_SIZE)) : [rng.int(3)];
+    for (const color of colors) goals.push({ kind: 'level3color', count: hard ? 3 : 4, color });
   }
 
   return parseLevel({
