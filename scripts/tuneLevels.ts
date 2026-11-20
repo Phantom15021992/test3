@@ -64,10 +64,11 @@ const BOSS = FLOOR_SIZE - 1;
  */
 const MOVES_CURVE = [32, 33, 34, 35, 32, 35, 36, 38, 35, 40];
 /**
- * Лёгкие места: даже в самых удачных партиях (FAST_SHARE) на цели должно уходить не меньше MIN_FAST ходов,
+ * Лёгкие места: даже в самых удачных партиях (FAST_SHARE) на цели должно уходить не меньше MIN_FAST ходов (15 не
+ * выходило: при 90% побед и потолке 45 ходов разброс у бота слишком велик, уровни падали до 67% побед),
  * иначе уровень считается слишком лёгким — маленькие цели закрывались за 1–2 хода
  */
-const MIN_FAST = 15;
+const MIN_FAST = 12;
 const FAST_SHARE = 0.1;
 /**
  * Цели на ячейки 3 уровня рядом с препятствиями держатся маленькими (по просьбе владельца сложность — от
@@ -133,16 +134,11 @@ function playAll(level: Level, sized: SizedLevel, count: number): GameResult[] {
 }
 
 /**
- * Что подгонщик может менять: на первом этаже лёд — главная цель, его 30–40, и он не меняется,
- * пока у уровня есть другие цели, которыми можно подогнать сложность
+ * Что подгонщик может менять: слои угля и спрятанное золото — вместе с целями. Лёд первого этажа больше
+ * не закреплён (владелец: сложность — от препятствий, а не от ячеек 3 уровня)
  */
 function resizeOptions(level: Level): ResizeOptions {
-  const others = level.goals.some((goal) => !['ice', 'item', 'stone'].includes(goal.kind));
-  const fixed: Goal['kind'][] =
-    floorOf(level.id) === 1 && others && level.goals.some((goal) => goal.kind === 'ice')
-      ? ['ice']
-      : [];
-  return { coalLayers: level.coalLayers, hiddenGold: level.hiddenGold, fixed };
+  return { coalLayers: level.coalLayers, hiddenGold: level.hiddenGold, fixed: [] };
 }
 
 const usedMoves = (played: readonly GameResult[], goals: readonly Goal[]) =>
