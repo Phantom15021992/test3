@@ -1,25 +1,24 @@
 {
   "id": 190,
-  "title": "Уровень chests + gold + ice + color",
+  "title": "Уровень chests + ice + gold + color",
   "hint": "Сундук ломается от совпадения рядом или от взрыва",
   "layout": [
-    "..........",
-    "..........",
-    "..........",
-    "..........",
-    "..........",
-    "....1.....",
-    ".1..tt....",
-    ".t.JJJJ1t.",
-    ".JJJ1.JJJ.",
-    ".........."
+    ".........",
+    ".........",
+    ".........",
+    ".........",
+    "...b1b...",
+    "..bb.bb1.",
+    ".1JJ.JJ..",
+    ".JJJ1JJJ.",
+    "........."
   ],
   "colors": 3,
   "moves": 35,
   "goals": [
     {
       "kind": "box",
-      "count": 8
+      "count": 10
     },
     {
       "kind": "ice",
@@ -27,7 +26,7 @@
     },
     {
       "kind": "gold",
-      "count": 4
+      "count": 3
     },
     {
       "kind": "level3color",
@@ -38,12 +37,12 @@
   "stars": [
     {
       "kind": "level3",
-      "count": 13
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 18
+      "count": 15
     }
   ],
-  "iceCracks": true
+  "hiddenGold": 3
 }

@@ -1,17 +1,17 @@
 {
   "id": 400,
-  "title": "Уровень coal + stones + chests + color",
+  "title": "Уровень coal + stones + ice + color",
   "hint": "Совпадения рядом с углём откалывают слои",
   "layout": [
     "..........",
-    "...1......",
-    ".ccs######",
-    ".cc.ss....",
-    "....1.....",
-    "...s..scc.",
-    "######.cc.",
-    ".......1..",
-    "....1.....",
+    "..........",
+    "...s..s...",
+    "..s....s..",
+    ".cc.##.cc.",
+    ".cc.##.cc.",
+    "..........",
+    "..JJccJJ..",
+    ".JJJccJJJ.",
     ".........."
   ],
   "colors": 3,
@@ -19,11 +19,11 @@
   "goals": [
     {
       "kind": "coal",
-      "count": 2
+      "count": 3
     },
     {
-      "kind": "box",
-      "count": 4
+      "kind": "ice",
+      "count": 10
     },
     {
       "kind": "level3color",
@@ -39,11 +39,11 @@
   "stars": [
     {
       "kind": "level3",
-      "count": 16
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 21
+      "count": 15
     }
   ],
   "coalLayers": 6

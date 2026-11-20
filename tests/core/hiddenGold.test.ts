@@ -7,7 +7,7 @@ function level(overrides: Partial<Level> = {}): Level {
     id: 1,
     title: 'Золото',
     hint: '',
-    layout: ['......', '.JJJJ.', '.JJbb.', '......'],
+    layout: ['......', '.JbbJ.', '.bb11.', '......'],
     colors: 3,
     moves: 20,
     goals: [{ kind: 'gold', count: 3 }],
@@ -20,20 +20,19 @@ function level(overrides: Partial<Level> = {}): Level {
   };
 }
 
-/** Где спрятано золото: льдины со слитками и сундуки с сокровищами */
+/** Где спрятано золото: только сундуки с сокровищами (во льду золота больше нет) */
 function goldSpots(session: LevelSession): string[] {
   const spots: string[] = [];
   session.board.forEach((line, row) =>
     line.forEach((cell, col) => {
-      if (session.iceStyle[row]![col] === 'gold') spots.push(`лёд ${row},${col}`);
-      if (cell?.kind === 'box' && cell.treasure) spots.push(`сундук ${row},${col}`);
+      if (cell?.kind === 'box' && cell.treasure) spots.push(`${row},${col}`);
     }),
   );
   return spots;
 }
 
 describe('спрятанное золото', () => {
-  it('ровно hiddenGold мест с золотом среди льда 2 уровня и сундуков, остальные — пустышки', () => {
+  it('ровно hiddenGold сундуков с золотом, остальные — пустышки; лёд золота не прячет', () => {
     for (const seed of [1, 2, 3, 4, 5]) {
       expect(goldSpots(new LevelSession(seed, parseLevel(level())))).toHaveLength(3);
     }
@@ -52,13 +51,13 @@ describe('спрятанное золото', () => {
       );
     const plain = new LevelSession(
       7,
-      parseLevel(level({ hiddenGold: undefined, goals: [{ kind: 'ice', count: 3 }] })),
+      parseLevel(level({ hiddenGold: undefined, goals: [{ kind: 'ice', count: 2 }] })),
     );
     expect(tiles(new LevelSession(7, parseLevel(level())))).toBe(tiles(plain));
   });
 
-  it('цель «золото» считает спрятанное; больше мест, чем льдин и сундуков, — ошибка', () => {
+  it('цель «золото» считает спрятанное; больше мест, чем сундуков без сокровищ, — ошибка', () => {
     expect(() => parseLevel(level({ goals: [{ kind: 'gold', count: 4 }] }))).toThrow('больше');
-    expect(() => parseLevel(level({ hiddenGold: 9 }))).toThrow('hiddenGold');
+    expect(() => parseLevel(level({ hiddenGold: 7 }))).toThrow('hiddenGold');
   });
 });

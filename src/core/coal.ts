@@ -9,6 +9,8 @@ export interface CoalHit {
   top: number;
   left: number;
   layers: number;
+  /** Уголь с золотом */
+  gold?: boolean;
 }
 
 const SIDES = [
@@ -59,7 +61,7 @@ export function hitCoal(
         next[row]![col] = left > 0 ? { ...cell, layers: left } : null;
       }
     }
-    hits.push({ top: block.row, left: block.col, layers: left });
+    hits.push({ top: block.row, left: block.col, layers: left, ...(cell.gold && { gold: true }) });
   }
   return { board: next, hits };
 }

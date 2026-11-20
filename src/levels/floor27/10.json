@@ -1,16 +1,16 @@
 {
   "id": 270,
-  "title": "Уровень stones + crowns + chests + color",
+  "title": "Уровень stones + ice + crowns + color",
   "hint": "Камни разбивает только взрыв",
   "layout": [
-    "#..o##o..#",
-    "..........",
-    ".1........",
-    "...s1.s...",
-    "#..s..s1.#",
-    "##......##",
-    "###.1..###",
-    "####..####"
+    "o......o",
+    "........",
+    "........",
+    "..s..s..",
+    "..s..s..",
+    "..JJJJ..",
+    ".JJJJJJ.",
+    "........"
   ],
   "colors": 3,
   "moves": 35,
@@ -20,8 +20,8 @@
       "count": 2
     },
     {
-      "kind": "box",
-      "count": 4
+      "kind": "ice",
+      "count": 10
     },
     {
       "kind": "level3color",
@@ -37,11 +37,11 @@
   "stars": [
     {
       "kind": "level3",
-      "count": 16
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 21
+      "count": 15
     }
   ]
 }

@@ -62,7 +62,7 @@ const CROWN_PATH = { easy: [3, 6], hard: [3, 7] } as const;
 
 const HINTS: Readonly<Record<Mechanic, string>> = {
   ice: 'Лёд ломается, когда на его клетке исчезает фишка',
-  gold: 'Золото — во льду и в сундуках: доломай их',
+  gold: 'Золото — в угле и в сундуках: доломай их',
   chests: 'Сундук ломается от совпадения рядом или от взрыва',
   crowns: 'Опусти корону на дно поля',
   coal: 'Совпадения рядом с углём откалывают слои',
@@ -108,7 +108,7 @@ function coalSpots(layout: readonly string[], banned: Set<number>): { row: numbe
         at(r, c + 2),
         at(r + 1, c + 2),
       ];
-      if (block.every((s) => s === '.') && ring.every((s) => s !== '#' && s !== 'c')) {
+      if (block.every((s) => s === '.') && ring.every((s) => s !== '#' && s !== 'c' && s !== 'k')) {
         spots.push({ row: r, col: c });
       }
     }
@@ -184,10 +184,16 @@ function blockImage(layout: readonly string[], row: number, col: number) {
 /**
  * Глыбы угля — парами отражений; нечётная — на оси, если там есть место. Без места для пары — по одной
  */
-function placeCoal(layout: string[], blocks: number, banned: Set<number>, rng: Rng): number {
+function placeCoal(
+  layout: string[],
+  blocks: number,
+  banned: Set<number>,
+  rng: Rng,
+  symbol: 'c' | 'k' = 'c',
+): number {
   let placed = 0;
   const put = (row: number, col: number) => {
-    for (const [dr, dc] of BLOCK) setCell(layout, row + dr, col + dc, 'c');
+    for (const [dr, dc] of BLOCK) setCell(layout, row + dr, col + dc, symbol);
     placed++;
   };
   while (placed < blocks) {
@@ -211,6 +217,20 @@ function placeCoal(layout: string[], blocks: number, banned: Set<number>, rng: R
     }
   }
   return placed;
+}
+
+/** Первые blocks глыб угля становятся глыбами с золотом (k): сверху вниз, слева направо */
+function goldenCoal(layout: readonly string[], blocks: number): string[] {
+  const grid = [...layout];
+  let left = blocks;
+  for (let row = 0; row < grid.length && left > 0; row++) {
+    for (let col = 0; col < grid[0]!.length && left > 0; col++) {
+      if (grid[row]![col] !== 'c') continue;
+      for (const [dr, dc] of BLOCK) setCell(grid, row + dr, col + dc, 'k');
+      left--;
+    }
+  }
+  return grid;
 }
 
 /** Камни — помеха без цели: в середине поля, не на краю; парами отражений */
@@ -312,7 +332,6 @@ function buildLevel(id: number, mechanics: Mechanic[], rng: Rng): Level {
   const goals: Goal[] = [];
   let coalLayers: number | undefined;
   let hiddenGold: number | undefined;
-  let iceCracks = false;
 
   let crownColumns = new Set<number>();
   if (crowns > 0) {
@@ -335,25 +354,32 @@ function buildLevel(id: number, mechanics: Mechanic[], rng: Rng): Level {
     layout = hard ? placeChains(layout, 4) : placeLayer(layout, 'b', 4);
   }
   if (mechanics.includes('ice')) {
+    // Лёд — две прочности: на лёгких местах тонкий (1 удар), на трудных — крепкий (целый → треснувший)
     layout = placeLayer(layout, hard ? 'J' : 'i', hard ? 10 : 14);
-    // Трещины — только на 5, 9 и 10 местах этажа
-    iceCracks = hard && rng.int(2) === 0;
   }
   if (mechanics.includes('gold')) {
-    if (!hard) layout = placeLayer(layout, 'g', 4);
-    else if (rng.int(2) === 0) layout = placeLayer(layout, 't', 3);
+    // Золото — в угле и сундуках (во льду его больше нет). Есть уголь — золото в половине его глыб
+    const coal = count(layout, 'c') / 4;
+    if (coal > 0) layout = goldenCoal(layout, Math.ceil(coal / 2));
+    else if (rng.int(2) === 0) {
+      // Своя глыба с золотом: на лёгких местах одна, на трудных две
+      if (placeCoal(layout, hard ? 2 : 1, crownColumns, rng, 'k') > 0) coalLayers = hard ? 6 : 4;
+    } else if (!hard) layout = placeLayer(layout, 't', 3);
     else {
-      // Спрятанное золото: в части льдин 2 уровня, каждая попытка — в других
-      layout = placeLayer(layout, 'J', count(layout, 'J') + 8);
+      // Спрятанное золото: в части простых сундуков, каждая попытка — в других
+      layout = placeLayer(layout, 'b', count(layout, 'b') + 6);
       hiddenGold = 3;
     }
   }
   if (mechanics.includes('stones')) placeStones(layout, hard ? 4 : 3, rng);
 
   if (mechanics.includes('chests')) goals.push({ kind: 'box', count: count(layout, 'bt123uvw') });
-  if (mechanics.includes('ice')) goals.push({ kind: 'ice', count: count(layout, 'iJg') });
+  if (mechanics.includes('ice')) goals.push({ kind: 'ice', count: count(layout, 'iJ') });
   if (mechanics.includes('gold')) {
-    goals.push({ kind: 'gold', count: count(layout, 'gtuvw') + (hiddenGold ?? 0) });
+    goals.push({
+      kind: 'gold',
+      count: count(layout, 'tuvw') + count(layout, 'k') / 4 + (hiddenGold ?? 0),
+    });
   }
   if (mechanics.includes('cells')) goals.push({ kind: 'level3', count: 6 });
   if (mechanics.includes('color')) {
@@ -376,7 +402,6 @@ function buildLevel(id: number, mechanics: Mechanic[], rng: Rng): Level {
     ],
     ...(coalLayers !== undefined && { coalLayers }),
     ...(hiddenGold !== undefined && { hiddenGold }),
-    ...(iceCracks && { iceCracks }),
   } as Level);
 }
 

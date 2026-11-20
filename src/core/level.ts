@@ -1,16 +1,14 @@
 import { createEmptyBoard, type Board } from './board';
 import type { Rng } from './rng';
-import { COAL_MAX_LAYERS, COAL_SIZE, ICE_CRACKS_HITS, ICE_HITS } from './config';
+import { COAL_MAX_LAYERS, COAL_SIZE, ICE_HITS } from './config';
 
 // Описание уровня и его проверка: уровни лежат в JSON, поэтому при загрузке им нельзя верить на слово.
 //
 // Поле уровня — строки из символов:
 //   .  обычная клетка (заполнится случайной фишкой)
 //   #  дыра: клетки нет, фишки пролетают сквозь неё
-//   i  клетка со льдом (ломается с одного удара)
-//   J  лёд 2 уровня: 2 уровень → 1 уровень → нет; с iceCracks у уровня — ещё этап «с трещинами»
-//   g  лёд 2 уровня со слитками золота: после первого удара видны слитки, дальше — как J;
-//      сломанный засчитывается в цель gold
+//   i  тонкий лёд: ломается с одного удара
+//   J  крепкий лёд: целый → треснувший → нет (2 удара)
 //   s  камень: падает, сдвинуть нельзя, разбить можно только взрывом
 //   b  сундук: стоит на месте, бьётся взрывом и совпадением рядом: закрытый → открытый → нет
 //   t  сундук с сокровищами: так же, сломанный засчитывается в цель gold
@@ -18,6 +16,7 @@ import { COAL_MAX_LAYERS, COAL_SIZE, ICE_CRACKS_HITS, ICE_HITS } from './config'
 //   u, v, w  сундук с сокровищами в цепи из 1, 2, 3 звеньев
 //   o  корона: её нужно опустить на дно
 //   c  уголь: глыба 2×2 из этих символов; слоёв у глыб уровня — coalLayers (по умолчанию 9)
+//   k  уголь с золотом: такая же глыба 2×2, последний слой — самородок; разбитая засчитывается и в цель gold
 
 export type GoalKind =
   | 'level2'
@@ -62,11 +61,9 @@ export interface Level {
   stars: readonly StarTask[];
   /** Сколько слоёв у каждой глыбы угля: подбирается под сложность уровня */
   coalLayers?: number;
-  /** Лёд 2 уровня получает ещё этап «с трещинами» — на удар больше: так уровень сложнее */
-  iceCracks?: boolean;
   /**
-   * Сколько золота спрятать в случайные льдины 2 уровня (J) и сундуки без сокровищ (b, 1–3):
-   * какие из них с золотом, решает seed попытки, остальные — пустышки
+   * Сколько золота спрятать в случайные сундуки без сокровищ (b, 1–3): какие из них с золотом, решает seed
+   * попытки, остальные — пустышки
    */
   hiddenGold?: number;
 }
@@ -120,7 +117,13 @@ export function boardTemplate(level: Level): Board {
   for (const block of coalBlocks(level.layout)) {
     for (let row = block.row; row < block.row + COAL_SIZE; row++) {
       for (let col = block.col; col < block.col + COAL_SIZE; col++) {
-        board[row]![col] = { kind: 'coal', top: block.row, left: block.col, layers };
+        board[row]![col] = {
+          kind: 'coal',
+          top: block.row,
+          left: block.col,
+          layers,
+          ...(block.gold && { gold: true }),
+        };
       }
     }
   }
@@ -128,55 +131,51 @@ export function boardTemplate(level: Level): Board {
 }
 
 /**
- * Глыбы угля в поле (левые верхние углы); если символы угля не складываются
- * в отдельные квадраты 2×2 — исключение
+ * Глыбы угля в поле (левые верхние углы; gold — уголь с золотом, символ k); если символы угля не складываются
+ * в отдельные квадраты 2×2 одного вида — исключение
  */
-export function coalBlocks(layout: readonly string[]): { row: number; col: number }[] {
+export function coalBlocks(
+  layout: readonly string[],
+): { row: number; col: number; gold?: boolean }[] {
   const taken = layout.map((line) => [...line].map(() => false));
-  const blocks: { row: number; col: number }[] = [];
+  const blocks: { row: number; col: number; gold?: boolean }[] = [];
   layout.forEach((line, row) =>
     [...line].forEach((symbol, col) => {
-      if (symbol !== 'c' || taken[row]![col]) return;
+      if ((symbol !== 'c' && symbol !== 'k') || taken[row]![col]) return;
       for (let r = row; r < row + COAL_SIZE; r++) {
         for (let c = col; c < col + COAL_SIZE; c++) {
-          if (layout[r]?.[c] !== 'c' || taken[r]![c])
+          if (layout[r]?.[c] !== symbol || taken[r]![c])
             throw new Error('уголь — только квадраты 2×2');
           taken[r]![c] = true;
         }
       }
-      blocks.push({ row, col });
+      blocks.push(symbol === 'k' ? { row, col, gold: true } : { row, col });
     }),
   );
   return blocks;
 }
 
-/** Клетки, где может спрятаться золото: лёд 2 уровня и сундуки без сокровищ */
+/** Клетки, где может спрятаться золото: сундуки без сокровищ */
 function goldHideouts(level: Level): { row: number; col: number }[] {
   const spots: { row: number; col: number }[] = [];
   level.layout.forEach((line, row) =>
     [...line].forEach((symbol, col) => {
-      if ('Jb123'.includes(symbol)) spots.push({ row, col });
+      if ('b123'.includes(symbol)) spots.push({ row, col });
     }),
   );
   return spots;
 }
 
 /**
- * Прячет hiddenGold уровня в случайные льдины и сундуки: льдина становится льдом со слитками
- * (снаружи такой же), сундук — сундуком с сокровищами. ГСЧ — свой, чтобы не менять поле попытки
+ * Прячет hiddenGold уровня в случайные сундуки: сундук становится сундуком с сокровищами (снаружи такой же).
+ * ГСЧ — свой, чтобы не менять поле попытки
  */
-export function hideGold(
-  level: Level,
-  board: Board,
-  styles: (IceStyle | null)[][],
-  rng: Rng,
-): void {
+export function hideGold(level: Level, board: Board, rng: Rng): void {
   const spots = goldHideouts(level);
   for (let left = level.hiddenGold ?? 0; left > 0 && spots.length > 0; left--) {
     const [{ row, col }] = spots.splice(rng.int(spots.length), 1) as [{ row: number; col: number }];
     const cell = board[row]![col];
     if (cell?.kind === 'box') board[row]![col] = { ...cell, treasure: true };
-    else styles[row]![col] = 'gold';
   }
 }
 
@@ -186,12 +185,11 @@ export type IceStyle = keyof typeof ICE_HITS;
 const ICE_SYMBOLS: Readonly<Record<string, IceStyle>> = {
   i: 'classic',
   J: 'plain',
-  g: 'gold',
 };
 
-/** Сколько ударов держит лёд этого вида на уровне */
-export function iceHits(style: IceStyle, cracks: boolean): number {
-  return ICE_HITS[style] + (cracks && style !== 'classic' ? ICE_CRACKS_HITS : 0);
+/** Сколько ударов держит лёд этого вида */
+export function iceHits(style: IceStyle): number {
+  return ICE_HITS[style];
 }
 
 /** Вид льда по клеткам; null — льда нет */
@@ -204,8 +202,7 @@ export function iceStyles(level: Level): (IceStyle | null)[][] {
  * Число в клетке — сколько ударов лёд ещё выдержит (0 — льда нет)
  */
 export function iceTemplate(level: Level): number[][] {
-  const cracks = level.iceCracks === true;
-  return iceStyles(level).map((line) => line.map((style) => (style ? iceHits(style, cracks) : 0)));
+  return iceStyles(level).map((line) => line.map((style) => (style ? iceHits(style) : 0)));
 }
 
 function countSymbol(level: Level, symbol: string): number {
@@ -227,14 +224,16 @@ export function parseLevel(value: unknown): Level {
   if (!Array.isArray(level.layout) || level.layout.length === 0) fail('нет поля');
   const width = level.layout[0]?.length;
   if (level.layout.some((line) => line.length !== width)) fail('строки поля разной длины');
-  if (level.iceCracks !== undefined && typeof level.iceCracks !== 'boolean') {
-    fail('iceCracks — true или false');
-  }
-  if (level.layout.join('').replace(/[.#iJgsobt123uvwc]/g, '') !== '')
+  // Этапа трещин и льда со слитками больше нет: лёд — тонкий (i) или крепкий (J)
+  if ('iceCracks' in level) fail('iceCracks больше нет: у льда две прочности, i и J');
+  if (level.layout.join('').replace(/[.#iJsobt123uvwck]/g, '') !== '')
     fail('неизвестный символ в поле');
   let coal = 0;
+  let goldCoal = 0;
   try {
-    coal = coalBlocks(level.layout).length;
+    const blocks = coalBlocks(level.layout);
+    coal = blocks.length;
+    goldCoal = blocks.filter((block) => block.gold).length;
   } catch {
     fail('уголь — только квадраты 2×2');
   }
@@ -252,7 +251,7 @@ export function parseLevel(value: unknown): Level {
     hidden !== undefined &&
     (!Number.isInteger(hidden) || hidden < 1 || hidden > goldHideouts(level).length)
   ) {
-    fail('hiddenGold — от 1 до числа льдин J и сундуков без сокровищ');
+    fail('hiddenGold — от 1 до числа сундуков без сокровищ');
   }
 
   if (!Array.isArray(level.goals) || level.goals.length === 0) fail('нет целей');
@@ -267,14 +266,14 @@ export function parseLevel(value: unknown): Level {
     ) {
       fail(`цвет цели вне палитры уровня`);
     }
-    const symbols = { ice: 'iJg', gold: 'gtuvw', stone: 's', box: 'bt123uvw', item: 'o' }[
+    const symbols = { ice: 'iJ', gold: 'tuvw', stone: 's', box: 'bt123uvw', item: 'o' }[
       goal.kind as string
     ];
     const available =
       goal.kind === 'coal'
         ? coal
         : [...(symbols ?? '')].reduce((sum, s) => sum + countSymbol(level, s), 0) +
-          (goal.kind === 'gold' ? (hidden ?? 0) : 0);
+          (goal.kind === 'gold' ? (hidden ?? 0) + goldCoal : 0);
     if ((symbols || goal.kind === 'coal') && available < goal.count) {
       fail(`цель ${goal.kind} больше, чем есть на поле`);
     }

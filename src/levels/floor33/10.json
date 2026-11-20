@@ -1,15 +1,15 @@
 {
   "id": 330,
-  "title": "Уровень crowns + chests + gold + color",
+  "title": "Уровень crowns + stones + gold + color",
   "hint": "Опусти корону на дно поля",
   "layout": [
     "#o..##..o#",
     "..........",
-    ".1........",
-    "....1.....",
-    "#......1.#",
-    "##.tttt.##",
-    "###.1..###",
+    "..........",
+    "....ss....",
+    "#........#",
+    "##sbbbbs##",
+    "###.bb.###",
     "####..####"
   ],
   "colors": 3,
@@ -20,12 +20,8 @@
       "count": 2
     },
     {
-      "kind": "box",
-      "count": 8
-    },
-    {
       "kind": "gold",
-      "count": 4
+      "count": 3
     },
     {
       "kind": "level3color",
@@ -41,11 +37,12 @@
   "stars": [
     {
       "kind": "level3",
-      "count": 16
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 21
+      "count": 15
     }
-  ]
+  ],
+  "hiddenGold": 3
 }

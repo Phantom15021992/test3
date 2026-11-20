@@ -1,29 +1,29 @@
 {
   "id": 350,
-  "title": "Уровень gold + stones + crowns + color",
-  "hint": "Золото — во льду и в сундуках: доломай их",
+  "title": "Уровень gold + ice + stones + color",
+  "hint": "Золото — в угле и в сундуках: доломай их",
   "layout": [
-    "o........o",
+    "#...##...#",
+    "..kk..kk..",
+    "..kk..kk..",
     "..........",
-    "..s....s..",
+    "#ss.##.ss#",
+    "#...##...#",
     "..........",
-    "###....###",
-    "###.JJ.###",
-    "###.JJ.###",
-    "###sJJs###",
-    "###.JJ.###",
-    "###....###"
+    "...JJJJ...",
+    ".JJJ..JJJ.",
+    "#...##...#"
   ],
   "colors": 3,
   "moves": 35,
   "goals": [
     {
-      "kind": "item",
-      "count": 2
+      "kind": "ice",
+      "count": 10
     },
     {
       "kind": "gold",
-      "count": 3
+      "count": 2
     },
     {
       "kind": "level3color",
@@ -39,12 +39,12 @@
   "stars": [
     {
       "kind": "level3",
-      "count": 16
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 21
+      "count": 15
     }
   ],
-  "hiddenGold": 3
+  "coalLayers": 6
 }

@@ -1,6 +1,6 @@
 {
   "id": 103,
-  "title": "Уровень ice + color",
+  "title": "Уровень ice + cells",
   "hint": "Лёд ломается, когда на его клетке исчезает фишка",
   "layout": [
     "..........",
@@ -22,9 +22,8 @@
       "count": 14
     },
     {
-      "kind": "level3color",
-      "count": 4,
-      "color": 0
+      "kind": "level3",
+      "count": 6
     }
   ],
   "stars": [

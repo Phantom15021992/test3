@@ -1,28 +1,27 @@
 {
   "id": 209,
-  "title": "Уровень ice + gold + color",
+  "title": "Уровень ice + crowns + color",
   "hint": "Лёд ломается, когда на его клетке исчезает фишка",
   "layout": [
-    ".........",
-    ".........",
-    ".........",
-    ".........",
-    ".........",
-    ".JJJ.JJJ.",
-    ".JJJ.JJJ.",
-    ".JJJ.JJJ.",
-    "........."
+    ".o....o.",
+    "........",
+    "........",
+    "........",
+    "........",
+    "..JJJJ..",
+    ".JJJJJJ.",
+    "........"
   ],
   "colors": 3,
   "moves": 35,
   "goals": [
     {
-      "kind": "ice",
-      "count": 18
+      "kind": "item",
+      "count": 2
     },
     {
-      "kind": "gold",
-      "count": 3
+      "kind": "ice",
+      "count": 10
     },
     {
       "kind": "level3color",
@@ -33,12 +32,11 @@
   "stars": [
     {
       "kind": "level3",
-      "count": 13
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 18
+      "count": 15
     }
-  ],
-  "hiddenGold": 3
+  ]
 }

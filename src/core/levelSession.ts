@@ -96,10 +96,9 @@ export class LevelSession extends GameSession {
   ) {
     super(seed, level.colors, boardTemplate(level), level.moves);
     this.ice = iceTemplate(level);
-    const styles = iceStyles(level);
     // Своё зерно: золото прячется, не трогая ГСЧ партии, — поле попытки остаётся тем же
-    if (level.hiddenGold) hideGold(level, this.board, styles, createRng(seed ^ HIDDEN_GOLD_SALT));
-    this.iceStyle = styles;
+    if (level.hiddenGold) hideGold(level, this.board, createRng(seed ^ HIDDEN_GOLD_SALT));
+    this.iceStyle = iceStyles(level);
     this.board.forEach((line, row) =>
       line.forEach((cell, col) => {
         if (cell?.kind === 'coal' && cell.top === row && cell.left === col) {
@@ -322,15 +321,16 @@ export class LevelSession extends GameSession {
         line[col] = line[col]! - 1;
         if (line[col]! > 0) continue;
         this.progress.ice++;
-        if (this.iceStyle[row]?.[col] === 'gold') this.progress.gold++;
       }
       this.progress.stone += step.stones ?? 0;
       this.progress.box += step.boxes ?? 0;
       this.progress.gold += step.treasures ?? 0;
       this.progress.item += step.items ?? 0;
-      for (const { top, left, layers } of step.coal ?? []) {
+      for (const { top, left, layers, gold } of step.coal ?? []) {
         this.coal.set(`${top},${left}`, layers);
         if (layers === 0) this.progress.coal++;
+        // Самородок в угле: разбитая глыба с золотом идёт и в цель «золото»
+        if (layers === 0 && gold) this.progress.gold++;
       }
     }
     if (step.kind === 'transform') {

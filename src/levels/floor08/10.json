@@ -22,10 +22,6 @@
       "count": 56
     },
     {
-      "kind": "gold",
-      "count": 20
-    },
-    {
       "kind": "level3color",
       "count": 3,
       "color": 1
@@ -40,7 +36,5 @@
       "kind": "level3",
       "count": 18
     }
-  ],
-  "iceCracks": true,
-  "hiddenGold": 20
+  ]
 }

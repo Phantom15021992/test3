@@ -17,16 +17,16 @@ describe('размер целей уровня', () => {
         } = resizeLevel(level.layout, level.goals, scale, {
           hiddenGold: level.hiddenGold,
         });
-        // Золото во льду и сундуках не меняется: без цели на лёд или сундуки на поле только оно
-        // (и укрытия спрятанного золота)
+        // Золото в сундуках не меняется: без цели на сундуки на поле только оно (и укрытия спрятанного
+        // золота); уголь с золотом (k) идёт в цель «золото» глыбами
         for (const [kind, all, own] of [
-          ['ice', 'iJg', hiddenGold > 0 ? 'ig' : 'iJ'],
+          ['ice', 'iJ', 'iJ'],
           ['box', 'bt123uvw', hiddenGold > 0 ? '' : 'b123'],
-          ['gold', 'gtuvw', 'gtuvw'],
+          ['gold', 'tuvw', 'tuvw'],
         ] as const) {
           const goal = goals.find((g) => g.kind === kind)?.count;
           const where = `уровень ${level.id}, ${kind}, ×${scale}`;
-          const hidden = kind === 'gold' ? hiddenGold : 0;
+          const hidden = kind === 'gold' ? hiddenGold + count(layout, 'k') / 4 : 0;
           if (goal === undefined) expect(count(layout, own), where).toBe(0);
           else expect(count(layout, all) + hidden, where).toBe(goal);
         }
@@ -60,12 +60,14 @@ describe('размер целей уровня', () => {
   });
 
   it('спрятанное золото меняется вместе с местами, где прячется; закреплённая цель не меняется', () => {
-    const layout = ['......', '.JJJJ.', '.JJJJ.', '.JJJJ.', '.JJJJ.', '......'];
+    // Золото прячется только в простых сундуках
+    const chests = ['........', '.b.b.b..', '........', '.b.b.b..', '........', '.b.b.b..'];
     const goals = [{ kind: 'gold', count: 4 } as const];
-    const sized = resizeLevel(layout, goals, 0.5, { hiddenGold: 4 });
+    const sized = resizeLevel(chests, goals, 0.5, { hiddenGold: 4 });
     expect(sized.hiddenGold).toBe(2);
-    expect(count(sized.layout, 'J')).toBe(8);
+    expect(count(sized.layout, 'b')).toBe(5);
     expect(sized.goals).toEqual([{ kind: 'gold', count: 2 }]);
+    const layout = ['......', '.JJJJ.', '.JJJJ.', '.JJJJ.', '.JJJJ.', '......'];
     const ice = [
       { kind: 'ice', count: 16 },
       { kind: 'level3', count: 10 },

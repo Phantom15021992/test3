@@ -82,11 +82,13 @@ function goalValue(session: LevelSession, steps: ResolveStep[], after: Board): n
       if (need('box')) value += ((step.boxes ?? 0) + (step.chests?.length ?? 0)) * GOAL_STEP_VALUE;
       if (need('gold')) value += (step.treasures ?? 0) * GOAL_STEP_VALUE;
       if (need('coal')) value += (step.coal?.length ?? 0) * GOAL_STEP_VALUE;
+      // Глыба с золотом: каждый удар приближает самородок
+      if (need('gold'))
+        value += (step.coal?.filter((hit) => hit.gold).length ?? 0) * GOAL_STEP_VALUE;
       if (need('item')) value += (step.items ?? 0) * ITEM_VALUE;
       for (const { row, col } of step.cells) {
         const iced = (session.ice[row]?.[col] ?? 0) > 0;
-        const gold = iced && session.iceStyle[row]?.[col] === 'gold';
-        if ((need('ice') && iced) || (need('gold') && gold)) broken.add(`${row},${col}`);
+        if (need('ice') && iced) broken.add(`${row},${col}`);
       }
     }
     if (step.kind === 'transform') {

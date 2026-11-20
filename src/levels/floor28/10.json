@@ -1,29 +1,29 @@
 {
   "id": 280,
-  "title": "Уровень chests + stones + crowns + color",
+  "title": "Уровень chests + gold + stones + color",
   "hint": "Сундук ломается от совпадения рядом или от взрыва",
   "layout": [
-    "o........o",
+    "....##....",
+    "....##....",
+    "....##....",
+    "..........",
     ".......1..",
     "....1.....",
-    "...s..s...",
-    "###s..s###",
-    "###.1..###",
-    "###....###",
-    "###....###",
-    "###.1..###",
-    "###....###"
+    ".s.b..b.s.",
+    ".bss##s1b.",
+    ".b1.##..b.",
+    "....##...."
   ],
   "colors": 3,
   "moves": 35,
   "goals": [
     {
-      "kind": "item",
-      "count": 2
+      "kind": "box",
+      "count": 10
     },
     {
-      "kind": "box",
-      "count": 4
+      "kind": "gold",
+      "count": 3
     },
     {
       "kind": "level3color",
@@ -34,11 +34,12 @@
   "stars": [
     {
       "kind": "level3",
-      "count": 13
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 18
+      "count": 15
     }
-  ]
+  ],
+  "hiddenGold": 3
 }

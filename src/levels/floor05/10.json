@@ -23,7 +23,7 @@
     },
     {
       "kind": "gold",
-      "count": 28
+      "count": 20
     },
     {
       "kind": "level3color",
@@ -41,5 +41,5 @@
       "count": 18
     }
   ],
-  "hiddenGold": 28
+  "hiddenGold": 20
 }

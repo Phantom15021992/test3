@@ -1,29 +1,33 @@
 {
   "id": 160,
-  "title": "Уровень ice + coal + stones + color",
-  "hint": "Лёд ломается, когда на его клетке исчезает фишка",
+  "title": "Уровень crowns + ice + gold + color",
+  "hint": "Опусти корону на дно поля",
   "layout": [
-    "###....###",
-    "#........#",
-    "...cc.....",
-    "...cc.....",
+    "o........o",
     "..........",
-    ".ccsccs...",
-    ".cc.cc....",
-    ".sJJJJJJs.",
-    "#..JJJJ..#",
+    "....bb....",
+    "...bbbb...",
+    "###.JJ.###",
+    "###.JJ.###",
+    "###.JJ.###",
+    "###.JJ.###",
+    "###.JJ.###",
     "###....###"
   ],
   "colors": 3,
   "moves": 35,
   "goals": [
     {
-      "kind": "coal",
-      "count": 3
+      "kind": "item",
+      "count": 2
     },
     {
       "kind": "ice",
       "count": 10
+    },
+    {
+      "kind": "gold",
+      "count": 3
     },
     {
       "kind": "level3color",
@@ -34,13 +38,12 @@
   "stars": [
     {
       "kind": "level3",
-      "count": 13
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 18
+      "count": 15
     }
   ],
-  "coalLayers": 6,
-  "iceCracks": true
+  "hiddenGold": 3
 }

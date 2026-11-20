@@ -1,29 +1,29 @@
 {
   "id": 275,
-  "title": "Уровень gold + chests + color",
-  "hint": "Золото — во льду и в сундуках: доломай их",
+  "title": "Уровень ice + gold + color",
+  "hint": "Лёд ломается, когда на его клетке исчезает фишка",
   "layout": [
     "..........",
     "..........",
-    "....##....",
+    "....######",
+    "..kk......",
+    "..kkJJkk..",
+    "......kk..",
+    "######....",
     "..........",
-    "....1.....",
-    "..........",
-    ".1..##....",
-    "...J..J1..",
-    ".JJJ1.JJJ.",
+    ".JJJJJJJJ.",
     ".........."
   ],
   "colors": 3,
   "moves": 35,
   "goals": [
     {
-      "kind": "box",
-      "count": 4
+      "kind": "ice",
+      "count": 10
     },
     {
       "kind": "gold",
-      "count": 3
+      "count": 2
     },
     {
       "kind": "level3color",
@@ -34,12 +34,12 @@
   "stars": [
     {
       "kind": "level3",
-      "count": 13
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 18
+      "count": 15
     }
   ],
-  "hiddenGold": 3
+  "coalLayers": 6
 }

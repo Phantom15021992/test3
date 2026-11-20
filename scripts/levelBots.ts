@@ -17,7 +17,7 @@ import {
   type Position,
 } from '../src/core/board';
 import { aimedPiece, isBonusTarget, type AimedBonus } from '../src/core/bonus';
-import { iceHits, type Level, type StarTaskKind } from '../src/core/level';
+import { type Level, type StarTaskKind } from '../src/core/level';
 import { LevelSession, type LevelAction } from '../src/core/levelSession';
 import { findPossibleMoves } from '../src/core/moves';
 import { runMove, type ResolveStep } from '../src/core/resolve';
@@ -104,15 +104,6 @@ function candidates(session: LevelSession): PlayerMove[] {
   return moves;
 }
 
-/** Лёд, под которым может быть золото, пока его не ударили: снаружи 2 уровень, внутри неизвестно */
-function unrevealedIce(session: LevelSession, pos: Position): boolean {
-  const style = session.iceStyle[pos.row]?.[pos.col];
-  if (style !== 'plain' && style !== 'gold') return false;
-  return (
-    (session.ice[pos.row]?.[pos.col] ?? 0) === iceHits(style, session.level.iceCracks === true)
-  );
-}
-
 /** Закрытый сундук: есть ли в нём сокровища, не видно */
 function closedChest(board: Board, pos: Position): boolean {
   const cell = getCell(board, pos);
@@ -128,10 +119,7 @@ function goldOdds(session: LevelSession): number {
   let gold = 0;
   for (const pos of allPositions(session.board)) {
     const cell = getCell(session.board, pos);
-    if (unrevealedIce(session, pos)) {
-      spots++;
-      if (session.iceStyle[pos.row]?.[pos.col] === 'gold') gold++;
-    } else if (closedChest(session.board, pos)) {
+    if (closedChest(session.board, pos)) {
       spots++;
       if (cell?.kind === 'box' && cell.treasure) gold++;
     }
@@ -199,20 +187,17 @@ function moveValue(
       value += (step.boxes ?? 0) * (need('box') ? 90 : 5);
       value += (step.chests?.length ?? 0) * (need('box') ? 50 : 3 + 60 * odds);
       value += (step.treasures ?? 0) * (need('gold') ? 120 : 0);
-      // Удар по углю: слой снят; разбитая глыба — цель
-      for (const hit of step.coal ?? []) value += need('coal') ? (hit.layers === 0 ? 400 : 70) : 5;
+      // Удар по углю: слой снят; разбитая глыба — цель. Глыба с золотом нужна и цели «золото»
+      for (const hit of step.coal ?? []) {
+        value += need('coal') ? (hit.layers === 0 ? 400 : 70) : 5;
+        if (hit.gold && need('gold')) value += hit.layers === 0 ? 400 : 70;
+      }
       for (const pos of step.cells) {
         const hits = session.ice[pos.row]?.[pos.col] ?? 0;
         if (hits > 0 && !iced.has(posKey(pos))) {
           iced.add(posKey(pos));
-          // Последний удар ломает льдину — он ценнее, чем снятый слой
-          // Золото видно после первого удара; до него — только надежда, что оно здесь
-          const gold = unrevealedIce(session, pos)
-            ? odds
-            : session.iceStyle[pos.row]?.[pos.col] === 'gold'
-              ? 1
-              : 0;
-          const worth = (need('ice') ? 60 : 0) + (need('gold') ? 80 * gold : 0);
+          // Последний удар ломает льдину — он ценнее, чем трещина
+          const worth = need('ice') ? 60 : 0;
           value += hits === 1 ? worth : worth / 2;
         }
       }
@@ -241,9 +226,7 @@ function goalTargets(session: LevelSession): Position[] {
     const cell = getCell(session.board, pos);
     return (
       (need('ice') && (session.ice[pos.row]?.[pos.col] ?? 0) > 0) ||
-      (need('gold') &&
-        (session.ice[pos.row]?.[pos.col] ?? 0) > 0 &&
-        (session.iceStyle[pos.row]?.[pos.col] === 'gold' || unrevealedIce(session, pos))) ||
+      (need('gold') && cell?.kind === 'coal' && cell.gold === true) ||
       ((need('box') ||
         (need('gold') &&
           (closedChest(session.board, pos) || (cell?.kind === 'box' && cell.treasure === true)))) &&

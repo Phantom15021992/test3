@@ -15,9 +15,7 @@ export type ObstacleImage =
   | 'crown'
   | 'ice-thin'
   | 'ice-thick'
-  | 'ice-cracked'
-  | 'ice-gold'
-  | 'ice-gold-cracked';
+  | 'ice-cracked';
 
 const textureKey = (name: ObstacleImage) => `obstacle-${name}`;
 
@@ -31,22 +29,15 @@ const NAMES: readonly ObstacleImage[] = [
   'ice-thin',
   'ice-thick',
   'ice-cracked',
-  'ice-gold',
-  'ice-gold-cracked',
 ];
 
 /**
- * Картинка льда по виду и оставшимся ударам. Весь новый лёд начинается со 2 уровня: слитки под ним
- * не видны, после удара он становится льдом 1 уровня — простым или со слитками. С этапом трещин
- * (iceCracks у уровня) последний удар остаётся льду с трещинами
+ * Картинка льда по виду и оставшимся ударам (у льда две прочности, по просьбе владельца): тонкий лёд — целый
+ * и исчезает с одного удара; крепкий — целый, после удара треснувший, потом исчезает
  */
-export function iceImage(style: IceStyle, hits: number, cracks: boolean): ObstacleImage {
-  // Обычный лёд (1 удар) — это лёд 1 уровня: та же картинка, весь лёд в одном стиле
+export function iceImage(style: IceStyle, hits: number): ObstacleImage {
   if (style === 'classic') return 'ice-thin';
-  if (hits >= iceHits(style, cracks)) return 'ice-thick';
-  const cracked = cracks && hits === 1;
-  if (style === 'gold') return cracked ? 'ice-gold-cracked' : 'ice-gold';
-  return cracked ? 'ice-cracked' : 'ice-thin';
+  return hits >= iceHits(style) ? 'ice-thick' : 'ice-cracked';
 }
 
 /**
@@ -66,15 +57,51 @@ export const OBSTACLE_IMAGE_FILES: readonly { key: string; path: string }[] = [
 /** На сколько уменьшается глыба угля с каждой стадией */
 const COAL_SHRINK = 0.065;
 
-/** Глыба угля: картинка стадии во всю глыбу 4×4, с каждой стадией меньше */
+/** Самородок — последняя картинка угля с золотом: та же глыба последней стадии, перекрашенная в золото */
+const GOLD_COAL_KEY = 'obstacle-coal-gold';
+
+/** Перекрашивает последнюю стадию угля в золото: светлота пикселя → от тёмного золота к яркому */
+function ensureGoldCoal(scene: Phaser.Scene): void {
+  if (scene.textures.exists(GOLD_COAL_KEY)) return;
+  const source = scene.textures.get(coalKey(COAL_MAX_LAYERS)).getSourceImage() as HTMLImageElement;
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+  ctx.drawImage(source, 0, 0);
+  const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = image.data;
+  const dark = [122, 74, 0];
+  const bright = [255, 222, 92];
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] === 0) continue;
+    // Уголь почти чёрный: светлоту растягиваем, чтобы грани самородка читались
+    const light = Math.min(1, ((d[i]! + d[i + 1]! + d[i + 2]!) / 3 / 255) * 2.4 + 0.15);
+    for (let k = 0; k < 3; k++) d[i + k] = dark[k]! + (bright[k]! - dark[k]!) * light;
+  }
+  ctx.putImageData(image, 0, 0);
+  scene.textures.addCanvas(GOLD_COAL_KEY, canvas);
+}
+
+/**
+ * Глыба угля: картинка стадии во всю глыбу 4×4, с каждой стадией меньше. У угля с золотом последний слой —
+ * самородок (по просьбе владельца)
+ */
 export function setCoalArt(
   image: Phaser.GameObjects.Image,
   layers: number,
   cellSize: number,
   start: number = COAL_MAX_LAYERS,
+  gold = false,
 ): void {
   const stage = coalStage(layers, start);
   const size = cellSize * COAL_SIZE * (1 - (stage - 1) * COAL_SHRINK);
+  // Последний слой (как бы мало слоёв ни задал уровень) — самородок
+  if (gold && layers <= 1) {
+    ensureGoldCoal(image.scene);
+    image.setTexture(GOLD_COAL_KEY).setDisplaySize(size, size);
+    return;
+  }
   image.setTexture(coalKey(stage)).setDisplaySize(size, size);
 }
 

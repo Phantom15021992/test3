@@ -181,6 +181,36 @@ describe('уголь: уровень', () => {
     expect(() => parseLevel(level({ goals: [{ kind: 'coal', count: 2 }] }))).toThrow('больше');
   });
 
+  it('уголь с золотом (k): последний слой — самородок, разбитая глыба идёт и в уголь, и в золото', () => {
+    const golden = ['kk....', 'kk....', '......', '......', '......', '......'];
+    const gold = level({
+      layout: golden,
+      coalLayers: 1,
+      goals: [
+        { kind: 'coal', count: 1 },
+        { kind: 'gold', count: 1 },
+      ],
+    });
+    expect(boardTemplate(gold)[0]![0]).toEqual({
+      kind: 'coal',
+      top: 0,
+      left: 0,
+      layers: 1,
+      gold: true,
+    });
+    // Без золотой глыбы цели на золото не из чего собраться
+    expect(() => parseLevel(level({ goals: [{ kind: 'gold', count: 1 }] }))).toThrow('больше');
+    expect(() => parseLevel(level({ layout: ['kc....', 'kc....', '......'] }))).toThrow('2×2');
+    const session = new LevelSession(1, parseLevel(gold));
+    session.board = besideCoal(1, 1).map((line) =>
+      line.map((cell) => (cell?.kind === 'coal' ? { ...cell, gold: true } : cell)),
+    );
+    for (const step of session.play(swapIn)) void step;
+    expect(session.progress.coal).toBe(1);
+    expect(session.progress.gold).toBe(1);
+    expect(session.goalsDone).toBe(true);
+  });
+
   it('разбитая глыба засчитывается в цель', () => {
     const session = new LevelSession(1, parseLevel(level({ coalLayers: 1 })));
     session.board = besideCoal(1, 1).map((line) => [...line]);

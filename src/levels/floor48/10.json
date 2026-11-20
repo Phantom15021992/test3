@@ -1,29 +1,29 @@
 {
   "id": 480,
-  "title": "Уровень crowns + stones + gold + color",
-  "hint": "Опусти корону на дно поля",
+  "title": "Уровень gold + coal + stones + color",
+  "hint": "Золото — в угле и в сундуках: доломай их",
   "layout": [
-    ".o......o.",
     "..........",
-    "..........",
-    "..........",
-    "###s..s###",
-    "###.JJ.###",
-    "###.JJ.###",
-    "###sJJs###",
-    "###.JJ.###",
-    "###....###"
+    "......kk..",
+    "....s.kk..",
+    "####..s...",
+    "###......#",
+    "#......###",
+    "...s..####",
+    "..cc.s....",
+    "..cc......",
+    ".........."
   ],
   "colors": 3,
   "moves": 35,
   "goals": [
     {
-      "kind": "item",
+      "kind": "coal",
       "count": 2
     },
     {
       "kind": "gold",
-      "count": 3
+      "count": 1
     },
     {
       "kind": "level3color",
@@ -39,12 +39,12 @@
   "stars": [
     {
       "kind": "level3",
-      "count": 16
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 21
+      "count": 15
     }
   ],
-  "hiddenGold": 3
+  "coalLayers": 6
 }

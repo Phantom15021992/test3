@@ -120,7 +120,7 @@ export function goalTaskText({ kind, count, color }: Goal): string {
       return `собери ${n} ${plural(count, `${one} кристалл`, `${many} кристалла`, `${many} кристаллов`)} 3 уровня`;
     }
     case 'gold':
-      return `достань золото: ${n} (слитки во льду и сундуки с сокровищами)`;
+      return `достань золото: ${n} (самородки в угле и сундуки с сокровищами)`;
   }
 }
 

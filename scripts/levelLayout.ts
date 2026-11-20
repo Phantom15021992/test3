@@ -31,14 +31,14 @@ interface Cell {
   col: number;
 }
 
-/** Весь лёд поля: обычный, 2 уровня, со слитками */
-const ICE = 'iJg';
-/** Всё золото: слитки во льду и сундуки с сокровищами */
-const GOLD = 'gtuvw';
+/** Весь лёд поля: тонкий и крепкий */
+const ICE = 'iJ';
+/** Золото на виду: сундуки с сокровищами (уголь с золотом считается глыбами — goldCoal) */
+const GOLD = 'tuvw';
 /** Все сундуки поля: простые, с сокровищами, в цепях */
 const CHESTS = 'bt123uvw';
-/** Где прячется спрятанное золото: лёд 2 уровня и сундуки без сокровищ */
-const HIDEOUTS = 'Jb123';
+/** Где прячется спрятанное золото: сундуки без сокровищ */
+const HIDEOUTS = 'b123';
 /** Сколько звеньев бывает на одной цепи */
 const MAX_LINKS = 3;
 
@@ -85,7 +85,7 @@ export function resizeLevel(
     if (goal.kind === 'ice') return { kind: 'ice', count: cellsOf(grid, ICE).length };
     if (goal.kind === 'box') return { kind: 'box', count: cellsOf(grid, CHESTS).length };
     if (goal.kind === 'gold') {
-      return { kind: 'gold', count: cellsOf(grid, GOLD).length + (hidden ?? 0) };
+      return { kind: 'gold', count: cellsOf(grid, GOLD).length + (hidden ?? 0) + goldCoal(grid) };
     }
     // Камни — помеха, короны и уголь меняются не числом: у короны — высота, у угля — слои
     if (['item', 'stone', 'coal'].includes(goal.kind) || fixed.includes(goal.kind)) return goal;
@@ -93,7 +93,9 @@ export function resizeLevel(
   });
   const result: SizedLevel = { layout: grid.map((line) => line.join('')), goals: sized };
   if (hidden !== undefined) result.hiddenGold = hidden;
-  if (coalLayers !== undefined && goals.some((goal) => goal.kind === 'coal')) {
+  // Слои угля — рычаг и цели «уголь», и цели «золото», когда золото в угле
+  const coalGoal = has('coal') || (has('gold') && goldCoal(grid) > 0);
+  if (coalLayers !== undefined && coalGoal) {
     result.coalLayers = Math.min(COAL_MAX_LAYERS, Math.max(1, Math.round(coalLayers * scale)));
   }
   return result;
@@ -106,12 +108,15 @@ function resizeIce(grid: Grid, scale: number): void {
   if (count > 0) resizeLayer(grid, symbol, count, scale);
 }
 
+/** Глыбы угля с золотом: клеток k вчетверо больше, чем глыб */
+const goldCoal = (grid: Grid) => cellsOf(grid, 'k').length / 4;
+
 /**
- * Золото: слитки во льду и сундуки с сокровищами (без цепей) меняются каждые в своей доле.
- * Со спрятанным золотом меняются и места, где оно прячется: лёд 2 уровня и простые сундуки
+ * Золото: сундуки с сокровищами (без цепей) меняются в своей доле, со спрятанным золотом — и простые
+ * сундуки, где оно прячется. Уголь с золотом числом не меняется — у него, как у всего угля, меняются слои
  */
 function resizeGold(grid: Grid, scale: number, hidden: boolean): void {
-  for (const symbol of hidden ? ['g', 't', 'J', 'b'] : ['g', 't']) {
+  for (const symbol of hidden ? ['t', 'b'] : ['t']) {
     const count = cellsOf(grid, symbol).length;
     if (count > 0) resizeLayer(grid, symbol, count, scale);
   }
@@ -322,7 +327,7 @@ export function raiseCrowns(layout: readonly string[]): string[] {
       if (symbol !== 'o') return;
       let top = row;
       // Над дырой или углём корона застряла бы: выше них не поднимаем
-      for (let r = row - 1; r >= 0 && !['#', 'c'].includes(grid[r]![col]!); r--) {
+      for (let r = row - 1; r >= 0 && !['#', 'c', 'k'].includes(grid[r]![col]!); r--) {
         if (grid[r]![col] === '.') top = r;
       }
       if (top === row) return;

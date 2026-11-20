@@ -1,26 +1,22 @@
 {
   "id": 500,
-  "title": "Уровень coal + ice + crowns + color",
+  "title": "Уровень coal + ice + stones + color",
   "hint": "Совпадения рядом с углём откалывают слои",
   "layout": [
-    "o........o",
-    ".ccJJJJ...",
-    ".cc..cc...",
-    ".....cc...",
-    "###.JJ.###",
-    "###.cc.###",
-    "###.cc.###",
-    "###.JJ.###",
-    "###.JJ.###",
-    "###....###"
+    "..........",
+    "....cc....",
+    "....cc....",
+    ".s......s.",
+    ".ccs..scc.",
+    ".cc.##.cc.",
+    "..J.##.J..",
+    ".JJ.##.JJ.",
+    ".JJ.##.JJ.",
+    "....##...."
   ],
   "colors": 3,
   "moves": 35,
   "goals": [
-    {
-      "kind": "item",
-      "count": 2
-    },
     {
       "kind": "coal",
       "count": 3
@@ -38,13 +34,12 @@
   "stars": [
     {
       "kind": "level3",
-      "count": 13
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 18
+      "count": 15
     }
   ],
-  "coalLayers": 6,
-  "iceCracks": true
+  "coalLayers": 6
 }

@@ -144,7 +144,9 @@ export class BoardView {
           this.background.fillRect(x, y, this.cellSize, this.cellSize);
         }
         if (isCoal(cell)) {
-          if (cell.top === r && cell.left === c) this.addCoal(cell.top, cell.left, cell.layers);
+          if (cell.top === r && cell.left === c) {
+            this.addCoal(cell.top, cell.left, cell.layers, cell.gold === true);
+          }
           return null;
         }
         return cell ? this.createSprite(cell, { row: r, col: c }) : null;
@@ -182,7 +184,6 @@ export class BoardView {
   setIce(
     ice: readonly (readonly number[])[],
     styles: readonly (readonly (IceStyle | null)[])[],
-    cracks: boolean,
   ): void {
     this.iceLayer.removeAll(true);
     ice.forEach((line, row) =>
@@ -190,9 +191,7 @@ export class BoardView {
         const style = styles[row]?.[col];
         if (hits <= 0 || !style) return;
         const { x, y } = this.centerOf({ row, col });
-        this.iceLayer.add(
-          obstacleImage(this.scene, iceImage(style, hits, cracks), this.cellSize, x, y),
-        );
+        this.iceLayer.add(obstacleImage(this.scene, iceImage(style, hits), this.cellSize, x, y));
       }),
     );
   }
@@ -215,7 +214,7 @@ export class BoardView {
 
   /** Удары по углю: глыба вздрагивает и уменьшается, разбитая — исчезает */
   hitCoal(hits: readonly CoalHit[]): void {
-    for (const { top, left, layers } of hits) {
+    for (const { top, left, layers, gold } of hits) {
       const key = `${top},${left}`;
       const image = this.coal.get(key);
       if (!image) continue;
@@ -230,7 +229,7 @@ export class BoardView {
         });
         continue;
       }
-      setCoalArt(image, layers, this.cellSize, this.coalLayers);
+      setCoalArt(image, layers, this.cellSize, this.coalLayers, gold === true);
       const scale = image.scaleX;
       this.scene.tweens.add({
         targets: image,
@@ -241,7 +240,7 @@ export class BoardView {
     }
   }
 
-  private addCoal(top: number, left: number, layers: number): void {
+  private addCoal(top: number, left: number, layers: number, gold: boolean): void {
     const half = (COAL_SIZE * this.cellSize) / 2;
     const image = this.scene.add
       .image(
@@ -250,7 +249,7 @@ export class BoardView {
         '',
       )
       .setMask(this.mask);
-    setCoalArt(image, layers, this.cellSize, this.coalLayers);
+    setCoalArt(image, layers, this.cellSize, this.coalLayers, gold);
     this.coal.set(`${top},${left}`, image);
   }
 

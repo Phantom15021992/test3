@@ -1,31 +1,33 @@
 {
   "id": 290,
-  "title": "Уровень chests + coal + crowns + color",
+  "title": "Уровень chests + ice + coal + color",
   "hint": "Сундук ломается от совпадения рядом или от взрыва",
   "layout": [
-    "#o..##..o#",
-    "......1...",
-    "...1cc....",
-    "....cc....",
-    "#.....1..#",
-    "##.1cc..##",
-    "###.cc.###",
-    "####..####"
+    "....##....",
+    "....##....",
+    "....##....",
+    "..........",
+    ".JJ.cc1JJ.",
+    ".cc1cc.cc.",
+    ".ccJ..Jcc.",
+    ".J..##.1J.",
+    ".J1.##..J.",
+    "....##...."
   ],
   "colors": 3,
   "moves": 35,
   "goals": [
     {
-      "kind": "item",
-      "count": 2
-    },
-    {
       "kind": "coal",
-      "count": 2
+      "count": 3
     },
     {
       "kind": "box",
       "count": 4
+    },
+    {
+      "kind": "ice",
+      "count": 10
     },
     {
       "kind": "level3color",
@@ -41,11 +43,11 @@
   "stars": [
     {
       "kind": "level3",
-      "count": 16
+      "count": 10
     },
     {
       "kind": "level3",
-      "count": 21
+      "count": 15
     }
   ],
   "coalLayers": 6

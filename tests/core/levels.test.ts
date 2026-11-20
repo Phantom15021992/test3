@@ -37,19 +37,19 @@ describe('кампания', () => {
   });
 
   it('льда, сундуков и золота на поле ровно столько, сколько в цели: лишних нет', () => {
-    // Лёд и сундуки со слитками и сокровищами считаются и в золото, поэтому без своей цели
-    // на поле может быть только золото. Со спрятанным золотом лёд 2 уровня и сундуки — его укрытия:
-    // пустышки нужны, они стоят и без своей цели
+    // Сундуки с сокровищами считаются и в золото, поэтому без своей цели на поле может быть только золото.
+    // Со спрятанным золотом сундуки — его укрытия: пустышки нужны, они стоят и без своей цели. Уголь с золотом
+    // (k) идёт в цель «золото» глыбами
     for (const { id, layout, goals, hiddenGold = 0 } of LEVELS) {
       const symbols = [
-        ['ice', 'iJg', hiddenGold > 0 ? 'ig' : 'iJ'],
+        ['ice', 'iJ', 'iJ'],
         ['box', 'bt123uvw', hiddenGold > 0 ? '' : 'b123'],
-        ['gold', 'gtuvw', 'gtuvw'],
+        ['gold', 'tuvw', 'tuvw'],
       ] as const;
       const count = (chars: string) => [...layout.join('')].filter((s) => chars.includes(s)).length;
       for (const [kind, all, own] of symbols) {
         const goal = goals.find((g) => g.kind === kind)?.count;
-        const hidden = kind === 'gold' ? hiddenGold : 0;
+        const hidden = kind === 'gold' ? hiddenGold + count('k') / 4 : 0;
         if (goal === undefined) expect(count(own), `уровень ${id}, ${kind}`).toBe(0);
         else expect(count(all) + hidden, `уровень ${id}, ${kind}`).toBe(goal);
       }

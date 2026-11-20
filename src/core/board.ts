@@ -59,6 +59,8 @@ export interface Coal {
   top: number;
   left: number;
   layers: number;
+  /** Уголь с золотом: последний слой — самородок, разбитая глыба засчитывается и в цель «золото» */
+  gold?: boolean;
 }
 
 /** null — пустая клетка, которую нужно заполнить */
