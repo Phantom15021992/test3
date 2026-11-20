@@ -1,16 +1,16 @@
 {
   "id": 229,
-  "title": "Уровень crowns + stones + chests",
+  "title": "Уровень crowns + ice + color",
   "hint": "Опусти корону на дно поля",
   "layout": [
-    "#o..##..o#",
-    "..........",
-    ".1........",
-    "..s.1..s..",
-    "#......1.#",
-    "##s....s##",
-    "###.1..###",
-    "####..####"
+    "o......o",
+    "........",
+    "........",
+    "........",
+    "........",
+    "..JJJJ..",
+    ".JJJJJJ.",
+    "........"
   ],
   "colors": 3,
   "moves": 35,
@@ -20,8 +20,18 @@
       "count": 2
     },
     {
-      "kind": "box",
-      "count": 4
+      "kind": "ice",
+      "count": 10
+    },
+    {
+      "kind": "level3color",
+      "count": 3,
+      "color": 2
+    },
+    {
+      "kind": "level3color",
+      "count": 3,
+      "color": 0
     }
   ],
   "stars": [
@@ -33,5 +43,6 @@
       "kind": "level3",
       "count": 15
     }
-  ]
+  ],
+  "iceCracks": true
 }

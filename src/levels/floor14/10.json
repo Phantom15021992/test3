@@ -1,17 +1,17 @@
 {
   "id": 140,
-  "title": "Уровень coal + cells + stones",
+  "title": "Уровень coal + ice + gold + color",
   "hint": "Совпадения рядом с углём откалывают слои",
   "layout": [
     "..........",
-    "..........",
-    "....##....",
-    "..........",
-    "..........",
-    "..s....s..",
-    "..s.##.s..",
-    "..cc..cc..",
-    "..cc..cc..",
+    ".JJJJJJcc.",
+    "....JJJcc.",
+    "####......",
+    "###.cc...#",
+    "#...cc.###",
+    "......####",
+    ".ccJJJ....",
+    ".ccJJJJJJ.",
     ".........."
   ],
   "colors": 3,
@@ -19,11 +19,25 @@
   "goals": [
     {
       "kind": "coal",
-      "count": 2
+      "count": 3
     },
     {
-      "kind": "level3",
-      "count": 6
+      "kind": "ice",
+      "count": 18
+    },
+    {
+      "kind": "gold",
+      "count": 3
+    },
+    {
+      "kind": "level3color",
+      "count": 3,
+      "color": 1
+    },
+    {
+      "kind": "level3color",
+      "count": 3,
+      "color": 0
     }
   ],
   "stars": [
@@ -36,5 +50,7 @@
       "count": 15
     }
   ],
-  "coalLayers": 6
+  "coalLayers": 6,
+  "hiddenGold": 3,
+  "iceCracks": true
 }

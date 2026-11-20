@@ -27,18 +27,23 @@
     },
     {
       "kind": "level3color",
-      "count": 4,
+      "count": 3,
       "color": 2
+    },
+    {
+      "kind": "level3color",
+      "count": 3,
+      "color": 0
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 14
+      "count": 16
     },
     {
       "kind": "level3",
-      "count": 19
+      "count": 21
     }
   ],
   "coalLayers": 8

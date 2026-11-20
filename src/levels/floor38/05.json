@@ -1,33 +1,39 @@
 {
   "id": 375,
-  "title": "Уровень cells + coal + gold",
-  "hint": "Собирай ячейки 3 уровня",
+  "title": "Уровень coal + ice + color",
+  "hint": "Совпадения рядом с углём откалывают слои",
   "layout": [
-    "###....###",
-    "#........#",
+    "....##....",
+    ".cc.##....",
+    ".cc.##....",
     "..........",
     "..........",
-    ".....cc...",
-    ".....cc...",
-    "..........",
-    ".JJJccJJJ.",
-    "#..JccJ..#",
-    "###....###"
+    "..cc..cc..",
+    ".Jcc..ccJ.",
+    ".JJ.##.JJ.",
+    ".JJ.##.JJ.",
+    "....##...."
   ],
   "colors": 3,
   "moves": 35,
   "goals": [
     {
       "kind": "coal",
-      "count": 2
-    },
-    {
-      "kind": "gold",
       "count": 3
     },
     {
-      "kind": "level3",
-      "count": 6
+      "kind": "ice",
+      "count": 10
+    },
+    {
+      "kind": "level3color",
+      "count": 3,
+      "color": 0
+    },
+    {
+      "kind": "level3color",
+      "count": 3,
+      "color": 1
     }
   ],
   "stars": [
@@ -40,6 +46,5 @@
       "count": 15
     }
   ],
-  "coalLayers": 6,
-  "hiddenGold": 3
+  "coalLayers": 6
 }

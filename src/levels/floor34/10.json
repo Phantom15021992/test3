@@ -1,29 +1,43 @@
 {
   "id": 340,
-  "title": "Уровень coal + stones + gold",
+  "title": "Уровень coal + gold + crowns + color",
   "hint": "Совпадения рядом с углём откалывают слои",
   "layout": [
+    "o........o",
+    ".cc.cc.cc.",
+    ".cc.cc.cc.",
     "..........",
-    "..JJJccJ..",
-    ".....cc...",
-    "####.s..s.",
-    "###......#",
-    "#......###",
-    ".s..s.####",
-    "...cc.....",
-    "..JccJJJ..",
-    ".........."
+    "###....###",
+    "###....###",
+    "###....###",
+    "###.tt.###",
+    "###.tt.###",
+    "###....###"
   ],
   "colors": 3,
   "moves": 35,
   "goals": [
     {
-      "kind": "coal",
+      "kind": "item",
       "count": 2
     },
     {
-      "kind": "gold",
+      "kind": "coal",
       "count": 3
+    },
+    {
+      "kind": "gold",
+      "count": 4
+    },
+    {
+      "kind": "level3color",
+      "count": 3,
+      "color": 0
+    },
+    {
+      "kind": "level3color",
+      "count": 3,
+      "color": 1
     }
   ],
   "stars": [
@@ -36,6 +50,5 @@
       "count": 15
     }
   ],
-  "coalLayers": 6,
-  "hiddenGold": 3
+  "coalLayers": 6
 }

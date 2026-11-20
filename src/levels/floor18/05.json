@@ -1,33 +1,35 @@
 {
   "id": 175,
-  "title": "Уровень cells + ice + gold",
-  "hint": "Собирай ячейки 3 уровня",
+  "title": "Уровень crowns + stones + color",
+  "hint": "Опусти корону на дно поля",
   "layout": [
+    "o........o",
     "..........",
+    "....ss....",
     "..........",
-    "..........",
-    "..........",
-    "....##....",
-    "....##....",
-    "...J..J...",
-    ".JJJJJJJJ.",
-    ".JJJJJJJJ.",
-    ".........."
+    "###....###",
+    "###....###",
+    "###s..s###",
+    "###....###",
+    "###....###",
+    "###....###"
   ],
   "colors": 3,
   "moves": 35,
   "goals": [
     {
-      "kind": "ice",
-      "count": 18
+      "kind": "item",
+      "count": 2
     },
     {
-      "kind": "gold",
-      "count": 3
+      "kind": "level3color",
+      "count": 3,
+      "color": 0
     },
     {
-      "kind": "level3",
-      "count": 6
+      "kind": "level3color",
+      "count": 3,
+      "color": 1
     }
   ],
   "stars": [
@@ -39,7 +41,5 @@
       "kind": "level3",
       "count": 15
     }
-  ],
-  "hiddenGold": 3,
-  "iceCracks": true
+  ]
 }

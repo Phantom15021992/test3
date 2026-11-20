@@ -1,30 +1,39 @@
 {
   "id": 259,
-  "title": "Уровень color + gold + stones",
-  "hint": "Собирай ячейки 3 уровня нужного цвета",
+  "title": "Уровень ice + gold + color",
+  "hint": "Лёд ломается, когда на его клетке исчезает фишка",
   "layout": [
     "..........",
     "..........",
     "..........",
     "..........",
-    ".s..##..s.",
-    "....##....",
     "..........",
-    "..s....s..",
-    ".JJJJJJJJ.",
-    ".........."
+    "..t.##.t..",
+    ".tJ.##.Jt.",
+    ".JJ.##.JJ.",
+    ".JJ.##.JJ.",
+    "....##...."
   ],
   "colors": 3,
   "moves": 35,
   "goals": [
     {
+      "kind": "ice",
+      "count": 10
+    },
+    {
       "kind": "gold",
-      "count": 3
+      "count": 4
     },
     {
       "kind": "level3color",
-      "count": 4,
-      "color": 1
+      "count": 3,
+      "color": 0
+    },
+    {
+      "kind": "level3color",
+      "count": 3,
+      "color": 2
     }
   ],
   "stars": [
@@ -37,5 +46,5 @@
       "count": 15
     }
   ],
-  "hiddenGold": 3
+  "iceCracks": true
 }

@@ -1,29 +1,37 @@
 {
   "id": 270,
-  "title": "Уровень stones + coal + ice",
+  "title": "Уровень stones + crowns + chests + color",
   "hint": "Камни разбивает только взрыв",
   "layout": [
+    "#..o##o..#",
     "..........",
-    ".JJccJJJ..",
-    "...cc.....",
-    ".s..s.....",
-    ".cc..#####",
-    ".cc..#####",
-    ".s..s.....",
-    "...cc.....",
-    ".JJccJJJ..",
-    ".........."
+    ".1........",
+    "...s1.s...",
+    "#..s..s1.#",
+    "##......##",
+    "###.1..###",
+    "####..####"
   ],
   "colors": 3,
   "moves": 35,
   "goals": [
     {
-      "kind": "coal",
-      "count": 3
+      "kind": "item",
+      "count": 2
     },
     {
-      "kind": "ice",
-      "count": 10
+      "kind": "box",
+      "count": 4
+    },
+    {
+      "kind": "level3color",
+      "count": 3,
+      "color": 0
+    },
+    {
+      "kind": "level3color",
+      "count": 3,
+      "color": 1
     }
   ],
   "stars": [
@@ -35,6 +43,5 @@
       "kind": "level3",
       "count": 15
     }
-  ],
-  "coalLayers": 6
+  ]
 }

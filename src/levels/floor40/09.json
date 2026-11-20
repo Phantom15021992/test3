@@ -1,33 +1,32 @@
 {
   "id": 399,
-  "title": "Уровень coal + gold + chests",
+  "title": "Уровень coal + crowns + color",
   "hint": "Совпадения рядом с углём откалывают слои",
   "layout": [
+    "#o..##..o#",
     "..........",
-    "..........",
-    "..........",
-    "..........",
-    "..1.##....",
-    "....##....",
-    "..cc..cc1.",
-    ".1cc..cc..",
-    "..tt1.tt..",
-    ".........."
+    "..cc.cc...",
+    "..cc.cc...",
+    "#........#",
+    "##..cc..##",
+    "###.cc.###",
+    "####..####"
   ],
   "colors": 3,
   "moves": 35,
   "goals": [
     {
-      "kind": "coal",
+      "kind": "item",
       "count": 2
     },
     {
-      "kind": "box",
-      "count": 8
+      "kind": "coal",
+      "count": 3
     },
     {
-      "kind": "gold",
-      "count": 4
+      "kind": "level3color",
+      "count": 3,
+      "color": 0
     }
   ],
   "stars": [

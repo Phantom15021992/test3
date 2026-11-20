@@ -1,33 +1,33 @@
 {
   "id": 409,
-  "title": "Уровень ice + chests + gold",
+  "title": "Уровень ice + coal + color",
   "hint": "Лёд ломается, когда на его клетке исчезает фишка",
   "layout": [
-    "..........",
-    "..........",
-    "....######",
-    ".1........",
-    ".JJJ1.JJJ.",
-    "......J...",
-    "######.JJ.",
-    "......J1J.",
-    ".JJJ1JJJJ.",
-    ".........."
+    ".........",
+    "...cc....",
+    "...cc....",
+    ".cc...cc.",
+    ".cc...cc.",
+    ".........",
+    "..JJ.JJ..",
+    ".JJJ.JJJ.",
+    "........."
   ],
   "colors": 3,
   "moves": 35,
   "goals": [
     {
-      "kind": "box",
-      "count": 4
+      "kind": "coal",
+      "count": 3
     },
     {
       "kind": "ice",
-      "count": 18
+      "count": 10
     },
     {
-      "kind": "gold",
-      "count": 3
+      "kind": "level3color",
+      "count": 3,
+      "color": 0
     }
   ],
   "stars": [
@@ -40,5 +40,6 @@
       "count": 15
     }
   ],
-  "hiddenGold": 3
+  "coalLayers": 6,
+  "iceCracks": true
 }

@@ -1,25 +1,25 @@
 {
   "id": 445,
-  "title": "Уровень gold + color + coal",
+  "title": "Уровень gold + ice + color",
   "hint": "Золото — во льду и в сундуках: доломай их",
   "layout": [
     "..........",
+    "..tJJJJJt.",
     "..........",
-    "...cc.....",
-    "...cc.....",
-    ".......cc.",
-    "....##.cc.",
-    "....##....",
-    "....##....",
-    ".tt.##.tt.",
-    "....##...."
+    "####......",
+    "###......#",
+    "#......###",
+    "......####",
+    "..........",
+    ".tJJJJJt..",
+    ".........."
   ],
   "colors": 3,
   "moves": 35,
   "goals": [
     {
-      "kind": "coal",
-      "count": 2
+      "kind": "ice",
+      "count": 10
     },
     {
       "kind": "gold",
@@ -27,8 +27,13 @@
     },
     {
       "kind": "level3color",
-      "count": 4,
+      "count": 3,
       "color": 0
+    },
+    {
+      "kind": "level3color",
+      "count": 3,
+      "color": 1
     }
   ],
   "stars": [
@@ -41,5 +46,5 @@
       "count": 15
     }
   ],
-  "coalLayers": 6
+  "iceCracks": true
 }

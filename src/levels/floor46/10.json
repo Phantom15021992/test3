@@ -1,16 +1,18 @@
 {
   "id": 460,
-  "title": "Уровень color + chests + crowns",
-  "hint": "Собирай ячейки 3 уровня нужного цвета",
+  "title": "Уровень crowns + ice + coal + color",
+  "hint": "Опусти корону на дно поля",
   "layout": [
-    "o......o",
-    "........",
-    "......1.",
-    "...1....",
-    "........",
-    "......1.",
-    "...1....",
-    "........"
+    "o........o",
+    "..ccJJ....",
+    ".Jcc.cc.J.",
+    ".....cc...",
+    "###.JJ.###",
+    "###.cc.###",
+    "###.cc.###",
+    "###.JJ.###",
+    "###.JJ.###",
+    "###....###"
   ],
   "colors": 3,
   "moves": 35,
@@ -20,13 +22,17 @@
       "count": 2
     },
     {
-      "kind": "box",
-      "count": 4
+      "kind": "coal",
+      "count": 3
+    },
+    {
+      "kind": "ice",
+      "count": 10
     },
     {
       "kind": "level3color",
-      "count": 4,
-      "color": 0
+      "count": 3,
+      "color": 1
     }
   ],
   "stars": [
@@ -38,5 +44,7 @@
       "kind": "level3",
       "count": 15
     }
-  ]
+  ],
+  "coalLayers": 6,
+  "iceCracks": true
 }

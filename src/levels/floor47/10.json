@@ -1,29 +1,39 @@
 {
   "id": 470,
-  "title": "Уровень stones + coal + color",
+  "title": "Уровень stones + chests + gold + color",
   "hint": "Камни разбивает только взрыв",
   "layout": [
-    ".........",
-    ".........",
-    "..s...s..",
-    ".........",
-    ".........",
-    ".scc.ccs.",
-    "..cc.cc..",
-    ".........",
-    "........."
+    "..........",
+    "..........",
+    "..........",
+    "...s..s...",
+    "..........",
+    "...s1.s...",
+    ".1........",
+    ".......1..",
+    "..tt1.tt..",
+    ".........."
   ],
   "colors": 3,
   "moves": 35,
   "goals": [
     {
-      "kind": "coal",
-      "count": 2
+      "kind": "box",
+      "count": 8
+    },
+    {
+      "kind": "gold",
+      "count": 4
     },
     {
       "kind": "level3color",
-      "count": 4,
+      "count": 3,
       "color": 0
+    },
+    {
+      "kind": "level3color",
+      "count": 3,
+      "color": 1
     }
   ],
   "stars": [
@@ -35,6 +45,5 @@
       "kind": "level3",
       "count": 15
     }
-  ],
-  "coalLayers": 6
+  ]
 }

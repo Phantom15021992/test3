@@ -244,6 +244,7 @@ function planFloor(theme: Mechanic, rng: Rng): Mechanic[][] {
   const pool = MECHANICS.filter((m) => m !== theme);
   const used = new Map<Mechanic, number>(pool.map((m) => [m, 0]));
   return Array.from({ length: FLOOR_SIZE }, (_, place) => {
+    if (HARD_PLACES.includes(place)) return hardPlace(theme, place, used, rng);
     const level: Mechanic[] = [theme];
     const extras = HARD_PLACES.includes(place) ? 2 : 1;
     for (let i = 0; i < extras; i++) {
@@ -264,6 +265,35 @@ function planFloor(theme: Mechanic, rng: Rng): Mechanic[][] {
     }
     return level;
   });
+}
+
+/** Препятствия: всё, кроме заданий на ячейки 3 уровня */
+const OBSTACLES: readonly Mechanic[] = MECHANICS.filter((m) => m !== 'cells' && m !== 'color');
+
+/**
+ * 5, 9 и 10 места этажа (по просьбе владельца): главное задание — ячейки 3 уровня одного или двух цветов
+ * (`color`), рядом препятствия: на 5 и 9 — два вида, на 10 — три. Тема этажа — одно из них, если это препятствие.
+ * Камни без цели — не единственное препятствие: иначе задание этажа было бы пустым
+ */
+function hardPlace(
+  theme: Mechanic,
+  place: number,
+  used: Map<Mechanic, number>,
+  rng: Rng,
+): Mechanic[] {
+  const level: Mechanic[] = OBSTACLES.includes(theme) ? [theme] : [];
+  const need = place === FLOOR_SIZE - 1 ? 3 : 2;
+  while (level.length < need) {
+    const fits = OBSTACLES.filter(
+      (m) => !level.includes(m) && !(m === 'stones' && level.every((x) => x === 'stones')),
+    );
+    const least = Math.min(...fits.map((m) => used.get(m) ?? 0));
+    const choices = fits.filter((m) => (used.get(m) ?? 0) === least);
+    const pick = choices[rng.int(choices.length)]!;
+    level.push(pick);
+    used.set(pick, (used.get(pick) ?? 0) + 1);
+  }
+  return [...level, 'color'];
 }
 
 function buildLevel(id: number, mechanics: Mechanic[], rng: Rng): Level {
@@ -326,7 +356,14 @@ function buildLevel(id: number, mechanics: Mechanic[], rng: Rng): Level {
     goals.push({ kind: 'gold', count: count(layout, 'gtuvw') + (hiddenGold ?? 0) });
   }
   if (mechanics.includes('cells')) goals.push({ kind: 'level3', count: 6 });
-  if (mechanics.includes('color')) goals.push({ kind: 'level3color', count: 4, color: rng.int(3) });
+  if (mechanics.includes('color')) {
+    // На 5, 9 и 10 местах — один или два цвета (не три), по 3 ячейки для начала: число подгоняет подбор
+    const colors = hard ? 1 + rng.int(2) : 1;
+    const palette = [0, 1, 2].sort(() => rng.int(3) - 1);
+    for (const color of palette.slice(0, colors)) {
+      goals.push({ kind: 'level3color', count: hard ? 3 : 4, color });
+    }
+  }
 
   return parseLevel({
     id,

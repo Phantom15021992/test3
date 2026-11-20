@@ -1,18 +1,16 @@
 {
   "id": 430,
-  "title": "Уровень crowns + cells + stones",
+  "title": "Уровень crowns + coal + ice + color",
   "hint": "Опусти корону на дно поля",
   "layout": [
-    "o........o",
-    "..........",
-    "..........",
-    "..........",
-    "###.ss.###",
-    "###....###",
-    "###s..s###",
-    "###....###",
-    "###....###",
-    "###....###"
+    "o......o",
+    "........",
+    "........",
+    ".cc.cc..",
+    ".cc.cc..",
+    "..JJJJ..",
+    ".JJJJJJ.",
+    "........"
   ],
   "colors": 3,
   "moves": 35,
@@ -22,8 +20,22 @@
       "count": 2
     },
     {
-      "kind": "level3",
-      "count": 6
+      "kind": "coal",
+      "count": 2
+    },
+    {
+      "kind": "ice",
+      "count": 10
+    },
+    {
+      "kind": "level3color",
+      "count": 3,
+      "color": 0
+    },
+    {
+      "kind": "level3color",
+      "count": 3,
+      "color": 1
     }
   ],
   "stars": [
@@ -35,5 +47,6 @@
       "kind": "level3",
       "count": 15
     }
-  ]
+  ],
+  "coalLayers": 6
 }

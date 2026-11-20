@@ -44,6 +44,20 @@ describe('цель: ячейки 3 уровня одного цвета', () => 
     expect(red.progress.level3).toBe(1);
   });
 
+  it('два цвета сразу (5, 9 и 10 места этажа): каждый считается отдельно, победа — когда собраны оба', () => {
+    const two = level(1, {
+      goals: [
+        { kind: 'level3color', count: 1, color: 1 },
+        { kind: 'level3color', count: 1, color: 0 },
+      ],
+    });
+    const session = new LevelSession(1, parseLevel(two));
+    greenStar(session);
+    expect(session.goalValue(session.level.goals[0]!)).toBe(1);
+    expect(session.goalValue(session.level.goals[1]!)).toBe(0);
+    expect(session.goalsDone).toBe(false);
+  });
+
   it('цвет обязателен, только у этой цели и в пределах палитры', () => {
     expect(() => parseLevel(level(4))).toThrow('палитры');
     expect(() => parseLevel(level(0, { goals: [{ kind: 'level3color', count: 1 }] }))).toThrow(

@@ -22,23 +22,19 @@
       "count": 40
     },
     {
-      "kind": "level3",
-      "count": 28
-    },
-    {
       "kind": "level3color",
-      "count": 11,
-      "color": 2
+      "count": 3,
+      "color": 0
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 49
+      "count": 13
     },
     {
       "kind": "level3",
-      "count": 54
+      "count": 18
     }
   ]
 }

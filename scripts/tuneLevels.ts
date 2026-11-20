@@ -76,7 +76,30 @@ const FAST_SHARE = 0.1;
  * препятствиями задуманных ходов не набрать
  */
 const HELPERS: readonly Goal['kind'][] = ['level3', 'level3color'];
-const HELPER_COUNT: Partial<Record<Goal['kind'], number>> = { level3: 3, level3color: 2 };
+/**
+ * С какого числа ячеек 3 уровня начинается подбор и до какого они могут вырасти. На 5, 9 и 10 местах этажа главное
+ * задание — ячейки 3 уровня одного или двух цветов, но сложность всё равно даёт задание этажа, а ячейки её
+ * подгоняют — до четверти (по просьбе владельца); на остальных местах ячейки — лишь поправка в 5–7%
+ */
+const HELPER_RANGE: Readonly<
+  Record<'easy' | 'hard', Partial<Record<Goal['kind'], readonly [number, number]>>>
+> = {
+  easy: { level3: [3, 5], level3color: [2, 4] },
+  hard: { level3: [3, 8], level3color: [3, 6] },
+};
+const helperRange = (place: number) => HELPER_RANGE[[4, 8, 9].includes(place) ? 'hard' : 'easy'];
+
+/** Ячейки 3 уровня не больше потолка места: иначе сложность давали бы они, а не задание этажа */
+function capHelpers(sized: SizedLevel, place: number): SizedLevel {
+  const range = helperRange(place);
+  return {
+    ...sized,
+    goals: sized.goals.map((goal) => {
+      const max = range[goal.kind]?.[1];
+      return max === undefined ? goal : { ...goal, count: Math.min(goal.count, max) };
+    }),
+  };
+}
 
 const games = Number(process.argv[2]) || 200;
 const floor = Number(process.argv[3]) || 1;
@@ -156,8 +179,8 @@ function chooseSize(source: Level, place: number): SizedLevel {
   const winShare = WIN_CURVE[place]!;
   const wanted = MOVES_CURVE[place]!;
   // Ячейки 3 уровня рядом с препятствиями — маленькие: сложность даёт задание этажа
-  const helped = withSmallHelpers(level);
-  if (place === BOSS) return chooseBossSize(helped.level, helped.fixed);
+  const helped = withSmallHelpers(level, place);
+  if (place === BOSS) return chooseBossSize(helped.level, helped.fixed, place);
   const onlyCrowns = level.goals.every((goal) => goal.kind === 'item');
   if (onlyCrowns) return chooseCrownHeight(level, winShare, wanted);
   level = helped.level;
@@ -167,10 +190,18 @@ function chooseSize(source: Level, place: number): SizedLevel {
     level = { ...level, layout: chooseCrownHeight(level, winShare, wanted).layout };
   }
   const easy = winShare >= WIN_CURVE[0]!;
-  const first = searchSize(level, winShare, wanted, easy, helped.fixed);
-  // Препятствиями задуманных ходов не набрать (поле кончилось) — тогда растут и ячейки 3 уровня
+  const first = searchSize(level, winShare, wanted, easy, helped.fixed, place);
+  // Препятствиями задуманных ходов не набрать (поле кончилось) — тогда при тех же препятствиях растут ячейки
+  // 3 уровня, но не выше своего потолка
   if (helped.fixed.length === 0 || first.moves >= wanted - 2) return first.sized;
-  const second = searchSize({ ...level, ...first.sized }, winShare, wanted, easy, []);
+  const second = searchSize(
+    { ...level, ...first.sized },
+    winShare,
+    wanted,
+    easy,
+    obstacleKinds(level),
+    place,
+  );
   return Math.abs(second.moves - wanted) < Math.abs(first.moves - wanted)
     ? second.sized
     : first.sized;
@@ -180,14 +211,18 @@ function chooseSize(source: Level, place: number): SizedLevel {
  * Если у уровня есть препятствия, цели на ячейки 3 уровня уменьшаются до HELPER_COUNT и при первом подборе
  * не меняются (fixed). Уровень только из ячеек 3 уровня остаётся как есть: других рычагов у него нет
  */
-function withSmallHelpers(level: Level): { level: Level; fixed: Goal['kind'][] } {
+/** Цели-препятствия уровня (всё, кроме ячеек 3 уровня): во второй примерке они не меняются */
+const obstacleKinds = (level: Level) =>
+  level.goals.map((goal) => goal.kind).filter((kind) => !HELPERS.includes(kind));
+
+function withSmallHelpers(level: Level, place: number): { level: Level; fixed: Goal['kind'][] } {
   const obstacles = level.goals.some((goal) => !HELPERS.includes(goal.kind));
   if (!obstacles || !level.goals.some((goal) => HELPERS.includes(goal.kind))) {
     return { level, fixed: [] };
   }
   const goals = level.goals.map((goal) =>
     HELPERS.includes(goal.kind)
-      ? { ...goal, count: Math.min(goal.count, HELPER_COUNT[goal.kind] ?? goal.count) }
+      ? { ...goal, count: Math.min(goal.count, helperRange(place)[goal.kind]?.[0] ?? goal.count) }
       : goal,
   );
   return { level: { ...level, goals }, fixed: [...HELPERS] };
@@ -205,14 +240,18 @@ function searchSize(
   wanted: number,
   easy: boolean,
   fixed: readonly Goal['kind'][],
+  place: number,
 ): { sized: SizedLevel; moves: number } {
   const options = resizeOptions(level);
   const tried: { scale: number; sized: SizedLevel; moves: number }[] = [];
   const attempt = (scale: number) => {
-    const sized = resizeLevel(level.layout, level.goals, scale, {
-      ...options,
-      fixed: [...(options.fixed ?? []), ...fixed],
-    });
+    const sized = capHelpers(
+      resizeLevel(level.layout, level.goals, scale, {
+        ...options,
+        fixed: [...(options.fixed ?? []), ...fixed],
+      }),
+      place,
+    );
     // Тот же размер уже примеряли: на поле не осталось места для препятствий
     const known = tried.find((t) => JSON.stringify(t.sized) === JSON.stringify(sized));
     if (known) return null;
@@ -287,26 +326,30 @@ let lastBuys: Record<string, number> = {};
  * 10-е место: ходы ставятся под 10% побед без покупок (окно 5–15%), а размер целей (у угля — слои) — так,
  * чтобы с покупкой спецфишек побед было ближе всего к BOMB_WINS.target
  */
-function chooseBossSize(level: Level, fixed: readonly Goal['kind'][]): SizedLevel {
-  const first = bossSearch(level, fixed);
-  // Препятствиями окна не достичь (с покупками всё ещё легко) — растут и ячейки 3 уровня
+function chooseBossSize(level: Level, fixed: readonly Goal['kind'][], place: number): SizedLevel {
+  const first = bossSearch(level, fixed, place);
+  // Препятствиями окна не достичь (с покупками всё ещё легко) — при тех же препятствиях растут ячейки 3 уровня
   if (fixed.length === 0 || first.share <= BOMB_WINS.max) return first.sized;
-  const second = bossSearch(level, []);
+  const second = bossSearch({ ...level, ...first.sized }, obstacleKinds(level), place);
   return second.distance < first.distance ? second.sized : first.sized;
 }
 
 function bossSearch(
   level: Level,
   fixed: readonly Goal['kind'][],
+  place: number,
 ): { sized: SizedLevel; distance: number; share: number } {
   let best: { sized: SizedLevel; distance: number; share: number } | null = null;
   const options = resizeOptions(level);
   // До ×8: боту 2,35 и выше с покупками мало и ×4 (12-10, 14-10 — 55–65% побед)
   for (const scale of [0.5, 0.7, 1, 1.4, 2, 2.8, 4, 5.6, 8]) {
-    const sized = resizeLevel(level.layout, level.goals, scale, {
-      ...options,
-      fixed: [...(options.fixed ?? []), ...fixed],
-    });
+    const sized = capHelpers(
+      resizeLevel(level.layout, level.goals, scale, {
+        ...options,
+        fixed: [...(options.fixed ?? []), ...fixed],
+      }),
+      place,
+    );
     const played = playAll(level, sized, SEARCH_GAMES);
     const used = usedMoves(played, sized.goals);
     const moves = movesFor(used, WIN_CURVE[BOSS]!);

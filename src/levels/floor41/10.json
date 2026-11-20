@@ -1,12 +1,12 @@
 {
   "id": 410,
-  "title": "Уровень ice + cells + crowns",
+  "title": "Уровень ice + crowns + gold + color",
   "hint": "Лёд ломается, когда на его клетке исчезает фишка",
   "layout": [
-    ".o......o.",
+    "..o....o..",
     "..........",
-    "..........",
-    "..........",
+    "...JJJJ...",
+    "...JJJJ...",
     "###.JJ.###",
     "###.JJ.###",
     "###.JJ.###",
@@ -23,11 +23,16 @@
     },
     {
       "kind": "ice",
-      "count": 10
+      "count": 18
     },
     {
-      "kind": "level3",
-      "count": 6
+      "kind": "gold",
+      "count": 3
+    },
+    {
+      "kind": "level3color",
+      "count": 3,
+      "color": 0
     }
   ],
   "stars": [
@@ -39,5 +44,6 @@
       "kind": "level3",
       "count": 15
     }
-  ]
+  ],
+  "hiddenGold": 3
 }

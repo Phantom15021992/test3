@@ -1,32 +1,34 @@
 {
   "id": 275,
-  "title": "Уровень cells + gold + ice",
-  "hint": "Собирай ячейки 3 уровня",
+  "title": "Уровень gold + chests + color",
+  "hint": "Золото — во льду и в сундуках: доломай их",
   "layout": [
-    ".........",
-    ".........",
-    ".........",
-    ".........",
-    ".........",
-    ".JJJ.JJJ.",
-    ".JJJ.JJJ.",
-    ".JJJ.JJJ.",
-    "........."
+    "..........",
+    "..........",
+    "....##....",
+    "..........",
+    "....1.....",
+    "..........",
+    ".1..##....",
+    "...J..J1..",
+    ".JJJ1.JJJ.",
+    ".........."
   ],
   "colors": 3,
   "moves": 35,
   "goals": [
     {
-      "kind": "ice",
-      "count": 18
+      "kind": "box",
+      "count": 4
     },
     {
       "kind": "gold",
       "count": 3
     },
     {
-      "kind": "level3",
-      "count": 6
+      "kind": "level3color",
+      "count": 3,
+      "color": 2
     }
   ],
   "stars": [
@@ -39,6 +41,5 @@
       "count": 15
     }
   ],
-  "hiddenGold": 3,
-  "iceCracks": true
+  "hiddenGold": 3
 }

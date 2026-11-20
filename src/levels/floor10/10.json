@@ -28,16 +28,21 @@
     {
       "kind": "gold",
       "count": 4
+    },
+    {
+      "kind": "level3color",
+      "count": 3,
+      "color": 2
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 13
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 18
     }
   ],
   "coalLayers": 4,
