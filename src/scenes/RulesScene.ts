@@ -35,20 +35,20 @@ export class RulesScene extends Phaser.Scene {
       .setOrigin(0.5);
     new RulesPanel(this, PANEL_MARGIN, PANEL_TOP, this.scale.width - PANEL_MARGIN * 2);
     const backY = PANEL_TOP + RULES_PANEL_HEIGHT + MENU_BUTTON_GAP * 1.5 + MENU_BUTTON_HEIGHT / 2;
-    // «Назад», сброс прогресса кампании, тестовый уровень и обновление игры — в один ряд: под панелью
-    // правил места на два ряда нет, поэтому ряд шире обычной кнопки меню
+    // Обновление игры, «Назад», тестовый уровень и сброс прогресса кампании — в один ряд (порядок —
+    // по просьбе владельца): под панелью правил места на два ряда нет, поэтому ряд шире обычной кнопки меню
     const quarter = (ROW_WIDTH - MENU_BUTTON_GAP * 3) / 4;
     const step = quarter + MENU_BUTTON_GAP;
     const xAt = (i: number) => centerX + (i - 1.5) * step;
+    addUpdateGameButton(this, xAt(0), backY, quarter, MENU_BUTTON_HEIGHT);
     createMenuButton(
       this,
-      xAt(0),
+      xAt(1),
       backY,
       [menuButtonLabel(this, 'Назад', BACK_FONT_SIZE)],
       () => this.scene.start('Menu'),
       quarter,
     );
-    addResetProgressButton(this, xAt(1), backY, quarter, MENU_BUTTON_HEIGHT);
     // Тестовый уровень: правила Лёгкого, фишки — камни с листа владельца
     const test = menuButtonLabel(this, 'Тестовый\nуровень', TEST_FONT_SIZE).setAlign('center');
     createMenuButton(
@@ -59,6 +59,6 @@ export class RulesScene extends Phaser.Scene {
       () => this.scene.start('Game', { gems: true }),
       quarter,
     );
-    addUpdateGameButton(this, xAt(3), backY, quarter, MENU_BUTTON_HEIGHT);
+    addResetProgressButton(this, xAt(3), backY, quarter, MENU_BUTTON_HEIGHT);
   }
 }

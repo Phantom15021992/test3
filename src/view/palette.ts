@@ -51,3 +51,5 @@ export const UI_TEXT_COLOR = '#ffffff';
 export const UI_MUTED_TEXT_COLOR = '#aab2d5';
 /** Надпись необратимого действия (сброс прогресса) */
 export const UI_WARNING_TEXT_COLOR = '#ff8a80';
+/** Зелёная подпись — кнопка «Обновить игру» на экране правил */
+export const UI_GOOD_TEXT_COLOR = '#7ee08a';

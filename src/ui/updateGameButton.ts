@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { UI_GOOD_TEXT_COLOR } from '../view/palette';
 import { createMenuButton, menuButtonLabel } from './menuButton';
 
 const UPDATE_FONT_SIZE = 24;
@@ -41,7 +42,9 @@ export function addUpdateGameButton(
   width: number,
   height: number,
 ): void {
-  const text = menuButtonLabel(scene, UPDATE_LABEL, UPDATE_FONT_SIZE).setAlign('center');
+  const text = menuButtonLabel(scene, UPDATE_LABEL, UPDATE_FONT_SIZE, UI_GOOD_TEXT_COLOR).setAlign(
+    'center',
+  );
   let busy = false;
   createMenuButton(
     scene,
