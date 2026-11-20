@@ -825,7 +825,8 @@ function* resolveMove(board, move, ctx) {
     let direct3 = 0;
     for (const group of groups) {
       const outcome = groupOutcome(group, landing, ctx.campaign ?? false);
-      if (ctx.noSpecials) outcome.placements = outcome.placements.filter(({ cell }) => isTile(cell));
+      if (ctx.noSpecials)
+        outcome.placements = outcome.placements.filter(({ cell }) => isTile(cell));
       removal.push(...group.cells, ...boxesAround(current, group.cells));
       addBlows(matchBlows, coalAround(current, group.cells), group.level);
       const step = dropped ? Math.min(++comboSteps, COMBO_MAX_STEPS) : 0;

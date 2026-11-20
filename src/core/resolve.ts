@@ -234,7 +234,8 @@ export function* resolveMove(
 
     for (const group of groups) {
       const outcome = groupOutcome(group, landing, ctx.campaign ?? false);
-      if (ctx.noSpecials) outcome.placements = outcome.placements.filter(({ cell }) => isTile(cell));
+      if (ctx.noSpecials)
+        outcome.placements = outcome.placements.filter(({ cell }) => isTile(cell));
       removal.push(...group.cells, ...boxesAround(current, group.cells));
       // Совпадение рядом с углём снимает столько слоёв, какого уровня его фишки
       addBlows(matchBlows, coalAround(current, group.cells), group.level);
