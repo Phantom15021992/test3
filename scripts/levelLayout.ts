@@ -261,6 +261,29 @@ export function middleRow(grid: readonly (readonly string[] | string)[]): number
   return Math.floor((grid.length - 1) / 2);
 }
 
+/**
+ * Короны — на самый верх своего столбца (до ближайшей дыры сверху, на свободную клетку): с этой высоты
+ * подгонщик опускает их, пока уровень не уложится в задуманные ходы. Иначе прошлая подгонка, опустившая
+ * корону, не дала бы сделать уровень труднее
+ */
+export function raiseCrowns(layout: readonly string[]): string[] {
+  const grid = layout.map((line) => [...line]);
+  for (let row = 0; row < grid.length; row++) {
+    grid[row]!.forEach((symbol, col) => {
+      if (symbol !== 'o') return;
+      let top = row;
+      // Над дырой или углём корона застряла бы: выше них не поднимаем
+      for (let r = row - 1; r >= 0 && !['#', 'c'].includes(grid[r]![col]!); r--) {
+        if (grid[r]![col] === '.') top = r;
+      }
+      if (top === row) return;
+      grid[row]![col] = '.';
+      grid[top]![col] = 'o';
+    });
+  }
+  return grid.map((line) => line.join(''));
+}
+
 /** Сколько клеток поля минимум под короной в её столбце: корона стоит на 4-й строке от дна или выше */
 export const CROWN_MIN_BELOW = 3;
 

@@ -17,7 +17,13 @@ import { FLOOR_SIZE, floorOf, type Goal, type Level, type StarTask } from '../sr
 import { LEVELS } from '../src/levels';
 import { levelNumber } from '../src/ui/levelText';
 import { play, type GameResult } from './levelBots';
-import { lowerCrowns, resizeLevel, type ResizeOptions, type SizedLevel } from './levelLayout';
+import {
+  lowerCrowns,
+  raiseCrowns,
+  resizeLevel,
+  type ResizeOptions,
+  type SizedLevel,
+} from './levelLayout';
 
 // Скрипт запускается в Node (vite-node), а типов Node в проекте нет
 declare const process: { argv: string[] };
@@ -52,8 +58,24 @@ const WIN_CURVE = [0.9, 0.9, 0.9, 0.9, 0.5, 0.9, 0.9, 0.9, 0.5, 0.1];
 const BOSS_WALLET = 20;
 const BOMB_WINS = { min: 0.3, max: 0.5, target: 0.4 };
 const BOSS = FLOOR_SIZE - 1;
-/** Сколько ходов задумано на уровне: от 25 до 40, к концу этажа длиннее; ходов на уровне — 25–50 */
-const MOVES_CURVE = [25, 26, 27, 28, 32, 28, 29, 30, 35, 40];
+/**
+ * Сколько ходов задумано на уровне. Лёгкие места (1–4, 6–8) — 32–38 (было 25–30: владелец заметил, что многие
+ * проходились за пару ходов), 5 и 9 — 32 и 35, 10 — 40; ходов на уровне — 25–45
+ */
+const MOVES_CURVE = [32, 33, 34, 35, 32, 35, 36, 38, 35, 40];
+/**
+ * Лёгкие места: даже в самых удачных партиях (FAST_SHARE) на цели должно уходить не меньше MIN_FAST ходов,
+ * иначе уровень считается слишком лёгким — маленькие цели закрывались за 1–2 хода
+ */
+const MIN_FAST = 15;
+const FAST_SHARE = 0.1;
+/**
+ * Цели на ячейки 3 уровня рядом с препятствиями держатся маленькими (по просьбе владельца сложность — от
+ * льда, угля, сундуков, корон, золота): сначала подбираются только препятствия, а ячейки растут, лишь если
+ * препятствиями задуманных ходов не набрать
+ */
+const HELPERS: readonly Goal['kind'][] = ['level3', 'level3color'];
+const HELPER_COUNT: Partial<Record<Goal['kind'], number>> = { level3: 3, level3color: 2 };
 
 const games = Number(process.argv[2]) || 200;
 const floor = Number(process.argv[3]) || 1;
@@ -132,20 +154,69 @@ const usedMoves = (played: readonly GameResult[], goals: readonly Goal[]) =>
  * задуманного — ещё и середину
  */
 function chooseSize(source: Level, place: number): SizedLevel {
-  let level = source;
+  // Короны — сначала на самый верх столбца: опускать их подгонщик умеет, а поднять прошлую подгонку — нет
+  // (у боссов короны не трогаем: их сложность подбирается покупками)
+  let level: Level = place === BOSS ? source : { ...source, layout: raiseCrowns(source.layout) };
   const winShare = WIN_CURVE[place]!;
   const wanted = MOVES_CURVE[place]!;
-  if (place === BOSS) return chooseBossSize(level);
+  // Ячейки 3 уровня рядом с препятствиями — маленькие: сложность даёт задание этажа
+  const helped = withSmallHelpers(level);
+  if (place === BOSS) return chooseBossSize(helped.level, helped.fixed);
   const onlyCrowns = level.goals.every((goal) => goal.kind === 'item');
   if (onlyCrowns) return chooseCrownHeight(level, winShare, wanted);
+  level = helped.level;
   // Короны вместе с другими целями: сначала опускаем короны (не ниже середины поля), потом подбираем
   // размер остальных целей
   if (level.layout.join('').includes('o')) {
     level = { ...level, layout: chooseCrownHeight(level, winShare, wanted).layout };
   }
+  const easy = winShare >= WIN_CURVE[0]!;
+  const first = searchSize(level, winShare, wanted, easy, helped.fixed);
+  // Препятствиями задуманных ходов не набрать (поле кончилось) — тогда растут и ячейки 3 уровня
+  if (helped.fixed.length === 0 || first.moves >= wanted - 2) return first.sized;
+  const second = searchSize({ ...level, ...first.sized }, winShare, wanted, easy, []);
+  return Math.abs(second.moves - wanted) < Math.abs(first.moves - wanted)
+    ? second.sized
+    : first.sized;
+}
+
+/**
+ * Если у уровня есть препятствия, цели на ячейки 3 уровня уменьшаются до HELPER_COUNT и при первом подборе
+ * не меняются (fixed). Уровень только из ячеек 3 уровня остаётся как есть: других рычагов у него нет
+ */
+function withSmallHelpers(level: Level): { level: Level; fixed: Goal['kind'][] } {
+  const obstacles = level.goals.some((goal) => !HELPERS.includes(goal.kind));
+  if (!obstacles || !level.goals.some((goal) => HELPERS.includes(goal.kind))) {
+    return { level, fixed: [] };
+  }
+  const goals = level.goals.map((goal) =>
+    HELPERS.includes(goal.kind)
+      ? { ...goal, count: Math.min(goal.count, HELPER_COUNT[goal.kind] ?? goal.count) }
+      : goal,
+  );
+  return { level: { ...level, goals }, fixed: [...HELPERS] };
+}
+
+/**
+ * Цели, на которые уходит ближе всего к задуманному числу ходов: сначала примеряем как есть, потом
+ * больше или меньше по шкале SCALES, а между двумя соседними размерами по разные стороны от задуманного —
+ * ещё и середину. На лёгких местах уровень, который в удачных партиях проходится быстрее MIN_FAST ходов,
+ * считается слишком лёгким, даже если на 90% партий ходов уходит сколько задумано
+ */
+function searchSize(
+  level: Level,
+  winShare: number,
+  wanted: number,
+  easy: boolean,
+  fixed: readonly Goal['kind'][],
+): { sized: SizedLevel; moves: number } {
+  const options = resizeOptions(level);
   const tried: { scale: number; sized: SizedLevel; moves: number }[] = [];
   const attempt = (scale: number) => {
-    const sized = resizeLevel(level.layout, level.goals, scale, resizeOptions(level));
+    const sized = resizeLevel(level.layout, level.goals, scale, {
+      ...options,
+      fixed: [...(options.fixed ?? []), ...fixed],
+    });
     // Тот же размер уже примеряли: на поле не осталось места для препятствий
     const known = tried.find((t) => JSON.stringify(t.sized) === JSON.stringify(sized));
     if (known) return null;
@@ -154,7 +225,9 @@ function chooseSize(source: Level, place: number): SizedLevel {
     // Не уложились в лимит: чем больше партий всё же прошли, тем ближе размер к нужному
     const finished = used.filter((value) => value <= NO_LIMIT).length / used.length;
     const reached = quantile(used, winShare);
-    const moves = reached === Infinity ? NO_LIMIT * 2 + Math.round((1 - finished) * 100) : reached;
+    let moves = reached === Infinity ? NO_LIMIT * 2 + Math.round((1 - finished) * 100) : reached;
+    const fast = quantile(used, FAST_SHARE);
+    if (easy && fast < MIN_FAST) moves = Math.min(moves, wanted - 1 - (MIN_FAST - fast));
     tried.push({ scale, sized, moves });
     return moves;
   };
@@ -169,7 +242,8 @@ function chooseSize(source: Level, place: number): SizedLevel {
     attempt((last.scale + before.scale) / 2);
   }
   const distance = (moves: number) => Math.abs(moves - wanted);
-  return tried.reduce((best, t) => (distance(t.moves) < distance(best.moves) ? t : best)).sized;
+  const best = tried.reduce((a, t) => (distance(t.moves) < distance(a.moves) ? t : a));
+  return { sized: best.sized, moves: best.moves };
 }
 
 /**
@@ -217,11 +291,26 @@ let lastBuys: Record<string, number> = {};
  * 10-е место: ходы ставятся под 10% побед без покупок (окно 5–15%), а размер целей (у угля — слои) — так,
  * чтобы с покупкой спецфишек побед было ближе всего к BOMB_WINS.target
  */
-function chooseBossSize(level: Level): SizedLevel {
-  let best: { sized: SizedLevel; distance: number } | null = null;
+function chooseBossSize(level: Level, fixed: readonly Goal['kind'][]): SizedLevel {
+  const first = bossSearch(level, fixed);
+  // Препятствиями окна не достичь (с покупками всё ещё легко) — растут и ячейки 3 уровня
+  if (fixed.length === 0 || first.share <= BOMB_WINS.max) return first.sized;
+  const second = bossSearch(level, []);
+  return second.distance < first.distance ? second.sized : first.sized;
+}
+
+function bossSearch(
+  level: Level,
+  fixed: readonly Goal['kind'][],
+): { sized: SizedLevel; distance: number; share: number } {
+  let best: { sized: SizedLevel; distance: number; share: number } | null = null;
+  const options = resizeOptions(level);
   // До ×8: боту 2,35 и выше с покупками мало и ×4 (12-10, 14-10 — 55–65% побед)
   for (const scale of [0.5, 0.7, 1, 1.4, 2, 2.8, 4, 5.6, 8]) {
-    const sized = resizeLevel(level.layout, level.goals, scale, resizeOptions(level));
+    const sized = resizeLevel(level.layout, level.goals, scale, {
+      ...options,
+      fixed: [...(options.fixed ?? []), ...fixed],
+    });
     const played = playAll(level, sized, SEARCH_GAMES);
     const used = usedMoves(played, sized.goals);
     const moves = movesFor(used, WIN_CURVE[BOSS]!);
@@ -230,9 +319,9 @@ function chooseBossSize(level: Level): SizedLevel {
     const plain = used.filter((value) => value <= moves).length / used.length;
     const distance =
       Math.abs(share - BOMB_WINS.target) + Math.max(0, plain - WIN_CURVE[BOSS]! - 0.05) * 2;
-    if (!best || distance < best.distance) best = { sized, distance };
+    if (!best || distance < best.distance) best = { sized, distance, share };
   }
-  return best!.sized;
+  return best!;
 }
 
 function tune(level: Level, place: number) {
@@ -247,7 +336,8 @@ function tune(level: Level, place: number) {
   const stars = starTasks(sized.goals);
   const starWins = starShare(played, sized.goals, moves);
   const bombs = place === BOSS ? bombWins(level, sized, moves, games) : undefined;
-  return { ...sized, moves, stars, win, target: winShare, bombs, starWins };
+  const fast = quantile(used, FAST_SHARE);
+  return { ...sized, moves, stars, win, target: winShare, bombs, starWins, fast };
 }
 
 const fs = require('node:fs');
@@ -255,8 +345,19 @@ for (const level of LEVELS) {
   if (floorOf(level.id) !== floor) continue;
   const place = (level.id - 1) % FLOOR_SIZE;
   if (only && !only.includes(place + 1)) continue;
-  const { layout, goals, moves, stars, win, target, bombs, coalLayers, hiddenGold, starWins } =
-    tune(level, place);
+  const {
+    layout,
+    goals,
+    moves,
+    stars,
+    win,
+    target,
+    bombs,
+    coalLayers,
+    hiddenGold,
+    starWins,
+    fast,
+  } = tune(level, place);
   const name = String(place + 1).padStart(2, '0');
   const path = `src/levels/floor${String(floor).padStart(2, '0')}/${name}.json`;
   const file = JSON.parse(fs.readFileSync(path, 'utf8')) as Level;
@@ -283,6 +384,6 @@ for (const level of LEVELS) {
             .join(', ') || 'ничего'
         })`;
   console.log(
-    `${levelNumber(level)}: ${text}; ходов ${moves}; победы ${Math.round(win * 100)}%${short}${starsText}${withBombs}`,
+    `${levelNumber(level)}: ${text}; ходов ${moves}; победы ${Math.round(win * 100)}%${short}; быстрые 10% — ${fast === Infinity ? '—' : fast} ходов${starsText}${withBombs}`,
   );
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseLevel } from '../../src/core/level';
 import { LEVELS } from '../../src/levels';
-import { lowerCrowns, resizeLevel } from '../../scripts/levelLayout';
+import { lowerCrowns, raiseCrowns, resizeLevel } from '../../scripts/levelLayout';
 
 const count = (layout: readonly string[], symbols: string) =>
   [...layout.join('')].filter((symbol) => symbols.includes(symbol)).length;
@@ -98,6 +98,18 @@ describe('размер целей уровня', () => {
     expect(lowerCrowns(layout, 10)).toEqual(['....', '....', '#...', '..s.', 'o..o', ...below]);
     // Под короной камень: она встаёт выше него
     expect(lowerCrowns(['..o.', '..s.', '....'], 1)).toEqual(['..o.', '..s.', '....']);
+  });
+
+  it('короны поднимаются на верх столбца — до дыры или угля, на свободную клетку', () => {
+    // Левая — под дырой: только до неё; правая — сквозь лёд до самого верха
+    expect(raiseCrowns(['....', '#...', '..i.', 'o.o.', '....'])).toEqual([
+      '..o.',
+      '#...',
+      'o.i.',
+      '....',
+      '....',
+    ]);
+    expect(raiseCrowns(['.cc.', '.cc.', '.o..'])).toEqual(['.cc.', '.cc.', '.o..']);
   });
 
   it('корона не опускается ниже 4-й клетки от дна столбца (дыры не клетки)', () => {
