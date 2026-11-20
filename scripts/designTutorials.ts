@@ -230,7 +230,8 @@ const STEPS3: TutorialStep[] = [
   { kind: 'fire', at: p(1, 1), text: '' },
   { kind: 'fire', at: p(2, 4), text: '' },
   { kind: 'swap', from: p(6, 5), to: p(6, 6), text: '' },
-  { kind: 'fire', at: 'rocket', text: '' },
+  // Ракету сдвигают на строку выше: бустер срабатывает там, куда его передвинули
+  { kind: 'swap', from: 'rocket', to: p(8, 0), text: '' },
   { kind: 'rainbow', at: 'rainbow', text: '', pickText: '' },
   { kind: 'manipulator', at: 'manipulator', text: '', firstText: '', secondText: '' },
 ];
