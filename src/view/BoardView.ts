@@ -24,6 +24,7 @@ import {
   BOARD_CELL_LIGHT,
   TEST_CELL_DARK,
   TEST_CELL_LIGHT,
+  TEST_BACKGROUND,
   HIGHLIGHT_COLOR,
   SELECTION_COLOR,
   TILE_COLORS,
@@ -39,6 +40,8 @@ import {
   CRYSTAL_CELL_SHARE,
   CRYSTAL_FIELD_COLOR,
   CRYSTAL_PIECE_SHARE,
+  crystalCellKey,
+  TILE_CELL_SHARE,
 } from './crystalArt';
 import { drawDiamondShape, drawTileShape } from './tileArt';
 
@@ -128,7 +131,9 @@ export class BoardView {
         if (cell?.kind === 'hole') return null;
         const x = this.originX + c * this.cellSize;
         const y = this.originY + r * this.cellSize;
+        const tile = this.gems ? crystalCellKey(this.crystalSet) : null;
         if (this.gems && CRYSTAL_BLUE_FIELD) this.drawCrystalCell(x, y);
+        else if (tile && this.scene.textures.exists(tile)) this.drawTileCell(x, y, tile);
         else {
           // У тестового уровня поле темнее
           const [dark, light] =
@@ -158,6 +163,18 @@ export class BoardView {
         .image(x + this.cellSize / 2, y + this.cellSize / 2, CRYSTAL_CELL)
         .setDisplaySize(size, size)
         .setAlpha(CRYSTAL_CELL_ALPHA),
+    );
+  }
+
+  /** Клетка — плитка набора (лавандовая у иконок владельца) на тёмном фоне: между плитками узкий зазор */
+  private drawTileCell(x: number, y: number, key: string): void {
+    this.background.fillStyle(TEST_BACKGROUND);
+    this.background.fillRect(x, y, this.cellSize, this.cellSize);
+    const size = this.cellSize * TILE_CELL_SHARE;
+    this.plateLayer.add(
+      this.scene.add
+        .image(x + this.cellSize / 2, y + this.cellSize / 2, key)
+        .setDisplaySize(size, size),
     );
   }
 

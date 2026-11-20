@@ -252,10 +252,10 @@ export class GameScene extends Phaser.Scene {
     this.view.gems = this.crystals;
     // Лист кристаллов режется на фишки до первой отрисовки поля
     this.view.crystalSet = this.crystalSet;
-    // Тестовый уровень по просьбе владельца: 1 и 2 уровни — обычные круг и треугольник, 3 — алмаз того же стиля
-    // (по картинке владельца); кристаллы листа здесь не рисуются
-    this.view.crystalFromLevel = this.gems ? 4 : 1;
-    this.view.diamondLevel3 = this.gems;
+    // Фишки — иконки владельца (жеода, кристалл, самоцвет), как в кампании. Раньше на тестовом уровне были
+    // круг и треугольник с векторным алмазом на 3 уровне: crystalFromLevel = 4 и diamondLevel3 = true
+    this.view.crystalFromLevel = 1;
+    this.view.diamondLevel3 = false;
     // Тестовый уровень — на тёмном фоне: так сияние новых кристаллов заметнее
     // Сцена одна на все режимы: в остальных камера прозрачная, виден общий фон игры
     this.cameras.main.setBackgroundColor(this.gems ? TEST_BACKGROUND : 'rgba(0,0,0,0)');
