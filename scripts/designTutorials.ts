@@ -216,18 +216,20 @@ const SPECIALS3: [Position, Cell][] = [
   [p(1, 1), { kind: 'piece', type: 'bomb' }],
   // Отдельная большая бомба сверху по центру: её 5×5 целиком на поле и не задевает другие бустеры
   [p(2, 4), { kind: 'piece', type: 'megaBomb' }],
-  [p(6, 3), { kind: 'piece', type: 'megaBomb' }],
-  [p(6, 2), { kind: 'piece', type: 'bomb' }],
+  // Комбо бомб — у правого края: взрыв 7×7 (строки 3–9, столбцы 3–9) целиком на поле
+  [p(6, 6), { kind: 'piece', type: 'megaBomb' }],
+  [p(6, 5), { kind: 'piece', type: 'bomb' }],
   [p(0, 9), { kind: 'piece', type: 'rainbow' }],
   [p(0, 7), { kind: 'piece', type: 'manipulator' }],
-  [p(9, 9), { kind: 'piece', type: 'rocket', direction: 'row' }],
+  // Ракета по строке — в левом нижнем углу, вне взрыва 7×7
+  [p(9, 0), { kind: 'piece', type: 'rocket', direction: 'row' }],
 ];
 
 const STEPS3: TutorialStep[] = [
   { kind: 'info', title: '', text: '' },
   { kind: 'fire', at: p(1, 1), text: '' },
   { kind: 'fire', at: p(2, 4), text: '' },
-  { kind: 'swap', from: p(6, 2), to: p(6, 3), text: '' },
+  { kind: 'swap', from: p(6, 5), to: p(6, 6), text: '' },
   { kind: 'fire', at: 'rocket', text: '' },
   { kind: 'rainbow', at: 'rainbow', text: '', pickText: '' },
   { kind: 'manipulator', at: 'manipulator', text: '', firstText: '', secondText: '' },
