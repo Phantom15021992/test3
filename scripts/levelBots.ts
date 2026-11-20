@@ -19,7 +19,8 @@ import {
 import { aimedPiece, isBonusTarget, type AimedBonus } from '../src/core/bonus';
 import { type Level, type StarTaskKind } from '../src/core/level';
 import { LevelSession, type LevelAction } from '../src/core/levelSession';
-import { findPossibleMoves } from '../src/core/moves';
+import { findPossibleMoves, swapCells } from '../src/core/moves';
+import { findMatches } from '../src/core/match';
 import { runMove, type ResolveStep } from '../src/core/resolve';
 import { createRng, type Rng } from '../src/core/rng';
 import type { PlayerMove } from '../src/core/session';
@@ -287,18 +288,30 @@ function ordered(session: LevelSession, rng: Rng): PlayerMove[] {
           const kind = getCell(session.board, pos)?.kind;
           return kind === 'box' || kind === 'coal' || kind === 'stone';
         });
-  const nearItem = (move: PlayerMove) =>
-    move.type === 'swap' &&
-    (crowns.some(
-      (pos) => Math.abs(pos.col - move.from.col) + Math.abs(pos.col - move.to.col) <= 2,
-    ) ||
-      items.some(
-        (pos) =>
-          Math.min(
-            Math.abs(pos.row - move.from.row) + Math.abs(pos.col - move.from.col),
-            Math.abs(pos.row - move.to.row) + Math.abs(pos.col - move.to.col),
-          ) <= 1,
-      ));
+  // Рядом с предметом — обмен, чьё совпадение его касается (или стоит на льдине): человек ищет линию у сундука,
+  // а не только обмены вплотную к нему, иначе последний сундук ждал десятки ходов
+  const touches = (a: Position, b: Position) =>
+    Math.abs(a.row - b.row) + Math.abs(a.col - b.col) <= 1;
+  const nearItem = (move: PlayerMove) => {
+    if (move.type !== 'swap') return false;
+    if (
+      crowns.some(
+        (pos) => Math.abs(pos.col - move.from.col) + Math.abs(pos.col - move.to.col) <= 2,
+      )
+    ) {
+      return true;
+    }
+    if (items.length === 0) return false;
+    if (items.some((pos) => touches(pos, move.from) || touches(pos, move.to))) return true;
+    const cells = findMatches(swapCells(session.board, move.from, move.to)).flatMap(
+      (group) => group.cells,
+    );
+    // Совпадение через клетку от предмета тоже на виду: оно перекладывает фишки вокруг него, а у дна поля
+    // без таких ходов соседи предмета не меняются никогда
+    return items.some((pos) =>
+      cells.some((cell) => Math.abs(pos.row - cell.row) + Math.abs(pos.col - cell.col) <= 2),
+    );
+  };
   // Под корону человек смотрит всегда: обмены в 1–3 клетках под ней (в её столбце или рядом)
   const rightUnder = (pos: Position) =>
     crowns.some(
@@ -472,7 +485,14 @@ function finish(steps: Generator<ResolveStep, void, undefined>): void {
  * bombs — замер «сколько бомб нужно»: опытный бот покупает только бомбы, не больше стольких
  * (лимит правил снят), звёзд без ограничения
  */
-export function play(level: Level, seed: number, bot: Bot, wallet = 0, bombs?: number): GameResult {
+export function play(
+  level: Level,
+  seed: number,
+  bot: Bot,
+  wallet = 0,
+  bombs?: number,
+  stopAtGoals = false,
+): GameResult {
   const session =
     bombs === undefined
       ? new LevelSession(seed, level, wallet)
@@ -487,7 +507,8 @@ export function play(level: Level, seed: number, bot: Bot, wallet = 0, bombs?: n
   const reached = level.goals.map((): number[] => []);
   const track: GameResult['track'] = { score: [], level2: [], level3: [], item: [] };
   let bought = 0;
-  while (!session.isOver) {
+  // stopAtGoals — подгонщику в поиске нужен только ход, на котором выполнены цели: дальше партия идёт впустую
+  while (!session.isOver && !(stopAtGoals && session.goalsDone)) {
     const pick = pickMove(session, bot, rng);
     // Покупка и есть ход, поэтому бот берёт её, когда она полезнее лучшего обычного хода
     const purchase =
@@ -515,7 +536,7 @@ export function play(level: Level, seed: number, bot: Bot, wallet = 0, bombs?: n
     });
   }
   // Уровень кончился — спецфишки на поле срабатывают в финале, итог считается после него, как в игре
-  finish(session.campaignFinale());
+  if (!stopAtGoals) finish(session.campaignFinale());
   const shares = level.goals.map((goal) => session.goalValue(goal) / goal.count);
   return {
     journal: session.journal,

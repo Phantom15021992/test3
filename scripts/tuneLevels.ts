@@ -70,6 +70,8 @@ const MOVES_CURVE = [32, 33, 34, 35, 32, 35, 36, 38, 35, 40];
  */
 const MIN_FAST = 12;
 const FAST_SHARE = 0.1;
+/** Насколько можно отойти от задуманного числа ходов ради правила MIN_FAST */
+const FAST_SLACK = 3;
 /**
  * Цели на ячейки 3 уровня рядом с препятствиями держатся маленькими (по просьбе владельца сложность — от
  * льда, угля, сундуков, корон, золота): сначала подбираются только препятствия, а ячейки растут, лишь если
@@ -141,18 +143,20 @@ function starShare(played: readonly GameResult[], goals: readonly Goal[], moves:
 
 /**
  * Партии почти без лимита ходов. Задачи на звёзды — недостижимые: партия идёт до последнего хода,
- * а бот после целей добирает то же, что и игрок, — очки и ячейки для звёзд
+ * а бот после целей добирает то же, что и игрок, — очки и ячейки для звёзд.
+ * search — примерка размера: нужен только ход, на котором выполнены цели, поэтому партия обрывается на нём
+ * (до целей бот играет так же, итог тот же). Итоговый замер — до MAX_MOVES: больше ходов игроку не дают
  */
-function playAll(level: Level, sized: SizedLevel, count: number): GameResult[] {
+function playAll(level: Level, sized: SizedLevel, count: number, search = true): GameResult[] {
   const place = (level.id - 1) % FLOOR_SIZE;
   const stars: StarTask[] = [
     { kind: 'level3', count: Infinity },
     { kind: 'level3', count: Infinity },
   ];
-  const open: Level = { ...level, ...sized, stars, moves: NO_LIMIT };
+  const open: Level = { ...level, ...sized, stars, moves: search ? NO_LIMIT : MAX_MOVES };
   const bombs = BOMB_PLACES.includes(place) ? 1 : undefined;
   return Array.from({ length: count }, (_, i) =>
-    play(open, 7000 * level.id + i + 1, 'expert', 0, bombs),
+    play(open, 7000 * level.id + i + 1, 'expert', 0, bombs, search),
   );
 }
 
@@ -243,7 +247,7 @@ function searchSize(
   place: number,
 ): { sized: SizedLevel; moves: number } {
   const options = resizeOptions(level);
-  const tried: { scale: number; sized: SizedLevel; moves: number }[] = [];
+  const tried: { scale: number; sized: SizedLevel; moves: number; fast: number }[] = [];
   const attempt = (scale: number) => {
     const sized = capHelpers(
       resizeLevel(level.layout, level.goals, scale, {
@@ -260,10 +264,10 @@ function searchSize(
     // Не уложились в лимит: чем больше партий всё же прошли, тем ближе размер к нужному
     const finished = used.filter((value) => value <= NO_LIMIT).length / used.length;
     const reached = quantile(used, winShare);
-    let moves = reached === Infinity ? NO_LIMIT * 2 + Math.round((1 - finished) * 100) : reached;
+    const moves =
+      reached === Infinity ? NO_LIMIT * 2 + Math.round((1 - finished) * 100) : reached;
     const fast = quantile(used, FAST_SHARE);
-    if (easy && fast < MIN_FAST) moves = Math.min(moves, wanted - 1 - (MIN_FAST - fast));
-    tried.push({ scale, sized, moves });
+    tried.push({ scale, sized, moves, fast });
     return moves;
   };
   const start = attempt(1)!;
@@ -276,8 +280,13 @@ function searchSize(
   if (before && (last.moves - wanted) * (before.moves - wanted) < 0) {
     attempt((last.scale + before.scale) / 2);
   }
+  // Мягкое правило MIN_FAST: среди размеров, попавших в задуманное число ходов (±FAST_SLACK), берём тот,
+  // что и в удачных партиях не быстрее MIN_FAST ходов; ради него уровень дальше от кривой не уводим
   const distance = (moves: number) => Math.abs(moves - wanted);
-  const best = tried.reduce((a, t) => (distance(t.moves) < distance(a.moves) ? t : a));
+  const near = tried.filter((t) => distance(t.moves) <= FAST_SLACK);
+  const slow = easy ? near.filter((t) => t.fast >= MIN_FAST) : [];
+  const pool = slow.length > 0 ? slow : tried;
+  const best = pool.reduce((a, t) => (distance(t.moves) < distance(a.moves) ? t : a));
   return { sized: best.sized, moves: best.moves };
 }
 
@@ -368,7 +377,7 @@ function tune(level: Level, place: number) {
   const sized = keepMoves
     ? { layout: [...level.layout], goals: [...level.goals] }
     : chooseSize(level, place);
-  const played = playAll(level, sized, games);
+  const played = playAll(level, sized, games, false);
   const used = usedMoves(played, sized.goals);
   const moves = keepMoves ? level.moves : movesFor(used, winShare);
   const win = used.filter((value) => value <= moves).length / games;
