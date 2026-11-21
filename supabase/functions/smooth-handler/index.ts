@@ -747,6 +747,21 @@ function slideDiagonally(board) {
   }
   return { board: next, falls };
 }
+function respawnStones(board, drops, stones, rng) {
+  const free = drops.flatMap(
+    (drop) => drop.spawns.filter((spawn) => !spawn.inPlace && spawn.tile.kind === "tile")
+  );
+  if (stones <= 0 || free.length === 0) return { board, left: Math.max(stones, 0) };
+  const next = cloneBoard(board);
+  let left = stones;
+  while (left > 0 && free.length > 0) {
+    const [spawn] = free.splice(rng.int(free.length), 1);
+    spawn.tile = { kind: "stone" };
+    next[spawn.to.row][spawn.to.col] = spawn.tile;
+    left--;
+  }
+  return { board: next, left };
+}
 
 // src/core/resolve.ts
 var MAX_WAVES = 1e3;
@@ -755,6 +770,7 @@ function* resolveMove(board, move, ctx) {
   let score = 0;
   let landing = [];
   let dropped = false;
+  let lostStones = 0;
   let comboSteps = 0;
   let matchBlows = /* @__PURE__ */ new Map();
   function* destroy(initial, preActivated, pointsOverride, combos = [], spared) {
@@ -776,6 +792,7 @@ function* resolveMove(board, move, ctx) {
     const pieces = cells.filter((pos) => isPiece(getCell(current, pos))).length;
     const count = (kind) => cells.filter((pos) => getCell(current, pos)?.kind === kind);
     const stones = count("stone").length;
+    lostStones += stones;
     const chests = [];
     let boxes = 0;
     let treasures = 0;
@@ -909,6 +926,11 @@ function* resolveMove(board, move, ctx) {
     dropped = true;
     const settled = settle(current, ctx.colorCount, ctx.rng);
     current = settled.board;
+    if (lostStones > 0) {
+      const back = respawnStones(current, settled.drops, lostStones, ctx.rng);
+      current = back.board;
+      lostStones = back.left;
+    }
     for (const drop of settled.drops) yield { kind: "drop", ...drop };
   }
   throw new Error(`\u041A\u0430\u0441\u043A\u0430\u0434 \u043D\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u043B\u0441\u044F \u0437\u0430 ${MAX_WAVES} \u0432\u043E\u043B\u043D`);
