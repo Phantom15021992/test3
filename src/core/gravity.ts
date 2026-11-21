@@ -7,6 +7,7 @@ import {
   type Board,
   type Cell,
   type Position,
+  type Stone,
   type Tile,
 } from './board';
 import { hasCoal } from './coal';
@@ -19,7 +20,8 @@ export interface Fall {
 
 export interface Spawn {
   to: Position;
-  tile: Tile;
+  /** Новая фишка 1 уровня или камень на замену разбитому */
+  tile: Tile | Stone;
   /** Появилась прямо на месте: под углём, куда нечему скатиться */
   inPlace?: true;
 }
@@ -201,4 +203,29 @@ function slideDiagonally(board: Board): { board: Board; falls: Fall[] } {
     });
   }
   return { board: next, falls };
+}
+
+/**
+ * Разбитые камни возвращаются: каждый заменяет случайную из новых фишек, упавших сверху (не появившихся
+ * на месте под углём), — так камней на поле не становится меньше. Без камней ГСЧ не трогается
+ */
+export function respawnStones(
+  board: Board,
+  drops: Drop[],
+  stones: number,
+  rng: Rng,
+): { board: Board; left: number } {
+  const free = drops.flatMap((drop) =>
+    drop.spawns.filter((spawn) => !spawn.inPlace && spawn.tile.kind === 'tile'),
+  );
+  if (stones <= 0 || free.length === 0) return { board, left: Math.max(stones, 0) };
+  const next = cloneBoard(board);
+  let left = stones;
+  while (left > 0 && free.length > 0) {
+    const [spawn] = free.splice(rng.int(free.length), 1);
+    spawn!.tile = { kind: 'stone' };
+    next[spawn!.to.row]![spawn!.to.col] = spawn!.tile;
+    left--;
+  }
+  return { board: next, left };
 }

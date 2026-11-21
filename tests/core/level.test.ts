@@ -111,6 +111,22 @@ describe('камни', () => {
     expect(clears(steps)[0]?.stones).toBe(1);
   });
 
+  it('разбитый камень заменяется новым: он падает сверху вместо одной из новых фишек', () => {
+    const b = parseBoard(`
+      R1 G1 B1 Y1
+      G1 * Y1 R1
+      B1 Y1 R1 G1
+      Y1 R1 G1 B1
+    `);
+    b[2]![2] = STONE;
+    b[3]![0] = STONE;
+    const { steps, board: after } = runMove(b, { type: 'fire', at: p(1, 1) }, ctx());
+    expect(clears(steps)[0]?.stones).toBe(1);
+    expect(after.flat().filter((cell) => cell?.kind === 'stone')).toHaveLength(2);
+    const spawned = steps.flatMap((step) => (step.kind === 'drop' ? step.spawns : []));
+    expect(spawned.filter(({ tile }) => tile.kind === 'stone')).toHaveLength(1);
+  });
+
   it('перемешивание оставляет камни и короны на месте', () => {
     const b = parseBoard(`
       R1 G1 B1 Y1

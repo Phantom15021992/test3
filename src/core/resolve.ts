@@ -30,7 +30,14 @@ import {
   MANIPULATOR_FINALE_POINTS,
 } from './config';
 import { addBlows, coalAround, coalIn, hitCoal, type CoalHit } from './coal';
-import { itemsOnBottom, removeCells, settle, type Fall, type Spawn } from './gravity';
+import {
+  itemsOnBottom,
+  removeCells,
+  respawnStones,
+  settle,
+  type Fall,
+  type Spawn,
+} from './gravity';
 import { findMatches, isSevenCross, type MatchGroup } from './match';
 import { swapCells } from './moves';
 import type { Rng } from './rng';
@@ -139,6 +146,8 @@ export function* resolveMove(
   let landing: Position[] = [];
   // Комбо считает только совпадения, собравшиеся сами: то, что собрал игрок, идёт без множителя
   let dropped = false;
+  /** Разбитые камни, которые ещё не вернулись на поле сверху */
+  let lostStones = 0;
   let comboSteps = 0;
   // Слои угля, которые снимут совпадения ближайшей волны (вместе с её очисткой)
   let matchBlows = new Map<string, { block: Position; layers: number }>();
@@ -173,6 +182,7 @@ export function* resolveMove(
     const pieces = cells.filter((pos) => isPiece(getCell(current, pos))).length;
     const count = (kind: string) => cells.filter((pos) => getCell(current, pos)?.kind === kind);
     const stones = count('stone').length;
+    lostStones += stones;
     // Сундук за шаг получает один удар: снимает звено, открывается или исчезает
     const chests: ChestHit[] = [];
     let boxes = 0;
@@ -329,6 +339,11 @@ export function* resolveMove(
     dropped = true;
     const settled = settle(current, ctx.colorCount, ctx.rng);
     current = settled.board;
+    if (lostStones > 0) {
+      const back = respawnStones(current, settled.drops, lostStones, ctx.rng);
+      current = back.board;
+      lostStones = back.left;
+    }
     for (const drop of settled.drops) yield { kind: 'drop', ...drop };
   }
 

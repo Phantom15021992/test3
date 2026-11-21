@@ -76,6 +76,7 @@ describe('refill', () => {
       { row: 1, col: 1 },
     ]);
     for (const { tile } of spawns) {
+      if (tile.kind !== 'tile') throw new Error('заполнение даёт только фишки');
       expect(tile.level).toBe(1);
       expect(tile.color).toBeLessThan(4);
     }
