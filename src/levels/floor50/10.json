@@ -5,8 +5,8 @@
   "layout": [
     "..........",
     "....cc....",
-    "...JccJ...",
-    ".sJJJJJJs.",
+    "....cc....",
+    ".s..JJ..s.",
     ".ccs..scc.",
     ".cc.##.cc.",
     ".JJ.##.JJ.",
@@ -15,7 +15,7 @@
     "....##...."
   ],
   "colors": 3,
-  "moves": 27,
+  "moves": 40,
   "goals": [
     {
       "kind": "coal",
@@ -23,7 +23,7 @@
     },
     {
       "kind": "ice",
-      "count": 20
+      "count": 14
     },
     {
       "kind": "level3color",
@@ -41,5 +41,5 @@
       "count": 18
     }
   ],
-  "coalLayers": 9
+  "coalLayers": 6
 }

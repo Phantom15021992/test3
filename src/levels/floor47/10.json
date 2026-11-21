@@ -15,7 +15,7 @@
     "###....###"
   ],
   "colors": 3,
-  "moves": 25,
+  "moves": 36,
   "goals": [
     {
       "kind": "coal",

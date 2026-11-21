@@ -4,7 +4,7 @@
   "hint": "Совпадения рядом с углём откалывают слои",
   "layout": [
     "..........",
-    "..........",
+    ".JJJJJJJJ.",
     ".JJsJJsJJ.",
     ".JsJ..JsJ.",
     ".cc.##.cc.",
@@ -15,7 +15,7 @@
     ".........."
   ],
   "colors": 3,
-  "moves": 26,
+  "moves": 36,
   "goals": [
     {
       "kind": "coal",
@@ -23,7 +23,7 @@
     },
     {
       "kind": "ice",
-      "count": 28
+      "count": 36
     },
     {
       "kind": "level3color",
@@ -46,5 +46,5 @@
       "count": 22
     }
   ],
-  "coalLayers": 6
+  "coalLayers": 8
 }

@@ -86,12 +86,16 @@ const HELPERS: readonly Goal['kind'][] = ['level3', 'level3color'];
  * подгоняют — до четверти (по просьбе владельца); на остальных местах ячейки — лишь поправка в 5–7%
  */
 const HELPER_RANGE: Readonly<
-  Record<'easy' | 'hard', Partial<Record<Goal['kind'], readonly [number, number]>>>
+  Record<'easy' | 'hard' | 'boss', Partial<Record<Goal['kind'], readonly [number, number]>>>
 > = {
   easy: { level3: [3, 5], level3color: [2, 4] },
   hard: { level3: [3, 8], level3color: [3, 6] },
+  // 10-е место (по просьбе владельца): ячейки не уменьшаются — цели уже подняты под звёзды с шагом 5;
+  // сначала сложность дают препятствия, не хватило — растут кристаллы цвета, до 12 на цвет
+  boss: { level3: [Infinity, 16], level3color: [Infinity, 12] },
 };
-const helperRange = (place: number) => HELPER_RANGE[[4, 8, 9].includes(place) ? 'hard' : 'easy'];
+const helperRange = (place: number) =>
+  HELPER_RANGE[place === BOSS ? 'boss' : [4, 8].includes(place) ? 'hard' : 'easy'];
 
 /** Ячейки 3 уровня не больше потолка места: иначе сложность давали бы они, а не задание этажа */
 function capHelpers(sized: SizedLevel, place: number): SizedLevel {
@@ -362,17 +366,24 @@ function bossSearch(
       }),
       place,
     );
-    const played = playAll(level, sized, SEARCH_GAMES);
+    // На тесном поле крупные цели не раскладываются (33-10) — такой размер пропускаем
+    let played: GameResult[], moves: number, share: number;
+    try {
+      played = playAll(level, sized, SEARCH_GAMES);
+      moves = movesFor(usedMoves(played, sized.goals), WIN_CURVE[BOSS]!);
+      share = bombWins(level, sized, moves, SEARCH_GAMES);
+    } catch {
+      continue;
+    }
     const used = usedMoves(played, sized.goals);
-    const moves = movesFor(used, WIN_CURVE[BOSS]!);
-    const share = bombWins(level, sized, moves, SEARCH_GAMES);
     // Ходов не меньше MIN_MOVES: мелкие цели и без бомб проходятся чаще задуманного — это тоже промах
     const plain = used.filter((value) => value <= moves).length / used.length;
     const distance =
       Math.abs(share - BOMB_WINS.target) + Math.max(0, plain - WIN_CURVE[BOSS]! - 0.05) * 2;
     if (!best || distance < best.distance) best = { sized, distance, share };
   }
-  return best!;
+  if (!best) throw new Error(`${level.id}: ни один размер целей не раскладывается`);
+  return best;
 }
 
 function tune(level: Level, place: number) {

@@ -4,8 +4,8 @@
   "hint": "Опусти корону на дно поля",
   "layout": [
     "o........o",
-    ".JJJJJJJJ.",
-    ".bbbbbbbb.",
+    "..........",
+    "....bb....",
     "...bbbb...",
     "###.JJ.###",
     "###.JJ.###",
@@ -15,7 +15,7 @@
     "###....###"
   ],
   "colors": 3,
-  "moves": 26,
+  "moves": 32,
   "goals": [
     {
       "kind": "item",
@@ -23,11 +23,11 @@
     },
     {
       "kind": "ice",
-      "count": 18
+      "count": 10
     },
     {
       "kind": "gold",
-      "count": 6
+      "count": 3
     },
     {
       "kind": "level3color",
@@ -45,5 +45,5 @@
       "count": 18
     }
   ],
-  "hiddenGold": 6
+  "hiddenGold": 3
 }

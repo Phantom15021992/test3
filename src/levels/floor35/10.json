@@ -15,7 +15,7 @@
     "#...##...#"
   ],
   "colors": 3,
-  "moves": 28,
+  "moves": 35,
   "goals": [
     {
       "kind": "ice",

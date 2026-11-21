@@ -5,15 +5,15 @@
   "layout": [
     "o......o",
     "........",
-    "......1.",
-    "...1....",
+    "......3.",
+    "...3....",
     "..s..s..",
-    "...ss.2.",
-    "...2....",
+    "...ss.3.",
+    "...3....",
     "........"
   ],
   "colors": 3,
-  "moves": 40,
+  "moves": 45,
   "goals": [
     {
       "kind": "item",
@@ -25,23 +25,23 @@
     },
     {
       "kind": "level3color",
-      "count": 5,
+      "count": 7,
       "color": 1
     },
     {
       "kind": "level3color",
-      "count": 5,
+      "count": 7,
       "color": 2
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 15
+      "count": 19
     },
     {
       "kind": "level3",
-      "count": 20
+      "count": 24
     }
   ]
 }
