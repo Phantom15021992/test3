@@ -5,23 +5,23 @@
   "layout": [
     "........",
     "........",
-    "........",
-    "........",
+    "..iiii..",
+    ".iittii.",
     ".ttiitt.",
     ".iiiiii.",
     ".iiiiii.",
     "........"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 25,
   "goals": [
     {
       "kind": "ice",
-      "count": 14
+      "count": 22
     },
     {
       "kind": "gold",
-      "count": 4
+      "count": 6
     }
   ],
   "stars": [

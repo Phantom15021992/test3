@@ -4,16 +4,16 @@
   "hint": "Сундук ломается от совпадения рядом или от взрыва",
   "layout": [
     "#.o.##.o.#",
-    "..........",
-    ".1........",
-    "...J1.J...",
-    "#..JJJJ1.#",
+    ".JJJ..JJJ.",
+    ".2JJJJJJ..",
+    ".JJJ3.JJJ.",
+    "#.JJJJJ3.#",
     "##.JJJJ.##",
-    "###.1..###",
+    "###.3J.###",
     "####..####"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 25,
   "goals": [
     {
       "kind": "item",
@@ -25,22 +25,22 @@
     },
     {
       "kind": "ice",
-      "count": 10
+      "count": 28
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 11,
       "color": 1
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 16
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 21
     }
   ]
 }

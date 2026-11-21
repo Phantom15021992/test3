@@ -5,17 +5,17 @@
   "layout": [
     "###....###",
     "#..cc....#",
-    "...cc.....",
-    "..........",
-    "..........",
-    "..cc.cc...",
-    "..cc.cc...",
-    "..JJJJJJ..",
+    ".JJcc..JJ.",
+    ".JJJJJJJJ.",
+    ".JJJJJJJJ.",
+    ".JccJccJJ.",
+    ".JccJccJJ.",
+    ".JJJJJJJJ.",
     "#..JJJJ..#",
     "###....###"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 28,
   "goals": [
     {
       "kind": "coal",
@@ -23,28 +23,28 @@
     },
     {
       "kind": "ice",
-      "count": 10
+      "count": 40
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 5,
       "color": 0
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 5,
       "color": 2
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 15
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 20
     }
   ],
-  "coalLayers": 6
+  "coalLayers": 9
 }

@@ -7,15 +7,15 @@
     "..........",
     "..........",
     "..........",
-    "###.JJ.###",
-    "###.JJ.###",
+    "###....###",
+    "###....###",
     "###.JJ.###",
     "###.JJ.###",
     "###.JJ.###",
     "###....###"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 39,
   "goals": [
     {
       "kind": "item",
@@ -23,27 +23,27 @@
     },
     {
       "kind": "ice",
-      "count": 10
+      "count": 6
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 5,
       "color": 0
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 5,
       "color": 2
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 15
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 20
     }
   ]
 }

@@ -9,13 +9,13 @@
     "..........",
     ".cc.cc.cc.",
     ".cc.cc.cc.",
-    ".bb....bb.",
-    ".b.bccb.b.",
+    ".bb.bb.bb.",
+    ".bbbccbbb.",
     "#..bccb..#",
     "###....###"
   ],
   "colors": 3,
-  "moves": 43,
+  "moves": 45,
   "goals": [
     {
       "kind": "coal",
@@ -23,11 +23,11 @@
     },
     {
       "kind": "box",
-      "count": 10
+      "count": 14
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 8,
       "color": 1
     }
   ],
@@ -41,5 +41,5 @@
       "count": 18
     }
   ],
-  "coalLayers": 6
+  "coalLayers": 8
 }

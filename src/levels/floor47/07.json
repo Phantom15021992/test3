@@ -6,18 +6,18 @@
     "#...##...#",
     "..........",
     "....ss....",
-    ".s..ii..s.",
+    ".siiiiiis.",
     "#.iiiiii.#",
     "##.iiii.##",
     "###.ii.###",
     "####..####"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 34,
   "goals": [
     {
       "kind": "ice",
-      "count": 14
+      "count": 18
     }
   ],
   "stars": [

@@ -9,15 +9,15 @@
     "........",
     "........",
     "..bbbb..",
-    "...bb...",
+    "..bbbb..",
     "........"
   ],
   "colors": 3,
-  "moves": 25,
+  "moves": 26,
   "goals": [
     {
       "kind": "box",
-      "count": 6
+      "count": 8
     }
   ],
   "stars": [

@@ -5,9 +5,9 @@
   "layout": [
     "..........",
     "..........",
-    "...i..i...",
-    ".i.i..iii.",
-    "..i.##.i..",
+    ".iiiiiiii.",
+    ".iii..iii.",
+    ".ii.##.ii.",
     ".ii.##.ii.",
     ".iii..iii.",
     ".iiiiiiii.",
@@ -15,31 +15,31 @@
     ".........."
   ],
   "colors": 3,
-  "moves": 34,
+  "moves": 27,
   "goals": [
     {
       "kind": "ice",
-      "count": 35
+      "count": 44
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 8,
       "color": 0
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 8,
       "color": 2
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 16
+      "count": 21
     },
     {
       "kind": "level3",
-      "count": 21
+      "count": 26
     }
   ]
 }

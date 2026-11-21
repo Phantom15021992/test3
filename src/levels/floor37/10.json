@@ -4,9 +4,9 @@
   "hint": "Камни разбивает только взрыв",
   "layout": [
     ".o......o.",
-    "..........",
-    "..........",
-    "..........",
+    ".JJJJJJJJ.",
+    ".JJJJJJJJ.",
+    "...JJJJ...",
     "###.JJ.###",
     "###sJJs###",
     "###sJJs###",
@@ -15,7 +15,7 @@
     "###....###"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 25,
   "goals": [
     {
       "kind": "item",
@@ -23,22 +23,22 @@
     },
     {
       "kind": "ice",
-      "count": 10
+      "count": 30
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 11,
       "color": 1
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 16
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 21
     }
   ]
 }

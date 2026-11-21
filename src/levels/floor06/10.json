@@ -8,18 +8,18 @@
     "..1.......",
     ".......1..",
     "..........",
-    "...1......",
-    "........1.",
-    "....bb....",
+    "...2......",
+    "........2.",
+    ".bbbbbbbb.",
     "#..2bbb..#",
     "###....###"
   ],
   "colors": 3,
-  "moves": 25,
+  "moves": 35,
   "goals": [
     {
       "kind": "box",
-      "count": 10
+      "count": 16
     },
     {
       "kind": "item",
@@ -27,11 +27,11 @@
     },
     {
       "kind": "gold",
-      "count": 3
+      "count": 4
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 8,
       "color": 2
     }
   ],
@@ -45,5 +45,5 @@
       "count": 18
     }
   ],
-  "hiddenGold": 3
+  "hiddenGold": 4
 }

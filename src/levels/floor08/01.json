@@ -9,15 +9,15 @@
     "........",
     "........",
     "........",
-    "..JJJJJ.",
+    ".JJJJJJ.",
     "........"
   ],
   "colors": 3,
-  "moves": 31,
+  "moves": 32,
   "goals": [
     {
       "kind": "ice",
-      "count": 5
+      "count": 6
     }
   ],
   "stars": [

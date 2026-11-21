@@ -4,42 +4,42 @@
   "hint": "Сундук ломается от совпадения рядом или от взрыва",
   "layout": [
     "....##....",
+    "....##.1..",
     "....##....",
-    "....##....",
-    "..........",
+    ".1........",
     ".......1..",
-    "....1.....",
-    ".s.b..b.s.",
+    "..bb1.bb..",
+    ".sbb..bbs.",
     ".bss##s1b.",
     ".b1.##..b.",
     "....##...."
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 45,
   "goals": [
     {
       "kind": "box",
-      "count": 10
+      "count": 18
     },
     {
       "kind": "gold",
-      "count": 3
+      "count": 4
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 8,
       "color": 1
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 13
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 18
     }
   ],
-  "hiddenGold": 3
+  "hiddenGold": 4
 }

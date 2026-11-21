@@ -6,8 +6,8 @@
     "..........",
     "..........",
     ".....#####",
-    "..........",
-    "...JJJJ1..",
+    ".1........",
+    ".J.JJJJ1J.",
     "....1.....",
     ".....#####",
     ".1........",
@@ -15,35 +15,35 @@
     ".........."
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 34,
   "goals": [
     {
       "kind": "box",
-      "count": 4
+      "count": 5
     },
     {
       "kind": "ice",
-      "count": 10
+      "count": 12
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 5,
       "color": 0
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 5,
       "color": 1
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 15
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 20
     }
   ]
 }

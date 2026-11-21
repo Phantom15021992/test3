@@ -9,19 +9,19 @@
     "........",
     "........",
     "........",
-    "..JJJJ..",
+    ".JJJJJJ.",
     "........"
   ],
   "colors": 3,
-  "moves": 29,
+  "moves": 30,
   "goals": [
     {
       "kind": "ice",
-      "count": 4
+      "count": 6
     },
     {
       "kind": "level3color",
-      "count": 1,
+      "count": 6,
       "color": 2
     }
   ],

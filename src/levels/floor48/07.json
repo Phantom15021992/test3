@@ -4,36 +4,36 @@
   "hint": "Собирай ячейки 3 уровня",
   "layout": [
     "..........",
-    ".iiiiiii..",
-    "..........",
-    "..........",
+    ".iiiiiiii.",
+    ".iiiiiiii.",
+    "...ii.....",
     ".....#####",
     ".....#####",
-    "..........",
-    "..........",
-    ".iiiiiii..",
+    "...ii.....",
+    ".iiiiiiii.",
+    ".iiiiiiii.",
     ".........."
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 42,
   "goals": [
     {
       "kind": "ice",
-      "count": 14
+      "count": 36
     },
     {
       "kind": "level3",
-      "count": 6
+      "count": 8
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 13
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 18
     }
   ]
 }

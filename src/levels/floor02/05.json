@@ -7,7 +7,7 @@
     "..........",
     ".....#####",
     "..........",
-    "..........",
+    "..bbbbbb..",
     "..........",
     "..b..#####",
     "..........",
@@ -19,27 +19,27 @@
   "goals": [
     {
       "kind": "box",
-      "count": 9
+      "count": 15
     },
     {
       "kind": "gold",
-      "count": 3
+      "count": 4
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 10,
       "color": 1
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 13
+      "count": 15
     },
     {
       "kind": "level3",
-      "count": 18
+      "count": 20
     }
   ],
-  "hiddenGold": 3
+  "hiddenGold": 4
 }

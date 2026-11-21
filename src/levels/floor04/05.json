@@ -9,13 +9,13 @@
     "..........",
     "....##....",
     "....##....",
-    ".......b..",
-    "......cc..",
+    "..b....b..",
+    "....bbcc..",
     ".b..bbccb.",
     ".........."
   ],
   "colors": 3,
-  "moves": 25,
+  "moves": 28,
   "goals": [
     {
       "kind": "coal",
@@ -23,22 +23,22 @@
     },
     {
       "kind": "box",
-      "count": 5
+      "count": 8
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 10,
       "color": 1
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 13
+      "count": 15
     },
     {
       "kind": "level3",
-      "count": 18
+      "count": 20
     }
   ],
   "coalLayers": 4

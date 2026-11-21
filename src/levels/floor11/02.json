@@ -4,24 +4,24 @@
   "hint": "Лёд ломается, когда на его клетке исчезает фишка",
   "layout": [
     "#...##...#",
-    "..........",
-    "..........",
-    "..iiiiii..",
+    ".bii..iib.",
+    ".iiiiiiii.",
+    ".iiiiiiii.",
     "#.iiiiii.#",
     "##.ibbi.##",
     "###.bb.###",
     "####..####"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 34,
   "goals": [
     {
       "kind": "box",
-      "count": 4
+      "count": 6
     },
     {
       "kind": "ice",
-      "count": 14
+      "count": 28
     }
   ],
   "stars": [

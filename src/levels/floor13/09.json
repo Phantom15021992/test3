@@ -3,17 +3,17 @@
   "title": "Уровень crowns + ice + color",
   "hint": "Опусти корону на дно поля",
   "layout": [
+    "........",
+    "........",
+    "........",
     "o......o",
-    "........",
-    "........",
-    "........",
     "........",
     "..JJJJ..",
     ".JJJJJJ.",
     "........"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 36,
   "goals": [
     {
       "kind": "item",
@@ -25,18 +25,18 @@
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 8,
       "color": 0
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 13
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 18
     }
   ]
 }

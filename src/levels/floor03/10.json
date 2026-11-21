@@ -5,15 +5,15 @@
   "layout": [
     "##..o...##",
     "#........#",
-    "..........",
-    "..........",
+    ".bbbbbbbb.",
+    ".bbbbbbbb.",
     "#.bbbbbb.#",
-    "##..bb..##",
+    "##.bbbb.##",
     "###.bb.###",
     "####..####"
   ],
   "colors": 3,
-  "moves": 25,
+  "moves": 40,
   "goals": [
     {
       "kind": "item",
@@ -21,27 +21,27 @@
     },
     {
       "kind": "box",
-      "count": 10
+      "count": 28
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 5,
       "color": 0
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 5,
       "color": 2
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 16
+      "count": 15
     },
     {
       "kind": "level3",
-      "count": 21
+      "count": 20
     }
   ]
 }

@@ -3,17 +3,17 @@
   "title": "Уровень chests + crowns + color",
   "hint": "Сундук ломается от совпадения рядом или от взрыва",
   "layout": [
-    "o......o",
+    "........",
     "........",
     "......1.",
-    "...1....",
+    "o..1...o",
     "........",
     "......1.",
     "...1....",
     "........"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 38,
   "goals": [
     {
       "kind": "item",
@@ -25,23 +25,23 @@
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 5,
       "color": 2
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 5,
       "color": 1
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 15
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 20
     }
   ]
 }

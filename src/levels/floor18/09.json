@@ -4,18 +4,18 @@
   "hint": "Лёд ломается, когда на его клетке исчезает фишка",
   "layout": [
     "###....###",
-    "#...cc...#",
-    "....cc....",
-    "..........",
-    ".....cc...",
-    ".cc..cc...",
-    ".cc.......",
-    "..JJJJJJ..",
+    "#..JccJ..#",
+    ".JJJccJJJ.",
+    ".JJJJJJJJ.",
+    ".JJJJccJJ.",
+    ".ccJJccJJ.",
+    ".ccJJJJJJ.",
+    ".JJJJJJJJ.",
     "#..JJJJ..#",
     "###....###"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 30,
   "goals": [
     {
       "kind": "coal",
@@ -23,22 +23,22 @@
     },
     {
       "kind": "ice",
-      "count": 10
+      "count": 44
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 10,
       "color": 2
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 15
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 20
     }
   ],
   "coalLayers": 6

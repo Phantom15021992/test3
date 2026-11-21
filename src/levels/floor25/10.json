@@ -4,16 +4,16 @@
   "hint": "Золото — в угле и в сундуках: доломай их",
   "layout": [
     "#o..##..o#",
-    "..kk......",
-    "..kk.kk...",
-    ".....kk...",
-    "#..JJJJ..#",
+    ".Jkk....J.",
+    ".Jkk.kk.J.",
+    ".JJ..kkJJ.",
+    "#.JJJJJJ.#",
     "##.JJJJ.##",
     "###.JJ.###",
     "####..####"
   ],
   "colors": 3,
-  "moves": 35,
+  "moves": 25,
   "goals": [
     {
       "kind": "item",
@@ -21,7 +21,7 @@
     },
     {
       "kind": "ice",
-      "count": 10
+      "count": 20
     },
     {
       "kind": "gold",
@@ -29,18 +29,18 @@
     },
     {
       "kind": "level3color",
-      "count": 3,
+      "count": 11,
       "color": 2
     }
   ],
   "stars": [
     {
       "kind": "level3",
-      "count": 10
+      "count": 16
     },
     {
       "kind": "level3",
-      "count": 15
+      "count": 21
     }
   ],
   "coalLayers": 6
