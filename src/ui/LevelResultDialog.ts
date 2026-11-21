@@ -31,6 +31,8 @@ const BUTTON_STEP = 112;
 /** Таблица лидеров уровня: высота строки и размер шрифта */
 const ROW_HEIGHT = 38;
 const TABLE_FONT = 24;
+/** Сколько строк таблицы уровня показывать */
+const BOARD_TOP = 10;
 /** Столбцы таблицы — от левого края окна: место, ник, звёзды, ходы, очки */
 const COL_RANK = 52;
 const COL_NAME = 76;
@@ -163,7 +165,11 @@ export class LevelResultDialog {
           this.text(centerX, top + 60, 'Пока здесь никого нет', 24, UI_MUTED_TEXT_COLOR);
           return;
         }
-        this.rows(top + 50, rows);
+        // Только десятка (по просьбе владельца): игрок ниже неё в таблице не показывается
+        this.rows(
+          top + 50,
+          rows.filter((row) => row.rank <= BOARD_TOP),
+        );
       })
       .catch(() => {
         if (heading.active) offline('Нет связи — твой лучший итог:');
